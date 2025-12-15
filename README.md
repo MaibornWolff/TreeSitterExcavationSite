@@ -16,8 +16,7 @@ A Kotlin library for calculating code metrics and extracting text from source co
 
 ## Installation
 
-### Gradle (Composite Build)
-
+### Gradle (Composite Build) Not yet on maven
 ```kotlin
 // settings.gradle.kts
 includeBuild("/path/to/TreeSitterLibrary")
@@ -26,12 +25,6 @@ includeBuild("/path/to/TreeSitterLibrary")
 dependencies {
     implementation("de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite:0.1.0")
 }
-```
-
-### Maven Local
-
-```bash
-./gradlew publishToMavenLocal
 ```
 
 ## Quick Start
