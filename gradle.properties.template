@@ -1,0 +1,12 @@
+# SonarQube Configuration
+# Copy this file to gradle.properties and fill in your credentials
+# DO NOT commit gradle.properties to version control
+
+# SonarQube server URL (default: http://localhost:9000)
+sonarHostUrl=http://localhost:9000
+
+# Project key in SonarQube (default: TreesitterLibrary)
+sonarProjectKey=TreesitterLibrary
+
+# Authentication token (generate in SonarQube: User > My Account > Security > Tokens)
+sonarToken=YOUR_TOKEN_HERE
