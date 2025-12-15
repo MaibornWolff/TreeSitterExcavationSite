@@ -37,7 +37,7 @@ object TreeSitterExtraction {
      * @throws IllegalArgumentException if the file extension is not supported
      * @throws UnsupportedOperationException if extraction is not supported for this language
      */
-    fun extract(file: File): de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionResult {
+    fun extract(file: File): ExtractionResult {
         val language = Language.fromFilename(file.name)
             ?: throw IllegalArgumentException("Unsupported file extension: ${file.extension}")
 
@@ -52,7 +52,7 @@ object TreeSitterExtraction {
      * @return ExtractionResult containing all extracted text items
      * @throws UnsupportedOperationException if extraction is not supported for this language
      */
-    fun extract(content: String, language: Language): de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionResult {
+    fun extract(content: String, language: Language): ExtractionResult {
         if (!isExtractionSupported(language)) {
             throw UnsupportedOperationException(
                 "Text extraction is not supported for ${language.name}. " +
