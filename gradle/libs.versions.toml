@@ -4,7 +4,7 @@ junit5 = "6.0.1"
 assertj = "3.27.7"
 mockk = "1.14.7"
 archunit = "1.4.1"
-ktlint = "12.3.0"
+ktlint = "14.0.1"
 detekt = "1.23.7"
 sonarqube = "7.2.1.6560"
 
