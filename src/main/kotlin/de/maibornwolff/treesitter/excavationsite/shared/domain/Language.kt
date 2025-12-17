@@ -20,7 +20,8 @@ enum class Language(
     CSHARP(primaryExtension = ".cs"),
     CPP(primaryExtension = ".cpp", otherExtensions = setOf(".cc", ".cxx", ".hpp", ".hxx", ".h")),
     C(primaryExtension = ".c"),
-    OBJECTIVE_C(primaryExtension = ".m", otherExtensions = setOf(".mm"));
+    OBJECTIVE_C(primaryExtension = ".m", otherExtensions = setOf(".mm")),
+    VUE(primaryExtension = ".vue");
 
     companion object {
         private val extensionMap: Map<String, Language> by lazy {

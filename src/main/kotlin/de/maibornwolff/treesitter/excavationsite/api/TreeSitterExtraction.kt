@@ -1,8 +1,8 @@
 package de.maibornwolff.treesitter.excavationsite.api
 
 import de.maibornwolff.treesitter.excavationsite.integration.extraction.ExtractionFacade
-import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionResult
 import de.maibornwolff.treesitter.excavationsite.languages.LanguageRegistry
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionResult
 import java.io.File
 
 /**
@@ -60,16 +60,28 @@ object TreeSitterExtraction {
             )
         }
 
+        val customProcessor = LanguageRegistry.getExtractionProcessor(language)
+        val extractedTexts = if (customProcessor != null) {
+            customProcessor(content)
+        } else {
+            extractStandard(content, language)
+        }
+
+        return ExtractionResult(extractedTexts)
+    }
+
+    private fun extractStandard(
+        content: String,
+        language: Language
+    ): List<de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractedText> {
         val definition = LanguageRegistry.getLanguageDefinition(language)
         val treeSitterLanguage = LanguageRegistry.getTreeSitterLanguage(language)
 
-        val extractedTexts = ExtractionFacade.extract(
+        return ExtractionFacade.extract(
             content = content,
             treeSitterLanguage = treeSitterLanguage,
             definition = definition
         )
-
-        return ExtractionResult(extractedTexts)
     }
 
     /**
@@ -78,6 +90,10 @@ object TreeSitterExtraction {
      * @param language The language to check
      */
     fun isExtractionSupported(language: Language): Boolean {
+        // Languages with custom processors are always supported
+        if (LanguageRegistry.getExtractionProcessor(language) != null) {
+            return true
+        }
         val definition = LanguageRegistry.getLanguageDefinition(language)
         return definition.nodeExtractions.isNotEmpty()
     }

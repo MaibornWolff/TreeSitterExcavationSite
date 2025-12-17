@@ -675,6 +675,15 @@ class RobustnessContractTest {
                         if (1) {}
                     }
                 """.trimIndent()
+                Language.VUE -> """
+                    <script>
+                    // Comment
+                    function foo() {
+                        let s = "hello";
+                        if (true) {}
+                    }
+                    </script>
+                """.trimIndent()
             }
         }
     }

@@ -2,10 +2,10 @@ package de.maibornwolff.treesitter.excavationsite.integration.extraction
 
 import de.maibornwolff.treesitter.excavationsite.integration.extraction.extractors.common.CommentExtractor
 import de.maibornwolff.treesitter.excavationsite.integration.extraction.extractors.common.StringExtractor
-import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractedText
-import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionContext
 import de.maibornwolff.treesitter.excavationsite.integration.extraction.ports.ExtractionNodeTypes
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Extract
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractedText
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionContext
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeSitterParser
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeWalker
 import org.treesitter.TSLanguage

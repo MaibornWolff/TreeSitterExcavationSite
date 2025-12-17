@@ -23,6 +23,7 @@ tree-sitter-ruby = "0.23.1"
 tree-sitter-swift = "0.5.0"
 tree-sitter-objc = "main-a"
 tree-sitter-bash = "0.23.3"
+tree-sitter-vue = "0.2.1a"
 
 [libraries]
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
@@ -48,6 +49,7 @@ treesitter-ruby = { group = "io.github.bonede", name = "tree-sitter-ruby", versi
 treesitter-swift = { group = "io.github.bonede", name = "tree-sitter-swift", version.ref = "tree-sitter-swift" }
 treesitter-objc = { group = "io.github.bonede", name = "tree-sitter-objc", version.ref = "tree-sitter-objc" }
 treesitter-bash = { group = "io.github.bonede", name = "tree-sitter-bash", version.ref = "tree-sitter-bash" }
+treesitter-vue = { group = "io.github.bonede", name = "tree-sitter-vue", version.ref = "tree-sitter-vue" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
