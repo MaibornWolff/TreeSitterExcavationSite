@@ -32,11 +32,11 @@ class ArchitectureTest {
                 .that().resideInAPackage("$BASE_PACKAGE.api..")
                 .should().dependOnClassesThat()
                 .resideInAnyPackage(
-                    "$BASE_PACKAGE.features.metrics.calculators..",
-                    "$BASE_PACKAGE.features.metrics.ports..",
-                    "$BASE_PACKAGE.features.metrics.adapters..",
-                    "$BASE_PACKAGE.features.extraction.extractors..",
-                    "$BASE_PACKAGE.features.extraction.parsers..",
+                    "$BASE_PACKAGE.integration.metrics.calculators..",
+                    "$BASE_PACKAGE.integration.metrics.ports..",
+                    "$BASE_PACKAGE.integration.metrics.adapters..",
+                    "$BASE_PACKAGE.integration.extraction.extractors..",
+                    "$BASE_PACKAGE.integration.extraction.parsers..",
                     "$BASE_PACKAGE.shared.infrastructure.walker.."
                 )
                 .because("API should only depend on public interfaces, not internal implementations")
@@ -47,9 +47,9 @@ class ArchitectureTest {
         fun `should prevent metrics from depending on extraction`() {
             // Arrange & Act & Assert
             noClasses()
-                .that().resideInAPackage("$BASE_PACKAGE.features.metrics..")
+                .that().resideInAPackage("$BASE_PACKAGE.integration.metrics..")
                 .should().dependOnClassesThat()
-                .resideInAPackage("$BASE_PACKAGE.features.extraction..")
+                .resideInAPackage("$BASE_PACKAGE.integration.extraction..")
                 .because("Metrics feature should be independent from extraction feature")
                 .check(classes)
         }
@@ -58,9 +58,9 @@ class ArchitectureTest {
         fun `should prevent extraction from depending on metrics`() {
             // Arrange & Act & Assert
             noClasses()
-                .that().resideInAPackage("$BASE_PACKAGE.features.extraction..")
+                .that().resideInAPackage("$BASE_PACKAGE.integration.extraction..")
                 .should().dependOnClassesThat()
-                .resideInAPackage("$BASE_PACKAGE.features.metrics..")
+                .resideInAPackage("$BASE_PACKAGE.integration.metrics..")
                 .because("Extraction feature should be independent from metrics feature")
                 .check(classes)
         }
@@ -74,7 +74,7 @@ class ArchitectureTest {
                 .should().dependOnClassesThat()
                 .resideInAnyPackage(
                     "$BASE_PACKAGE.api..",
-                    "$BASE_PACKAGE.features..",
+                    "$BASE_PACKAGE.integration..",
                     "$BASE_PACKAGE.languages.."
                 )
                 .because("Shared walker infrastructure should have no internal dependencies")
@@ -90,7 +90,7 @@ class ArchitectureTest {
                 .should().dependOnClassesThat()
                 .resideInAnyPackage(
                     "$BASE_PACKAGE.api..",
-                    "$BASE_PACKAGE.features..",
+                    "$BASE_PACKAGE.integration..",
                     "$BASE_PACKAGE.languages..",
                     "$BASE_PACKAGE.shared.infrastructure.."
                 )
@@ -105,9 +105,9 @@ class ArchitectureTest {
                 .that().resideInAPackage("$BASE_PACKAGE.languages..")
                 .should().dependOnClassesThat()
                 .resideInAnyPackage(
-                    "$BASE_PACKAGE.features.metrics.calculators..",
-                    "$BASE_PACKAGE.features.metrics.ports..",
-                    "$BASE_PACKAGE.features.metrics.adapters.."
+                    "$BASE_PACKAGE.integration.metrics.calculators..",
+                    "$BASE_PACKAGE.integration.metrics.ports..",
+                    "$BASE_PACKAGE.integration.metrics.adapters.."
                 )
                 .because("Languages should only depend on Metric and CalculationExtensions, not implementations")
                 .check(classes)
@@ -122,7 +122,7 @@ class ArchitectureTest {
                 .that().resideInAPackage("$BASE_PACKAGE.languages..")
                 .should().dependOnClassesThat()
                 .resideInAnyPackage(
-                    "$BASE_PACKAGE.features.extraction.parsers.."
+                    "$BASE_PACKAGE.integration.extraction.parsers.."
                 )
                 .because("Languages should not depend on parser implementations")
                 .check(classes)
@@ -152,9 +152,9 @@ class ArchitectureTest {
             // Arrange & Act & Assert
             // Check for cycles within the features package (metrics and extraction should be independent)
             slices()
-                .matching("$BASE_PACKAGE.features.(*)..")
+                .matching("$BASE_PACKAGE.integration.(*)..")
                 .should().beFreeOfCycles()
-                .because("Feature packages should not have cyclic dependencies")
+                .because("Integration packages should not have cyclic dependencies")
                 .check(classes)
         }
 
@@ -164,7 +164,7 @@ class ArchitectureTest {
             // This specifically guards against the cycle we fixed:
             // languages/ depending on features/metrics/calculators/
             slices()
-                .matching("$BASE_PACKAGE.features.metrics.(*)..")
+                .matching("$BASE_PACKAGE.integration.metrics.(*)..")
                 .should().beFreeOfCycles()
                 .because("Metrics sub-packages should not have cyclic dependencies")
                 .check(classes)

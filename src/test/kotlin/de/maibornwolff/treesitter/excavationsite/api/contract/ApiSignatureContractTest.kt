@@ -84,7 +84,7 @@ class ApiSignatureContractTest {
 
             // Assert
             assertThat(method.returnType.name).isEqualTo(
-                "de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionResult"
+                "de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionResult"
             )
         }
 
@@ -99,7 +99,7 @@ class ApiSignatureContractTest {
 
             // Assert
             assertThat(method.returnType.name).isEqualTo(
-                "de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionResult"
+                "de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionResult"
             )
         }
 
@@ -311,9 +311,9 @@ class ApiSignatureContractTest {
     @Nested
     inner class LanguageEnumContract {
         @Test
-        fun `should have exactly 14 language values`() {
+        fun `should have exactly 15 language values`() {
             // Assert
-            assertThat(Language.entries).hasSize(14)
+            assertThat(Language.entries).hasSize(15)
         }
 
         @Test

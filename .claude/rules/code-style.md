@@ -27,6 +27,41 @@
 - **Immutability**: Prefer immutable data structures, especially in the model layer
 - **Backward Compatibility**: Changes to `.cc.json` format require careful versioning
 
+## Commit Message Conventions
+
+Use [Conventional Commits](https://www.conventionalcommits.org/) format:
+
+```
+<type>(<scope>): <description>
+
+[optional body]
+```
+
+**Types:**
+- `feat` - New feature or capability
+- `fix` - Bug fix
+- `docs` - Documentation only changes
+- `style` - Code style changes (formatting, no logic change)
+- `refactor` - Code restructuring without changing behavior
+- `test` - Adding or updating tests
+- `chore` - Build, CI, dependencies, or tooling changes
+
+**Examples:**
+```
+feat(vue): add Vue Single File Component support
+fix(metrics): correct LOC calculation for empty files
+docs: update API usage examples
+refactor(extraction): simplify comment parsing logic
+test(kotlin): add edge case tests for lambda expressions
+chore(deps): update tree-sitter to 0.25.3
+```
+
+**Guidelines:**
+- Use imperative mood ("add" not "added")
+- Keep first line under 72 characters
+- Scope is optional but recommended for clarity
+- Reference issues when applicable: `fix(metrics): handle null input (#123)`
+
 ## Avoid
 
 - Committing with failing tests

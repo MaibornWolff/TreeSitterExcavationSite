@@ -1,5 +1,25 @@
 package de.maibornwolff.treesitter.excavationsite.languages
 
+import de.maibornwolff.treesitter.excavationsite.languages.bash.BashDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.c.CDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.cpp.CppDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.csharp.CSharpDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.go.GoDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.java.JavaDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.JavascriptDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.TypescriptDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.kotlin.KotlinDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.objectivec.ObjectiveCDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.php.PhpDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.python.PythonDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.ruby.RubyDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.swift.SwiftDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.vue.VueDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.vue.VueExtractionProcessor
+import de.maibornwolff.treesitter.excavationsite.languages.vue.VueMetricsProcessor
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractedText
+import de.maibornwolff.treesitter.excavationsite.shared.domain.Language
+import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDefinition
 import org.treesitter.TSLanguage
 import org.treesitter.TreeSitterBash
 import org.treesitter.TreeSitterC
@@ -15,6 +35,7 @@ import org.treesitter.TreeSitterPython
 import org.treesitter.TreeSitterRuby
 import org.treesitter.TreeSitterSwift
 import org.treesitter.TreeSitterTypescript
+import org.treesitter.TreeSitterVue
 
 /**
  * Registry that maps Language enum values to their TreeSitter language and definition.
@@ -42,6 +63,7 @@ object LanguageRegistry {
             Language.CPP -> TreeSitterCpp()
             Language.C -> TreeSitterC()
             Language.OBJECTIVE_C -> TreeSitterObjc()
+            Language.VUE -> TreeSitterVue()
         }
     }
 
@@ -64,6 +86,29 @@ object LanguageRegistry {
             Language.CPP -> CppDefinition
             Language.C -> CDefinition
             Language.OBJECTIVE_C -> ObjectiveCDefinition
+            Language.VUE -> VueDefinition
+        }
+    }
+
+    /**
+     * Returns a custom metrics processor for languages that require special handling.
+     * Returns null if the language uses standard processing.
+     */
+    fun getMetricsProcessor(language: Language): ((String) -> Map<String, Double>)? {
+        return when (language) {
+            Language.VUE -> VueMetricsProcessor::calculateMetrics
+            else -> null
+        }
+    }
+
+    /**
+     * Returns a custom extraction processor for languages that require special handling.
+     * Returns null if the language uses standard processing.
+     */
+    fun getExtractionProcessor(language: Language): ((String) -> List<ExtractedText>)? {
+        return when (language) {
+            Language.VUE -> VueExtractionProcessor::extract
+            else -> null
         }
     }
 }
