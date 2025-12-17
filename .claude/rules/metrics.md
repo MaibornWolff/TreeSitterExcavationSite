@@ -1,5 +1,5 @@
 ---
-paths: src/main/kotlin/**/features/metrics/**/*.kt
+paths: src/main/kotlin/**/integration/metrics/**/*.kt
 ---
 
 # Metric Calculators
@@ -15,7 +15,7 @@ enum class AvailableFileMetrics(val metricName: String) {
 }
 ```
 
-2. **Add Metric type** (if needed) in `features/metrics/domain/Metric.kt`:
+2. **Add Metric type** (if needed) in `shared/domain/Metric.kt`:
 
 ```kotlin
 sealed class Metric {
@@ -24,7 +24,7 @@ sealed class Metric {
 }
 ```
 
-3. **Create calculator** in `features/metrics/calculators/`:
+3. **Create calculator** in `integration/metrics/calculators/`:
 
 ```kotlin
 class NewMetricCalc(private val nodeTypeProvider: MetricNodeTypes) : MetricPerFileCalc {
@@ -44,5 +44,16 @@ class NewMetricCalc(private val nodeTypeProvider: MetricNodeTypes) : MetricPerFi
 ## Hexagonal Pattern
 
 The metrics feature uses ports/adapters:
-- **Port**: `MetricNodeTypes` interface in `features/metrics/ports/`
-- **Adapter**: `LanguageDefinitionMetricsAdapter` in `features/metrics/adapters/` adapts `LanguageDefinition` to `MetricNodeTypes`
+- **Port**: `MetricNodeTypes` interface in `integration/metrics/ports/`
+- **Adapter**: `LanguageDefinitionMetricsAdapter` in `integration/metrics/adapters/` adapts `LanguageDefinition` to `MetricNodeTypes`
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `integration/metrics/MetricsFacade.kt` | Feature entry point |
+| `integration/metrics/MetricCollector.kt` | Orchestrates calculations |
+| `integration/metrics/MetricsToCalculatorsMap.kt` | Calculator registry |
+| `integration/metrics/calculators/*.kt` | Individual calculators |
+| `integration/metrics/domain/CalculationContext.kt` | Context passed to calculators |
+| `shared/domain/Metric.kt` | Metric type definitions |

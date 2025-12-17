@@ -6,13 +6,16 @@ paths: src/main/kotlin/**/languages/**/*.kt
 
 ## Adding a New Language
 
-1. **Create language definition** in `languages/NewLangDefinition.kt`:
+1. **Create language directory** in `languages/newlang/` with three files:
 
 ```kotlin
-import de.maibornwolff.treesitter.excavationsite.integration.metrics.domain.Metric
-import de.maibornwolff.treesitter.excavationsite.integration.extraction.model.Extract
+// languages/newlang/NewLangMetricMapping.kt
+package ...languages.newlang
 
-object NewLangDefinition : LanguageDefinition {
+import de.maibornwolff.treesitter.excavationsite.shared.domain.Metric
+import de.maibornwolff.treesitter.excavationsite.shared.domain.MetricMapping
+
+object NewLangMetricMapping : MetricMapping {
     override val nodeMetrics: Map<String, Set<Metric>> = buildMap {
         // Logic complexity nodes
         listOf("if_statement", "for_statement", "while_statement")
@@ -33,7 +36,16 @@ object NewLangDefinition : LanguageDefinition {
         // Message chains
         put("call_expression", setOf(Metric.MessageChain, Metric.MessageChainCall))
     }
+}
+```
 
+```kotlin
+// languages/newlang/NewLangExtractionMapping.kt
+package ...languages.newlang
+
+import de.maibornwolff.treesitter.excavationsite.shared.domain.*
+
+object NewLangExtractionMapping : ExtractionMapping {
     override val nodeExtractions: Map<String, Extract> = buildMap {
         // Identifiers
         put("function_definition", Extract.Identifier(
@@ -49,6 +61,18 @@ object NewLangDefinition : LanguageDefinition {
 }
 ```
 
+```kotlin
+// languages/newlang/NewLangDefinition.kt
+package ...languages.newlang
+
+import de.maibornwolff.treesitter.excavationsite.shared.domain.*
+
+object NewLangDefinition : LanguageDefinition {
+    override val nodeMetrics = NewLangMetricMapping.nodeMetrics
+    override val nodeExtractions = NewLangExtractionMapping.nodeExtractions
+}
+```
+
 2. **Add to Language enum** in `languages/Language.kt` (internal) and update `api/Language.kt` (public):
 
 ```kotlin
@@ -61,9 +85,11 @@ NEW_LANG(
 )
 ```
 
-3. **Add tests** in `src/test/kotlin/.../languages/newlang/`
+3. **Add language-specific extractors** (if needed) in `languages/newlang/extractors/`
 
-## Metric Types (from `features/metrics/domain/Metric.kt`)
+4. **Add tests** in `src/test/kotlin/.../languages/newlang/`
+
+## Metric Types (from `shared/domain/Metric.kt`)
 
 - `LogicComplexity` - Control flow (if, for, while, etc.)
 - `LogicComplexityConditional` - Conditional matching (e.g., binary expressions with &&, ||)
@@ -74,7 +100,7 @@ NEW_LANG(
 - `Parameter` - Function parameters
 - `MessageChain` / `MessageChainCall` - Method chain detection
 
-## Extract Types (from `features/extraction/model/Extract.kt`)
+## Extract Types (from `shared/domain/Extract.kt`)
 
 - `Identifier(single, multi, customSingle, customMulti)` - Identifier extraction
 - `Comment(format, custom)` - Comment text extraction
@@ -82,11 +108,25 @@ NEW_LANG(
 
 ## Language-Specific Calculation Behavior
 
-Use `CalculationExtensions` (from `features/metrics/domain/CalculationExtensions.kt`) for special cases:
+Use `CalculationExtensions` (from `shared/domain/CalculationExtensions.kt`) for special cases:
 
 ```kotlin
 override val calculationExtensions = CalculationExtensions(
     hasFunctionBodyStartOrEndNode = false,  // Python uses indentation
     ignoreNodeForComplexity = { node, nodeType -> false }
 )
+```
+
+## Directory Structure
+
+Each language follows this pattern:
+
+```
+languages/
+└── java/
+    ├── JavaDefinition.kt         # Combines mappings
+    ├── JavaMetricMapping.kt      # Metric node mappings
+    ├── JavaExtractionMapping.kt  # Extraction node mappings
+    └── extractors/               # Language-specific extractors
+        └── SomeExtractor.kt
 ```
