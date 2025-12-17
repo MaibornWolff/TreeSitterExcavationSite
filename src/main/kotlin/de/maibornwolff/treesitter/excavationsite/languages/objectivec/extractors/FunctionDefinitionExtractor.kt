@@ -1,0 +1,8 @@
+package de.maibornwolff.treesitter.excavationsite.languages.objectivec.extractors
+
+import de.maibornwolff.treesitter.excavationsite.languages.c.extractors.CDeclaratorParser
+import org.treesitter.TSNode
+
+internal fun extractFromFunctionDefinition(node: TSNode, sourceCode: String): String? {
+    return CDeclaratorParser.extractIdentifierFromDeclaratorField(node, sourceCode)
+}

@@ -9,8 +9,8 @@ paths: src/main/kotlin/**/languages/**/*.kt
 1. **Create language definition** in `languages/NewLangDefinition.kt`:
 
 ```kotlin
-import de.maibornwolff.treesitter.excavationsite.features.metrics.domain.Metric
-import de.maibornwolff.treesitter.excavationsite.features.extraction.model.Extract
+import de.maibornwolff.treesitter.excavationsite.integration.metrics.domain.Metric
+import de.maibornwolff.treesitter.excavationsite.integration.extraction.model.Extract
 
 object NewLangDefinition : LanguageDefinition {
     override val nodeMetrics: Map<String, Set<Metric>> = buildMap {

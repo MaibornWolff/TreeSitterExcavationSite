@@ -2,7 +2,7 @@ package de.maibornwolff.treesitter.excavationsite.languages.bash
 
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
-import de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionContext
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 

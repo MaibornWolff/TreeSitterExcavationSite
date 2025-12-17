@@ -84,7 +84,7 @@ class ApiSignatureContractTest {
 
             // Assert
             assertThat(method.returnType.name).isEqualTo(
-                "de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionResult"
+                "de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionResult"
             )
         }
 
@@ -99,7 +99,7 @@ class ApiSignatureContractTest {
 
             // Assert
             assertThat(method.returnType.name).isEqualTo(
-                "de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionResult"
+                "de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionResult"
             )
         }
 

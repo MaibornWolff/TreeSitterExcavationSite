@@ -1,7 +1,7 @@
 package de.maibornwolff.treesitter.excavationsite.api
 
-import de.maibornwolff.treesitter.excavationsite.features.extraction.ExtractionFacade
-import de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionResult
+import de.maibornwolff.treesitter.excavationsite.integration.extraction.ExtractionFacade
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionResult
 import de.maibornwolff.treesitter.excavationsite.languages.LanguageRegistry
 import java.io.File
 
