@@ -51,25 +51,16 @@ object TreeSitterMetrics {
      * @return MetricsResult containing all calculated metrics
      */
     fun parse(content: String, language: Language): MetricsResult {
-        val customProcessor = LanguageRegistry.getMetricsProcessor(language)
-        val metrics = if (customProcessor != null) {
-            customProcessor(content)
-        } else {
-            collectStandardMetrics(content, language)
-        }
-
-        return toMetricsResult(metrics)
-    }
-
-    private fun collectStandardMetrics(content: String, language: Language): Map<String, Double> {
         val definition = LanguageRegistry.getLanguageDefinition(language)
         val treeSitterLanguage = LanguageRegistry.getTreeSitterLanguage(language)
 
-        return MetricsFacade.collectMetrics(
+        val metrics = MetricsFacade.collectMetrics(
             content = content,
             treeSitterLanguage = treeSitterLanguage,
             definition = definition
         )
+
+        return toMetricsResult(metrics)
     }
 
     private fun toMetricsResult(metrics: Map<String, Double>): MetricsResult {

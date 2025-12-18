@@ -168,7 +168,7 @@ class VueMetricsTest {
     }
 
     @Test
-    fun `should count lines of code including template and style`() {
+    fun `should count lines of code for script section only`() {
         // Arrange
         val code = """
             <template>
@@ -188,7 +188,7 @@ class VueMetricsTest {
         val result = TreeSitterMetrics.parse(code, Language.VUE)
 
         // Assert
-        assertThat(result.linesOfCode).isEqualTo(11.0)
+        assertThat(result.linesOfCode).isEqualTo(2.0) // Only script section lines (excluding empty lines)
     }
 
     @Test
@@ -209,7 +209,7 @@ class VueMetricsTest {
         // Assert
         assertThat(result.complexity).isEqualTo(0.0)
         assertThat(result.numberOfFunctions).isEqualTo(0.0)
-        assertThat(result.linesOfCode).isEqualTo(6.0)
+        assertThat(result.linesOfCode).isEqualTo(0.0) // Empty script content has 0 lines
     }
 
     @Test

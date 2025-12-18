@@ -18,10 +18,11 @@ object MetricsFacade {
      * @return A map of metric names to their values
      */
     fun collectMetrics(content: String, treeSitterLanguage: TSLanguage, definition: LanguageDefinition): Map<String, Double> {
+        val processedContent = definition.preprocessor?.invoke(content) ?: content
         val collector = MetricCollector(
             treeSitterLanguage = treeSitterLanguage,
             definition = definition
         )
-        return collector.collectMetrics(content)
+        return collector.collectMetrics(processedContent)
     }
 }

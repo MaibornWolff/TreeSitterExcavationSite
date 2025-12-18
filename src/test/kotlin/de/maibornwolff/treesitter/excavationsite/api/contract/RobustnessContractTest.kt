@@ -467,9 +467,11 @@ class RobustnessContractTest {
         }
 
         @ParameterizedTest
-        @EnumSource(Language::class)
+        @EnumSource(Language::class, names = ["VUE"], mode = EnumSource.Mode.EXCLUDE)
         fun `should return loc greater than or equal to 1 for any non-empty file with newline`(language: Language) {
             // Arrange - file must have at least one newline to count as 1 line
+            // Note: Vue is excluded because it uses a preprocessor that extracts script content,
+            // so a file without a script section would return 0 LOC
             val code = "x\n"
 
             // Act

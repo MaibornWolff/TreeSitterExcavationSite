@@ -21,11 +21,12 @@ object ExtractionFacade {
      * @return A list of extracted text items
      */
     fun extract(content: String, treeSitterLanguage: TSLanguage, definition: LanguageDefinition): List<ExtractedText> {
+        val processedContent = definition.preprocessor?.invoke(content) ?: content
         val extractionNodeTypes = LanguageDefinitionExtractionAdapter(definition)
         val extractor = DirectTextExtractor(
             treeSitterLanguage = treeSitterLanguage,
             extractionNodeTypes = extractionNodeTypes
         )
-        return extractor.extract(content)
+        return extractor.extract(processedContent)
     }
 }

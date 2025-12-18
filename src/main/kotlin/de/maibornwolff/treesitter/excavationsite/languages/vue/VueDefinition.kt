@@ -1,26 +1,21 @@
 package de.maibornwolff.treesitter.excavationsite.languages.vue
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.JavascriptDefinition
 import de.maibornwolff.treesitter.excavationsite.shared.domain.CalculationConfig
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Extract
-import de.maibornwolff.treesitter.excavationsite.shared.domain.IgnoreRule
 import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDefinition
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Metric
 
 /**
- * Unified Vue language definition combining metrics and extraction.
+ * Vue Single File Component language definition.
  *
- * Composes VueMetricMapping and VueExtractionMapping.
+ * Reuses JavaScript's metric and extraction mappings since Vue SFCs
+ * contain JavaScript/TypeScript in their <script> sections.
+ * The preprocessor extracts the script content before parsing.
  */
 object VueDefinition : LanguageDefinition {
-    override val nodeMetrics: Map<String, Set<Metric>> = VueMetricMapping.nodeMetrics
-    override val nodeExtractions: Map<String, Extract> = VueExtractionMapping.nodeExtractions
-
-    private const val IDENTIFIER = "identifier"
-    private const val FUNCTION_DECLARATION = "function_declaration"
-
-    override val calculationConfig = CalculationConfig(
-        ignoreForParameters = listOf(
-            IgnoreRule.TypeWithParentType(IDENTIFIER, FUNCTION_DECLARATION)
-        )
-    )
+    override val nodeMetrics: Map<String, Set<Metric>> = JavascriptDefinition.nodeMetrics
+    override val nodeExtractions: Map<String, Extract> = JavascriptDefinition.nodeExtractions
+    override val calculationConfig: CalculationConfig = JavascriptDefinition.calculationConfig
+    override val preprocessor: ((String) -> String)? = VueScriptExtractor::extractScriptContent
 }
