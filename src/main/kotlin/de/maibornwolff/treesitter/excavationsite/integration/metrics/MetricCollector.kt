@@ -63,7 +63,12 @@ class MetricCollector(
             calculatorsMap.processPerFunctionMetricsForNode(node, nodeType, startRow, endRow)
         }
 
-        return buildMetricsResult(metricValues, rootNode.endPoint.row)
+        val totalLines = when {
+            content.isEmpty() -> 0
+            content.endsWith("\n") -> rootNode.endPoint.row
+            else -> rootNode.endPoint.row + 1
+        }
+        return buildMetricsResult(metricValues, totalLines)
     }
 
     private fun buildMetricsResult(metricValues: Map<AvailableFileMetrics, Int>, totalLines: Int): Map<String, Double> {

@@ -414,4 +414,21 @@ class RubyMetricsTest {
         // Assert
         assertThat(result.messageChains).isEqualTo(1.0)
     }
+
+    @Test
+    fun `should count LOC correctly for code without trailing newline`() {
+        // Arrange - 3 physical lines
+        val code = """
+            a = 1
+            b = 2
+            c = 3
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterMetrics.parse(code, Language.RUBY)
+
+        // Assert - LOC equals RLOC for code without blanks or comments
+        assertThat(result.linesOfCode).isEqualTo(3.0)
+        assertThat(result.realLinesOfCode).isEqualTo(3.0)
+    }
 }

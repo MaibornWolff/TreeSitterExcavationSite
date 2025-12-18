@@ -187,8 +187,8 @@ class VueMetricsTest {
         // Act
         val result = TreeSitterMetrics.parse(code, Language.VUE)
 
-        // Assert
-        assertThat(result.linesOfCode).isEqualTo(2.0) // Only script section lines (excluding empty lines)
+        // Assert - script content is 3 lines: function foo(), return 1;, }
+        assertThat(result.linesOfCode).isEqualTo(3.0)
     }
 
     @Test
@@ -525,5 +525,24 @@ class VueMetricsTest {
         assertThat(result.perFunctionMetrics["min_rloc_per_function"]).isEqualTo(1.0)
         assertThat(result.perFunctionMetrics["mean_rloc_per_function"]).isEqualTo(1.5)
         assertThat(result.perFunctionMetrics["median_rloc_per_function"]).isEqualTo(1.5)
+    }
+
+    @Test
+    fun `should count LOC correctly for code without trailing newline`() {
+        // Arrange - Vue file with 2-line script content
+        val code = """
+            <script>
+            const a = 1;
+            const b = 2;
+            </script>
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterMetrics.parse(code, Language.VUE)
+
+        // Assert - Vue counts only script section lines (2 lines: const a, const b)
+        // LOC equals RLOC for code without blanks or comments
+        assertThat(result.linesOfCode).isEqualTo(2.0)
+        assertThat(result.realLinesOfCode).isEqualTo(2.0)
     }
 }
