@@ -1323,6 +1323,93 @@ class PhpExtractionTest {
     }
 
     @Nested
+    inner class ImportStringTests {
+        @Test
+        fun `should not extract include path strings`() {
+            // Arrange
+            val code = """<?php include 'header.php';"""
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.PHP)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should not extract require path strings`() {
+            // Arrange
+            val code = """<?php require "config.php";"""
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.PHP)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should not extract include_once path strings`() {
+            // Arrange
+            val code = """<?php include_once 'functions.php';"""
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.PHP)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should not extract require_once path strings`() {
+            // Arrange
+            val code = """<?php require_once 'bootstrap.php';"""
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.PHP)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should still extract regular strings alongside includes`() {
+            // Arrange
+            val code = """
+                <?php
+                require 'config.php';
+                ${"$"}message = "Hello World";
+                ${"$"}greeting = 'Welcome';
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.PHP)
+
+            // Assert
+            assertThat(result.strings).containsExactly("Hello World", "Welcome")
+        }
+
+        @Test
+        fun `should handle mixed includes and regular strings`() {
+            // Arrange
+            val code = """
+                <?php
+                require 'config.php';
+                include_once 'header.php';
+                ${"$"}appName = "MyApp";
+                require_once 'footer.php';
+                ${"$"}version = '1.0.0';
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.PHP)
+
+            // Assert
+            assertThat(result.strings).containsExactly("MyApp", "1.0.0")
+        }
+    }
+
+    @Nested
     inner class APITests {
         @Test
         fun `should report extraction is supported for PHP`() {

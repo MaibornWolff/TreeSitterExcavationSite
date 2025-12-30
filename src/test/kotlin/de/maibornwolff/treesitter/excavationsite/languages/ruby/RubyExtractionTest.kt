@@ -481,6 +481,84 @@ class RubyExtractionTest {
         )
     }
 
+    // === Import String Tests ===
+
+    @Test
+    fun `should not extract require path strings`() {
+        // Arrange
+        val code = """
+            require 'json'
+            require "yaml"
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.RUBY)
+
+        // Assert
+        assertThat(result.strings).isEmpty()
+    }
+
+    @Test
+    fun `should not extract require_relative path strings`() {
+        // Arrange
+        val code = """
+            require_relative 'helper'
+            require_relative "./lib/utils"
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.RUBY)
+
+        // Assert
+        assertThat(result.strings).isEmpty()
+    }
+
+    @Test
+    fun `should not extract load path strings`() {
+        // Arrange
+        val code = """load 'config.rb'"""
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.RUBY)
+
+        // Assert
+        assertThat(result.strings).isEmpty()
+    }
+
+    @Test
+    fun `should still extract regular strings alongside requires`() {
+        // Arrange
+        val code = """
+            require 'json'
+            message = "Hello World"
+            greeting = 'Welcome'
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.RUBY)
+
+        // Assert
+        assertThat(result.strings).containsExactly("Hello World", "Welcome")
+    }
+
+    @Test
+    fun `should handle mixed requires and regular strings`() {
+        // Arrange
+        val code = """
+            require 'json'
+            require_relative 'helper'
+            APP_NAME = "MyApp"
+            load 'config.rb'
+            VERSION = '1.0.0'
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.RUBY)
+
+        // Assert
+        assertThat(result.strings).containsExactly("MyApp", "1.0.0")
+    }
+
     // === API Tests ===
 
     @Test

@@ -6,6 +6,8 @@ import de.maibornwolff.treesitter.excavationsite.languages.php.extractors.extrac
 import de.maibornwolff.treesitter.excavationsite.languages.php.extractors.extractConstName
 import de.maibornwolff.treesitter.excavationsite.languages.php.extractors.extractForeachValueVariable
 import de.maibornwolff.treesitter.excavationsite.languages.php.extractors.extractGlobalVariables
+import de.maibornwolff.treesitter.excavationsite.languages.php.extractors.extractNonImportEncapsedString
+import de.maibornwolff.treesitter.excavationsite.languages.php.extractors.extractNonImportString
 import de.maibornwolff.treesitter.excavationsite.languages.php.extractors.extractPropertyName
 import de.maibornwolff.treesitter.excavationsite.languages.php.extractors.extractUseClauseName
 import de.maibornwolff.treesitter.excavationsite.languages.php.extractors.findFirstVariableName
@@ -56,9 +58,9 @@ object PhpExtractionMapping : ExtractionMapping {
         // Comments
         put("comment", Extract.Comment(CommentFormats.AutoDetect))
 
-        // Strings - standard formats
-        put("string", Extract.StringLiteral(format = StringFormats.Quoted(stripSingleQuotes = true)))
-        put("encapsed_string", Extract.StringLiteral(format = StringFormats.Quoted()))
+        // Strings (skip include/require paths)
+        put("string", Extract.StringLiteral(custom = ::extractNonImportString))
+        put("encapsed_string", Extract.StringLiteral(custom = ::extractNonImportEncapsedString))
 
         // Strings - heredoc/nowdoc
         put("heredoc", Extract.StringLiteral(format = StringFormats.PhpHeredoc))

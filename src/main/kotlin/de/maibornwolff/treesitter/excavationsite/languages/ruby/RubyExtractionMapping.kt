@@ -8,6 +8,7 @@ import de.maibornwolff.treesitter.excavationsite.languages.ruby.extractors.extra
 import de.maibornwolff.treesitter.excavationsite.languages.ruby.extractors.extractFromHashKeySymbol
 import de.maibornwolff.treesitter.excavationsite.languages.ruby.extractors.extractFromIdentifierInContext
 import de.maibornwolff.treesitter.excavationsite.languages.ruby.extractors.extractFromRescue
+import de.maibornwolff.treesitter.excavationsite.languages.ruby.extractors.extractNonImportString
 import de.maibornwolff.treesitter.excavationsite.shared.domain.CommentFormats
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Extract
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionMapping
@@ -86,8 +87,8 @@ object RubyExtractionMapping : ExtractionMapping {
         // Comments
         put(COMMENT, Extract.Comment(CommentFormats.AutoDetect))
 
-        // Strings
-        put(STRING, Extract.StringLiteral(format = StringFormats.FromChild(STRING_CONTENT)))
+        // Strings (skip require/require_relative paths)
+        put(STRING, Extract.StringLiteral(custom = ::extractNonImportString))
         put(SIMPLE_SYMBOL, Extract.StringLiteral(format = StringFormats.RubySymbol))
         put(DELIMITED_SYMBOL, Extract.StringLiteral(format = StringFormats.FromChild(STRING_CONTENT)))
         put(HEREDOC_BODY, Extract.StringLiteral(format = StringFormats.Trimmed))

@@ -1404,6 +1404,112 @@ class JavascriptExtractionTest {
     }
 
     @Nested
+    inner class ImportStringTests {
+        @Test
+        fun `should not extract import path strings`() {
+            // Arrange
+            val code = """
+                import { Component } from '@angular/core';
+                import React from "react";
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should not extract export path strings`() {
+            // Arrange
+            val code = """
+                export { foo } from './foo';
+                export * from "../utils";
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should not extract require path strings`() {
+            // Arrange
+            val code = """
+                const fs = require('fs');
+                const path = require("path");
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should still extract regular strings alongside imports`() {
+            // Arrange
+            val code = """
+                import React from 'react';
+                const message = "Hello World";
+                const greeting = 'Welcome';
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).containsExactly("Hello World", "Welcome")
+        }
+
+        @Test
+        fun `should still extract template strings not in imports`() {
+            // Arrange
+            val code = "const msg = `Hello`;"
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).containsExactly("Hello")
+        }
+
+        @Test
+        fun `should not extract dynamic import strings`() {
+            // Arrange
+            val code = """const mod = import('./module');"""
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should handle mixed imports and regular strings`() {
+            // Arrange
+            val code = """
+                import { service } from '@app/services';
+                const config = require('./config');
+                const name = "MyApp";
+                export { utils } from './utils';
+                const version = '1.0.0';
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).containsExactly("MyApp", "1.0.0")
+        }
+    }
+
+    @Nested
     inner class APITests {
         @Test
         fun `should report extraction is supported for JavaScript`() {
