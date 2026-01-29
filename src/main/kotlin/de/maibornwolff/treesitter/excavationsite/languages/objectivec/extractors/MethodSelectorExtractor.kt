@@ -25,14 +25,12 @@ internal fun extractMethodSelector(node: TSNode, sourceCode: String): String? {
     return null
 }
 
-private fun extractSelectorBaseName(selector: TSNode, sourceCode: String): String? {
-    return when (selector.type) {
-        SELECTOR -> TreeTraversal.getNodeText(selector, sourceCode)
-        KEYWORD_SELECTOR -> extractFirstKeyword(selector, sourceCode)
-        IDENTIFIER -> TreeTraversal.getNodeText(selector, sourceCode)
-        else -> TreeTraversal.findChildByType(selector, IDENTIFIER, sourceCode)
-            ?: extractFirstKeyword(selector, sourceCode)
-    }
+private fun extractSelectorBaseName(selector: TSNode, sourceCode: String): String? = when (selector.type) {
+    SELECTOR -> TreeTraversal.getNodeText(selector, sourceCode)
+    KEYWORD_SELECTOR -> extractFirstKeyword(selector, sourceCode)
+    IDENTIFIER -> TreeTraversal.getNodeText(selector, sourceCode)
+    else -> TreeTraversal.findChildByType(selector, IDENTIFIER, sourceCode)
+        ?: extractFirstKeyword(selector, sourceCode)
 }
 
 private fun extractFirstKeyword(node: TSNode, sourceCode: String): String? {

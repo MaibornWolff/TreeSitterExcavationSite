@@ -51,25 +51,16 @@ object TreeSitterMetrics {
      * @return MetricsResult containing all calculated metrics
      */
     fun parse(content: String, language: Language): MetricsResult {
-        val customProcessor = LanguageRegistry.getMetricsProcessor(language)
-        val metrics = if (customProcessor != null) {
-            customProcessor(content)
-        } else {
-            collectStandardMetrics(content, language)
-        }
-
-        return toMetricsResult(metrics)
-    }
-
-    private fun collectStandardMetrics(content: String, language: Language): Map<String, Double> {
         val definition = LanguageRegistry.getLanguageDefinition(language)
         val treeSitterLanguage = LanguageRegistry.getTreeSitterLanguage(language)
 
-        return MetricsFacade.collectMetrics(
+        val metrics = MetricsFacade.collectMetrics(
             content = content,
             treeSitterLanguage = treeSitterLanguage,
             definition = definition
         )
+
+        return toMetricsResult(metrics)
     }
 
     private fun toMetricsResult(metrics: Map<String, Double>): MetricsResult {
@@ -92,18 +83,14 @@ object TreeSitterMetrics {
      *
      * @param extension The file extension including the dot (e.g., ".java")
      */
-    fun isLanguageSupported(extension: String): Boolean {
-        return Language.fromExtension(extension) != null
-    }
+    fun isLanguageSupported(extension: String): Boolean = Language.fromExtension(extension) != null
 
     /**
      * Returns the language for the given file extension, or null if not supported.
      *
      * @param extension The file extension including the dot (e.g., ".java")
      */
-    fun getLanguage(extension: String): Language? {
-        return Language.fromExtension(extension)
-    }
+    fun getLanguage(extension: String): Language? = Language.fromExtension(extension)
 
     /**
      * Returns all supported file extensions.

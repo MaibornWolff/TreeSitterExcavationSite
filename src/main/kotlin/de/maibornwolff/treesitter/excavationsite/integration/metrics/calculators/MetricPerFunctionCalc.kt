@@ -76,9 +76,7 @@ abstract class MetricPerFunctionCalc {
         )
     }
 
-    fun getMetricPerFunction(): List<Int> {
-        return metricPerFunction
-    }
+    fun getMetricPerFunction(): List<Int> = metricPerFunction
 
     fun updateFunctionEndPos(endRow: Int, endColumn: Int) {
         endRowOfLastFunction = endRow

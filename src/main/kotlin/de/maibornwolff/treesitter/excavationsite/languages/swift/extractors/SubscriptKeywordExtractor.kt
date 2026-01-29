@@ -10,6 +10,4 @@ private const val SUBSCRIPT_KEYWORD = "subscript"
 internal fun extractSubscriptKeyword(
     @Suppress("UNUSED_PARAMETER") node: TSNode,
     @Suppress("UNUSED_PARAMETER") sourceCode: String
-): String {
-    return SUBSCRIPT_KEYWORD
-}
+): String = SUBSCRIPT_KEYWORD

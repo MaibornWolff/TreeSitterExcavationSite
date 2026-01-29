@@ -18,10 +18,7 @@ import org.treesitter.TSTreeCursor
  * Walks the AST and looks up each node type in the port's nodeExtractions map
  * to determine what to extract.
  */
-class DirectTextExtractor(
-    private val treeSitterLanguage: TSLanguage,
-    private val extractionNodeTypes: ExtractionNodeTypes
-) {
+class DirectTextExtractor(private val treeSitterLanguage: TSLanguage, private val extractionNodeTypes: ExtractionNodeTypes) {
     private val commentExtractor = CommentExtractor(extractionNodeTypes.commentFormats)
     private val stringExtractor = StringExtractor(extractionNodeTypes.stringFormats)
 

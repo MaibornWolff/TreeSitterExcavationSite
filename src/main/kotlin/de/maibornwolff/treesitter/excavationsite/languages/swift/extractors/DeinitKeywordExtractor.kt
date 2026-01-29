@@ -10,6 +10,4 @@ private const val DEINIT_KEYWORD = "deinit"
 internal fun extractDeinitKeyword(
     @Suppress("UNUSED_PARAMETER") node: TSNode,
     @Suppress("UNUSED_PARAMETER") sourceCode: String
-): String {
-    return DEINIT_KEYWORD
-}
+): String = DEINIT_KEYWORD

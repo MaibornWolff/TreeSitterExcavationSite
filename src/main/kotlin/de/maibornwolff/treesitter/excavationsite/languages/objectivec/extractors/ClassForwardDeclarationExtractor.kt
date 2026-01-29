@@ -6,6 +6,5 @@ import org.treesitter.TSNode
 private const val IDENTIFIER = "identifier"
 private const val TYPE_IDENTIFIER = "type_identifier"
 
-internal fun extractFromClassForwardDeclaration(node: TSNode, sourceCode: String): String? {
-    return TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER, TYPE_IDENTIFIER)
-}
+internal fun extractFromClassForwardDeclaration(node: TSNode, sourceCode: String): String? =
+    TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER, TYPE_IDENTIFIER)

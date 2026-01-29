@@ -16,7 +16,7 @@ jobs:
           distribution: temurin
           java-version: 21
           cache: gradle
-      - run: ./gradlew ktlintCheck
+      - run: ./gradlew ktlintCheck detekt
 
   test:
     needs: lint

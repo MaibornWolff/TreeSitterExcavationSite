@@ -18,18 +18,18 @@ internal fun extractPatternCaptureVariables(
     return if (patternNode != null && !patternNode.isNull) {
         extractCapturesFromNode(patternNode, sourceCode, findFirstIdentifier)
     } else {
-        node.children()
+        node
+            .children()
             .takeWhile {
                 it.type != ":" && it.type != "block"
-            }
-            .filter { it.type != "case" }
+            }.filter { it.type != "case" }
             .flatMap { extractCapturesFromNode(it, sourceCode, findFirstIdentifier) }
             .toList()
     }
 }
 
-private fun extractCapturesFromNode(node: TSNode, sourceCode: String, findFirstIdentifier: (TSNode, String) -> String?): List<String> {
-    return when (node.type) {
+private fun extractCapturesFromNode(node: TSNode, sourceCode: String, findFirstIdentifier: (TSNode, String) -> String?): List<String> =
+    when (node.type) {
         "as_pattern" -> extractCapturesFromAsPattern(node, sourceCode, findFirstIdentifier)
         "keyword_pattern" -> extractCapturesFromKeywordPattern(node, sourceCode, findFirstIdentifier)
         "splat_pattern" -> listOfNotNull(findFirstIdentifier(node, sourceCode))
@@ -43,18 +43,18 @@ private fun extractCapturesFromNode(node: TSNode, sourceCode: String, findFirstI
         }
         else -> node.children().flatMap { extractCapturesFromNode(it, sourceCode, findFirstIdentifier) }.toList()
     }
-}
 
-private fun extractCapturesFromAsPattern(node: TSNode, sourceCode: String, findFirstIdentifier: (TSNode, String) -> String?): List<String> {
-    return node.children().flatMap { child ->
-        if (child.type == "identifier") {
-            val text = TreeTraversal.getNodeText(child, sourceCode)
-            if (text != "_") listOf(text) else emptyList()
-        } else {
-            extractCapturesFromNode(child, sourceCode, findFirstIdentifier)
-        }
-    }.toList()
-}
+private fun extractCapturesFromAsPattern(node: TSNode, sourceCode: String, findFirstIdentifier: (TSNode, String) -> String?): List<String> =
+    node
+        .children()
+        .flatMap { child ->
+            if (child.type == "identifier") {
+                val text = TreeTraversal.getNodeText(child, sourceCode)
+                if (text != "_") listOf(text) else emptyList()
+            } else {
+                extractCapturesFromNode(child, sourceCode, findFirstIdentifier)
+            }
+        }.toList()
 
 private fun extractCapturesFromKeywordPattern(
     node: TSNode,
@@ -78,7 +78,8 @@ private fun isClassNameInPattern(node: TSNode): Boolean {
     return when (parent.type) {
         "class_pattern" -> {
             val classField = parent.getChildByFieldName("class")
-            classField != null && !classField.isNull &&
+            classField != null &&
+                !classField.isNull &&
                 (classField == node || TreeTraversal.isDescendantOf(node, classField))
         }
         "dotted_name" -> parent.parent?.type == "class_pattern"

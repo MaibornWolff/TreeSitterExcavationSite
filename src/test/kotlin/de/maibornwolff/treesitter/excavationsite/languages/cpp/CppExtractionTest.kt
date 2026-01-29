@@ -809,8 +809,7 @@ class CppExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.CPP)
 
         // Assert
-        assertThat(result.comments).hasSize(1)
-        assertThat(result.comments[0]).contains("Calculate the total price")
+        assertThat(result.comments).containsExactly("Calculate the total price.\n@param count Number of items")
     }
 
     // === String Tests ===
@@ -936,20 +935,14 @@ class CppExtractionTest {
 
     @Test
     fun `should return Cpp in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.CPP)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.CPP)).isTrue()
     }
 
     @Test
     fun `should return cpp in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".cpp")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".cpp")).isTrue()
     }
 
     @Test
@@ -978,7 +971,7 @@ class CppExtractionTest {
 
         // Assert - variadic parameter packs have different node types
         // Currently extracts the function name; variadic params would need additional support
-        assertThat(result.identifiers).contains("print")
+        assertThat(result.identifiers).containsExactly("print")
     }
 
     @Test
@@ -1036,7 +1029,7 @@ class CppExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.CPP)
 
         // Assert
-        assertThat(result.identifiers).contains("T")
+        assertThat(result.identifiers).containsExactly("T")
     }
 
     @Test

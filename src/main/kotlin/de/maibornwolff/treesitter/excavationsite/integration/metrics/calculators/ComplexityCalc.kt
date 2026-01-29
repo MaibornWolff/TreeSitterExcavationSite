@@ -8,20 +8,20 @@ import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.Tr
 
 // first, we calculate complexity as only function_complexity and later add logic_complexity to improve performance as:
 // complexity = logic_complexity + function_complexity
-class ComplexityCalc(val nodeTypeProvider: MetricNodeTypes) : MetricPerFileCalc, MetricPerFunctionCalc() {
+class ComplexityCalc(val nodeTypeProvider: MetricNodeTypes) :
+    MetricPerFunctionCalc(),
+    MetricPerFileCalc {
     override val metric = AvailableFunctionMetrics.COMPLEXITY
 
     override fun processMetricForNode(nodeContext: CalculationContext) {
         // nothing needed as we update the complexity per function with the normal complexity
     }
 
-    override fun calculateMetricForNode(nodeContext: CalculationContext): Int {
-        return getComplexityForAllowedNodeTypes(nodeContext, nodeTypeProvider.logicComplexityNodeTypes)
-    }
+    override fun calculateMetricForNode(nodeContext: CalculationContext): Int =
+        getComplexityForAllowedNodeTypes(nodeContext, nodeTypeProvider.logicComplexityNodeTypes)
 
-    fun calculateFunctionComplexityForNode(nodeContext: CalculationContext): Int {
-        return getComplexityForAllowedNodeTypes(nodeContext, nodeTypeProvider.functionComplexityNodeTypes)
-    }
+    fun calculateFunctionComplexityForNode(nodeContext: CalculationContext): Int =
+        getComplexityForAllowedNodeTypes(nodeContext, nodeTypeProvider.functionComplexityNodeTypes)
 
     private fun getComplexityForAllowedNodeTypes(nodeContext: CalculationContext, allowedNodeTypes: TreeNodeTypes): Int {
         val node = nodeContext.node

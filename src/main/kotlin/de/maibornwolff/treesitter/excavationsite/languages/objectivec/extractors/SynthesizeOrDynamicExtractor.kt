@@ -17,6 +17,5 @@ internal fun extractFromSynthesizeOrDynamic(node: TSNode, sourceCode: String): S
     return null
 }
 
-private fun extractFromSynthesizeProperty(node: TSNode, sourceCode: String): String? {
-    return TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER)
-}
+private fun extractFromSynthesizeProperty(node: TSNode, sourceCode: String): String? =
+    TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER)

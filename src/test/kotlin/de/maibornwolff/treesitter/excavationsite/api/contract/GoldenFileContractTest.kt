@@ -36,7 +36,8 @@ class GoldenFileContractTest {
             Language.CPP to "cpp_sample.cpp",
             Language.C to "c_sample.c",
             Language.OBJECTIVE_C to "objc_sample.m",
-            Language.VUE to "vue_sample.vue"
+            Language.VUE to "vue_sample.vue",
+            Language.ABL to "abl_sample.p"
         )
 
         private val GOLDEN_BASE_NAMES = mapOf(
@@ -54,7 +55,8 @@ class GoldenFileContractTest {
             Language.CPP to "cpp_sample",
             Language.C to "c_sample",
             Language.OBJECTIVE_C to "objc_sample",
-            Language.VUE to "vue_sample"
+            Language.VUE to "vue_sample",
+            Language.ABL to "abl_sample"
         )
     }
 
@@ -171,7 +173,6 @@ class GoldenFileContractTest {
                 |
                 |If this change is intentional, set UPDATE_GOLDEN_FILES=true and re-run.
                 """.trimMargin()
-            }
-            .isEqualTo(expected)
+            }.isEqualTo(expected)
     }
 }

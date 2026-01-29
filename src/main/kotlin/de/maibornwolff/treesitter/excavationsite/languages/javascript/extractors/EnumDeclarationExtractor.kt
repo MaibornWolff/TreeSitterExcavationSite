@@ -20,7 +20,8 @@ internal fun extractIdentifiersFromEnumDeclaration(node: TSNode, sourceCode: Str
         IDENTIFIER,
         TYPE_IDENTIFIER
     )
-    val enumMembers = node.children()
+    val enumMembers = node
+        .children()
         .filter { it.type == ENUM_BODY }
         .flatMap { it.children() }
         .mapNotNull { child ->

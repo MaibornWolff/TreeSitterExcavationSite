@@ -12,8 +12,7 @@ private const val SIMPLE_IDENTIFIER = "simple_identifier"
  * Swift parameters can have external and internal names. The internal name
  * (last simple_identifier) is extracted for domain relevance.
  */
-internal fun extractParameterName(node: TSNode, sourceCode: String): String? {
-    return node.children()
-        .lastOrNull { it.type == SIMPLE_IDENTIFIER }
-        ?.let { TreeTraversal.getNodeText(it, sourceCode) }
-}
+internal fun extractParameterName(node: TSNode, sourceCode: String): String? = node
+    .children()
+    .lastOrNull { it.type == SIMPLE_IDENTIFIER }
+    ?.let { TreeTraversal.getNodeText(it, sourceCode) }

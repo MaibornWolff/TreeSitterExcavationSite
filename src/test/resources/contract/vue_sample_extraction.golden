@@ -34,18 +34,3 @@ Simple computed property
 Simple method with no complexity
 
 # Strings
-
-
-
- 
- total: ${count}
-: 
-Hello, World!
-SampleComponent
-Vue Sample
-empty
-error
-one
-three
-two
-unknown

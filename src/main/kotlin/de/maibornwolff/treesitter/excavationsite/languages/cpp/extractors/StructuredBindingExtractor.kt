@@ -6,9 +6,8 @@ import org.treesitter.TSNode
 
 private const val IDENTIFIER = "identifier"
 
-internal fun extractFromStructuredBinding(node: TSNode, sourceCode: String): List<String> {
-    return node.children()
-        .filter { it.type == IDENTIFIER }
-        .map { TreeTraversal.getNodeText(it, sourceCode) }
-        .toList()
-}
+internal fun extractFromStructuredBinding(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .filter { it.type == IDENTIFIER }
+    .map { TreeTraversal.getNodeText(it, sourceCode) }
+    .toList()

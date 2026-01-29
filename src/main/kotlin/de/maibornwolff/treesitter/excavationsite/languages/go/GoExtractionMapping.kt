@@ -9,6 +9,8 @@ import de.maibornwolff.treesitter.excavationsite.languages.go.extractors.extract
 import de.maibornwolff.treesitter.excavationsite.languages.go.extractors.extractFromExpressionList
 import de.maibornwolff.treesitter.excavationsite.languages.go.extractors.extractFromVarDeclaration
 import de.maibornwolff.treesitter.excavationsite.languages.go.extractors.extractIdentifiersFromExpressionListChild
+import de.maibornwolff.treesitter.excavationsite.languages.go.extractors.extractNonImportInterpretedString
+import de.maibornwolff.treesitter.excavationsite.languages.go.extractors.extractNonImportRawString
 import de.maibornwolff.treesitter.excavationsite.languages.go.extractors.extractTypeDeclarationIdentifier
 import de.maibornwolff.treesitter.excavationsite.shared.domain.CommentFormats
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Extract
@@ -80,9 +82,9 @@ object GoExtractionMapping : ExtractionMapping {
         // Comments
         put("comment", Extract.Comment(CommentFormats.AutoDetect))
 
-        // Strings
-        put("raw_string_literal", Extract.StringLiteral(format = StringFormats.Template))
-        put("interpreted_string_literal", Extract.StringLiteral(format = StringFormats.Quoted()))
+        // Strings (skip import paths)
+        put("raw_string_literal", Extract.StringLiteral(custom = ::extractNonImportRawString))
+        put("interpreted_string_literal", Extract.StringLiteral(custom = ::extractNonImportInterpretedString))
         put("rune_literal", Extract.StringLiteral(format = StringFormats.Quoted(stripSingleQuotes = true)))
     }
 }

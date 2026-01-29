@@ -12,12 +12,12 @@ private const val TUPLE_PATTERN = "tuple_pattern"
  *
  * Recursively collects all identifiers from nested tuple patterns.
  */
-internal fun extractAllTuplePatternVariables(node: TSNode, sourceCode: String): List<String> {
-    return collectTuplePatternVariables(node, sourceCode)
-}
+internal fun extractAllTuplePatternVariables(node: TSNode, sourceCode: String): List<String> =
+    collectTuplePatternVariables(node, sourceCode)
 
-private fun collectTuplePatternVariables(node: TSNode, sourceCode: String): List<String> {
-    return node.children().flatMap { child ->
+private fun collectTuplePatternVariables(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .flatMap { child ->
         when (child.type) {
             IDENTIFIER ->
                 listOf(TreeTraversal.getNodeText(child, sourceCode))
@@ -26,4 +26,3 @@ private fun collectTuplePatternVariables(node: TSNode, sourceCode: String): List
             else -> emptyList()
         }
     }.toList()
-}

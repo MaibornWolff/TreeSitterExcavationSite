@@ -7,8 +7,9 @@ import org.treesitter.TSNode
 private const val IDENTIFIER = "identifier"
 private const val LAMBDA_CAPTURE_INITIALIZER = "lambda_capture_initializer"
 
-internal fun extractFromLambdaCaptures(node: TSNode, sourceCode: String): List<String> {
-    return node.children().flatMap { child ->
+internal fun extractFromLambdaCaptures(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .flatMap { child ->
         when (child.type) {
             IDENTIFIER -> listOf(TreeTraversal.getNodeText(child, sourceCode))
             LAMBDA_CAPTURE_INITIALIZER -> {
@@ -19,4 +20,3 @@ internal fun extractFromLambdaCaptures(node: TSNode, sourceCode: String): List<S
             else -> emptyList()
         }
     }.toList()
-}

@@ -10,9 +10,8 @@ private const val VARIABLE_NAME = "variable_name"
  * Extracts all variable names from global declaration.
  * Example: `global $x, $y, $z;` -> ["x", "y", "z"]
  */
-internal fun extractGlobalVariables(node: TSNode, sourceCode: String): List<String> {
-    return node.children()
-        .filter { it.type == VARIABLE_NAME }
-        .map { stripDollarPrefix(TreeTraversal.getNodeText(it, sourceCode)) }
-        .toList()
-}
+internal fun extractGlobalVariables(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .filter { it.type == VARIABLE_NAME }
+    .map { stripDollarPrefix(TreeTraversal.getNodeText(it, sourceCode)) }
+    .toList()

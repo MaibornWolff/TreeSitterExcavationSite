@@ -21,12 +21,13 @@ internal fun extractAttrSymbols(callNode: TSNode, sourceCode: String): List<Stri
     )
     if (methodName !in ATTR_METHODS) return emptyList()
 
-    return callNode.children()
+    return callNode
+        .children()
         .filter { it.type == ARGUMENT_LIST }
         .flatMap { argList ->
-            argList.children()
+            argList
+                .children()
                 .filter { it.type == SIMPLE_SYMBOL }
                 .map { TreeTraversal.getNodeText(it, sourceCode).removePrefix(":") }
-        }
-        .toList()
+        }.toList()
 }

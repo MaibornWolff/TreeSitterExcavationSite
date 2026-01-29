@@ -22,7 +22,9 @@ package de.maibornwolff.treesitter.excavationsite.shared.domain
  * }
  * ```
  */
-interface LanguageDefinition : MetricMapping, ExtractionMapping {
+interface LanguageDefinition :
+    MetricMapping,
+    ExtractionMapping {
     /**
      * Language-specific calculation configuration.
      *
@@ -32,4 +34,16 @@ interface LanguageDefinition : MetricMapping, ExtractionMapping {
      */
     val calculationConfig: CalculationConfig
         get() = CalculationConfig()
+
+    /**
+     * Optional content preprocessor for composite file formats.
+     *
+     * When defined, the preprocessor transforms the source content before parsing.
+     * This is useful for languages like Vue Single File Components where only
+     * a portion of the file (e.g., the <script> section) should be analyzed.
+     *
+     * @return A function that transforms source content, or null for no preprocessing
+     */
+    val preprocessor: ((String) -> String)?
+        get() = null
 }

@@ -17,10 +17,7 @@ import kotlin.math.round
  *
  * Uses the restored calculator architecture with MetricsToCalculatorsMap.
  */
-class MetricCollector(
-    private val treeSitterLanguage: TSLanguage,
-    private val definition: LanguageDefinition
-) {
+class MetricCollector(private val treeSitterLanguage: TSLanguage, private val definition: LanguageDefinition) {
     companion object {
         private const val LONG_METHOD_THRESHOLD = 10
         private const val LONG_PARAMETER_LIST_THRESHOLD = 4
@@ -63,7 +60,12 @@ class MetricCollector(
             calculatorsMap.processPerFunctionMetricsForNode(node, nodeType, startRow, endRow)
         }
 
-        return buildMetricsResult(metricValues, rootNode.endPoint.row)
+        val totalLines = when {
+            content.isEmpty() -> 0
+            content.endsWith("\n") -> rootNode.endPoint.row
+            else -> rootNode.endPoint.row + 1
+        }
+        return buildMetricsResult(metricValues, totalLines)
     }
 
     private fun buildMetricsResult(metricValues: Map<AvailableFileMetrics, Int>, totalLines: Int): Map<String, Double> {
@@ -102,17 +104,12 @@ class MetricCollector(
         return result
     }
 
-    private fun countLongMethods(rlocPerFunction: List<Int>): Int {
-        return rlocPerFunction.count { rloc -> rloc > LONG_METHOD_THRESHOLD }
-    }
+    private fun countLongMethods(rlocPerFunction: List<Int>): Int = rlocPerFunction.count { rloc -> rloc > LONG_METHOD_THRESHOLD }
 
-    private fun countLongParameterLists(parametersPerFunction: List<Int>): Int {
-        return parametersPerFunction.count { params -> params > LONG_PARAMETER_LIST_THRESHOLD }
-    }
+    private fun countLongParameterLists(parametersPerFunction: List<Int>): Int =
+        parametersPerFunction.count { params -> params > LONG_PARAMETER_LIST_THRESHOLD }
 
-    private fun calculateExcessiveComments(commentLines: Int): Double {
-        return if (commentLines > EXCESSIVE_COMMENTS_THRESHOLD) 1.0 else 0.0
-    }
+    private fun calculateExcessiveComments(commentLines: Int): Double = if (commentLines > EXCESSIVE_COMMENTS_THRESHOLD) 1.0 else 0.0
 
     private fun calculateCommentRatio(commentLines: Int, rloc: Int): Double {
         if (rloc <= 0) return 0.0

@@ -1,5 +1,6 @@
 package de.maibornwolff.treesitter.excavationsite.languages
 
+import de.maibornwolff.treesitter.excavationsite.languages.abl.AblDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.bash.BashDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.c.CDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.cpp.CppDefinition
@@ -15,12 +16,10 @@ import de.maibornwolff.treesitter.excavationsite.languages.python.PythonDefiniti
 import de.maibornwolff.treesitter.excavationsite.languages.ruby.RubyDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.swift.SwiftDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.vue.VueDefinition
-import de.maibornwolff.treesitter.excavationsite.languages.vue.VueExtractionProcessor
-import de.maibornwolff.treesitter.excavationsite.languages.vue.VueMetricsProcessor
-import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractedText
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Language
 import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDefinition
 import org.treesitter.TSLanguage
+import org.treesitter.TreeSitterAbl
 import org.treesitter.TreeSitterBash
 import org.treesitter.TreeSitterC
 import org.treesitter.TreeSitterCSharp
@@ -35,7 +34,6 @@ import org.treesitter.TreeSitterPython
 import org.treesitter.TreeSitterRuby
 import org.treesitter.TreeSitterSwift
 import org.treesitter.TreeSitterTypescript
-import org.treesitter.TreeSitterVue
 
 /**
  * Registry that maps Language enum values to their TreeSitter language and definition.
@@ -47,68 +45,44 @@ object LanguageRegistry {
     /**
      * Returns a new TreeSitter language parser instance for the given language.
      */
-    fun getTreeSitterLanguage(language: Language): TSLanguage {
-        return when (language) {
-            Language.JAVA -> TreeSitterJava()
-            Language.KOTLIN -> TreeSitterKotlin()
-            Language.TYPESCRIPT -> TreeSitterTypescript()
-            Language.JAVASCRIPT -> TreeSitterJavascript()
-            Language.PYTHON -> TreeSitterPython()
-            Language.GO -> TreeSitterGo()
-            Language.PHP -> TreeSitterPhp()
-            Language.RUBY -> TreeSitterRuby()
-            Language.SWIFT -> TreeSitterSwift()
-            Language.BASH -> TreeSitterBash()
-            Language.CSHARP -> TreeSitterCSharp()
-            Language.CPP -> TreeSitterCpp()
-            Language.C -> TreeSitterC()
-            Language.OBJECTIVE_C -> TreeSitterObjc()
-            Language.VUE -> TreeSitterVue()
-        }
+    fun getTreeSitterLanguage(language: Language): TSLanguage = when (language) {
+        Language.JAVA -> TreeSitterJava()
+        Language.KOTLIN -> TreeSitterKotlin()
+        Language.TYPESCRIPT -> TreeSitterTypescript()
+        Language.JAVASCRIPT -> TreeSitterJavascript()
+        Language.PYTHON -> TreeSitterPython()
+        Language.GO -> TreeSitterGo()
+        Language.PHP -> TreeSitterPhp()
+        Language.RUBY -> TreeSitterRuby()
+        Language.SWIFT -> TreeSitterSwift()
+        Language.BASH -> TreeSitterBash()
+        Language.CSHARP -> TreeSitterCSharp()
+        Language.CPP -> TreeSitterCpp()
+        Language.C -> TreeSitterC()
+        Language.OBJECTIVE_C -> TreeSitterObjc()
+        Language.VUE -> TreeSitterJavascript()
+        Language.ABL -> TreeSitterAbl()
     }
 
     /**
      * Returns the language definition for the given language.
      */
-    fun getLanguageDefinition(language: Language): LanguageDefinition {
-        return when (language) {
-            Language.JAVA -> JavaDefinition
-            Language.KOTLIN -> KotlinDefinition
-            Language.TYPESCRIPT -> TypescriptDefinition
-            Language.JAVASCRIPT -> JavascriptDefinition
-            Language.PYTHON -> PythonDefinition
-            Language.GO -> GoDefinition
-            Language.PHP -> PhpDefinition
-            Language.RUBY -> RubyDefinition
-            Language.SWIFT -> SwiftDefinition
-            Language.BASH -> BashDefinition
-            Language.CSHARP -> CSharpDefinition
-            Language.CPP -> CppDefinition
-            Language.C -> CDefinition
-            Language.OBJECTIVE_C -> ObjectiveCDefinition
-            Language.VUE -> VueDefinition
-        }
-    }
-
-    /**
-     * Returns a custom metrics processor for languages that require special handling.
-     * Returns null if the language uses standard processing.
-     */
-    fun getMetricsProcessor(language: Language): ((String) -> Map<String, Double>)? {
-        return when (language) {
-            Language.VUE -> VueMetricsProcessor::calculateMetrics
-            else -> null
-        }
-    }
-
-    /**
-     * Returns a custom extraction processor for languages that require special handling.
-     * Returns null if the language uses standard processing.
-     */
-    fun getExtractionProcessor(language: Language): ((String) -> List<ExtractedText>)? {
-        return when (language) {
-            Language.VUE -> VueExtractionProcessor::extract
-            else -> null
-        }
+    fun getLanguageDefinition(language: Language): LanguageDefinition = when (language) {
+        Language.JAVA -> JavaDefinition
+        Language.KOTLIN -> KotlinDefinition
+        Language.TYPESCRIPT -> TypescriptDefinition
+        Language.JAVASCRIPT -> JavascriptDefinition
+        Language.PYTHON -> PythonDefinition
+        Language.GO -> GoDefinition
+        Language.PHP -> PhpDefinition
+        Language.RUBY -> RubyDefinition
+        Language.SWIFT -> SwiftDefinition
+        Language.BASH -> BashDefinition
+        Language.CSHARP -> CSharpDefinition
+        Language.CPP -> CppDefinition
+        Language.C -> CDefinition
+        Language.OBJECTIVE_C -> ObjectiveCDefinition
+        Language.VUE -> VueDefinition
+        Language.ABL -> AblDefinition
     }
 }

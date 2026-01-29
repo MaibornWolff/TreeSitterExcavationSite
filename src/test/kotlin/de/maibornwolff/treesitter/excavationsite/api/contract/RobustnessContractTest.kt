@@ -467,9 +467,11 @@ class RobustnessContractTest {
         }
 
         @ParameterizedTest
-        @EnumSource(Language::class)
+        @EnumSource(Language::class, names = ["VUE"], mode = EnumSource.Mode.EXCLUDE)
         fun `should return loc greater than or equal to 1 for any non-empty file with newline`(language: Language) {
             // Arrange - file must have at least one newline to count as 1 line
+            // Note: Vue is excluded because it uses a preprocessor that extracts script content,
+            // so a file without a script section would return 0 LOC
             val code = "x\n"
 
             // Act
@@ -580,9 +582,8 @@ class RobustnessContractTest {
          * Returns a minimal but valid code sample for the given language
          * that includes a function, comment, and string literal.
          */
-        private fun getMinimalCodeSample(language: Language): String {
-            return when (language) {
-                Language.JAVA -> """
+        private fun getMinimalCodeSample(language: Language): String = when (language) {
+            Language.JAVA -> """
                     // Comment
                     public class Test {
                         public void foo() {
@@ -590,60 +591,60 @@ class RobustnessContractTest {
                             if (true) {}
                         }
                     }
-                """.trimIndent()
-                Language.KOTLIN -> """
+            """.trimIndent()
+            Language.KOTLIN -> """
                     // Comment
                     fun foo() {
                         val s = "hello"
                         if (true) {}
                     }
-                """.trimIndent()
-                Language.TYPESCRIPT, Language.JAVASCRIPT -> """
+            """.trimIndent()
+            Language.TYPESCRIPT, Language.JAVASCRIPT -> """
                     // Comment
                     function foo() {
                         let s = "hello";
                         if (true) {}
                     }
-                """.trimIndent()
-                Language.PYTHON -> """
+            """.trimIndent()
+            Language.PYTHON -> """
                     # Comment
                     def foo():
                         s = "hello"
                         if True:
                             pass
-                """.trimIndent()
-                Language.GO -> """
+            """.trimIndent()
+            Language.GO -> """
                     // Comment
                     package main
                     func foo() {
                         s := "hello"
                         if true {}
                     }
-                """.trimIndent()
-                Language.PHP -> """
+            """.trimIndent()
+            Language.PHP -> """
                     <?php
                     // Comment
                     function foo() {
                         ${"$"}s = "hello";
                         if (true) {}
                     }
-                """.trimIndent()
-                Language.RUBY -> """
+            """.trimIndent()
+            Language.RUBY -> """
                     # Comment
                     def foo
                         s = "hello"
                         if true
                         end
                     end
-                """.trimIndent()
-                Language.SWIFT -> """
+            """.trimIndent()
+            Language.SWIFT -> """
                     // Comment
                     func foo() {
                         let s = "hello"
                         if true {}
                     }
-                """.trimIndent()
-                Language.BASH -> """
+            """.trimIndent()
+            Language.BASH -> """
                     # Comment
                     foo() {
                         s="hello"
@@ -651,8 +652,8 @@ class RobustnessContractTest {
                             :
                         fi
                     }
-                """.trimIndent()
-                Language.CSHARP -> """
+            """.trimIndent()
+            Language.CSHARP -> """
                     // Comment
                     public class Test {
                         public void Foo() {
@@ -660,22 +661,22 @@ class RobustnessContractTest {
                             if (true) {}
                         }
                     }
-                """.trimIndent()
-                Language.CPP, Language.C -> """
+            """.trimIndent()
+            Language.CPP, Language.C -> """
                     // Comment
                     void foo() {
                         char* s = "hello";
                         if (1) {}
                     }
-                """.trimIndent()
-                Language.OBJECTIVE_C -> """
+            """.trimIndent()
+            Language.OBJECTIVE_C -> """
                     // Comment
                     void foo() {
                         NSString* s = @"hello";
                         if (1) {}
                     }
-                """.trimIndent()
-                Language.VUE -> """
+            """.trimIndent()
+            Language.VUE -> """
                     <script>
                     // Comment
                     function foo() {
@@ -683,8 +684,15 @@ class RobustnessContractTest {
                         if (true) {}
                     }
                     </script>
-                """.trimIndent()
-            }
+            """.trimIndent()
+            Language.ABL -> """
+                    // Comment
+                    PROCEDURE foo:
+                        DEFINE VARIABLE s AS CHARACTER NO-UNDO.
+                        s = "hello".
+                        IF TRUE THEN MESSAGE s.
+                    END PROCEDURE.
+            """.trimIndent()
         }
     }
 }

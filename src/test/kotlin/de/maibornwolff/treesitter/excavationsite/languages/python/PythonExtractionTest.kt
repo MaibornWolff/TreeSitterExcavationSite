@@ -1163,19 +1163,13 @@ class PythonExtractionTest {
 
     @Test
     fun `should return Python in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.PYTHON)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.PYTHON)).isTrue()
     }
 
     @Test
     fun `should return py in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".py")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".py")).isTrue()
     }
 }

@@ -1,17 +1,19 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractArrowFunctionSingleParameter
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractFirstBindingIdentifiers
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractIdentifiersFromClassDeclaration
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractIdentifiersFromEnumDeclaration
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractIdentifiersFromFormalParameters
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractIdentifiersFromMethodDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractIdentifiersFromVariableDeclarator
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractNonImportString
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractNonImportTemplateString
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractPropertyName
 import de.maibornwolff.treesitter.excavationsite.shared.domain.CommentFormats
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Extract
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionMapping
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionStrategy
-import de.maibornwolff.treesitter.excavationsite.shared.domain.StringFormats
 
 /**
  * JavaScript extraction definitions.
@@ -50,7 +52,7 @@ object JavascriptExtractionMapping : ExtractionMapping {
         )
         put(
             "arrow_function",
-            Extract.Identifier(single = ExtractionStrategy.FirstChildByType(IDENTIFIER))
+            Extract.Identifier(customSingle = ::extractArrowFunctionSingleParameter)
         )
         put(
             "required_parameter",
@@ -87,8 +89,8 @@ object JavascriptExtractionMapping : ExtractionMapping {
         put("comment", Extract.Comment(CommentFormats.AutoDetect))
         put("html_comment", Extract.Comment(CommentFormats.AutoDetect))
 
-        // Strings
-        put("string", Extract.StringLiteral(format = StringFormats.Quoted(stripSingleQuotes = true)))
-        put("template_string", Extract.StringLiteral(format = StringFormats.Template))
+        // Strings (skip import paths)
+        put("string", Extract.StringLiteral(custom = ::extractNonImportString))
+        put("template_string", Extract.StringLiteral(custom = ::extractNonImportTemplateString))
     }
 }

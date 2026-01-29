@@ -18,11 +18,12 @@ internal fun extractDecoratorName(node: TSNode, sourceCode: String): String? {
                 return TreeTraversal.getNodeText(child, sourceCode)
             }
             CALL_EXPRESSION -> {
-                TreeTraversal.findFirstChildTextByType(
-                    child,
-                    sourceCode,
-                    IDENTIFIER
-                )?.let { return it }
+                TreeTraversal
+                    .findFirstChildTextByType(
+                        child,
+                        sourceCode,
+                        IDENTIFIER
+                    )?.let { return it }
             }
         }
     }

@@ -16,35 +16,34 @@ private const val SHORTHAND_PROPERTY_IDENTIFIER_PATTERN = "shorthand_property_id
 /**
  * Recursively extracts identifiers from destructuring patterns.
  */
-internal fun extractIdentifiersFromPattern(node: TSNode, sourceCode: String): List<String> {
-    return when (node.type) {
-        SHORTHAND_PROPERTY_IDENTIFIER_PATTERN,
-        IDENTIFIER -> {
-            listOf(TreeTraversal.getNodeText(node, sourceCode))
-        }
-        PAIR_PATTERN -> extractIdentifiersFromPairPattern(node, sourceCode)
-        OBJECT_ASSIGNMENT_PATTERN,
-        ASSIGNMENT_PATTERN -> {
-            extractIdentifiersFromAssignmentPattern(node, sourceCode)
-        }
-        REST_PATTERN -> {
-            listOfNotNull(
-                TreeTraversal.findFirstChildTextByType(
-                    node,
-                    sourceCode,
-                    IDENTIFIER
-                )
-            )
-        }
-        else -> node.children().flatMap { extractIdentifiersFromPattern(it, sourceCode) }.toList()
+internal fun extractIdentifiersFromPattern(node: TSNode, sourceCode: String): List<String> = when (node.type) {
+    SHORTHAND_PROPERTY_IDENTIFIER_PATTERN,
+    IDENTIFIER -> {
+        listOf(TreeTraversal.getNodeText(node, sourceCode))
     }
+    PAIR_PATTERN -> extractIdentifiersFromPairPattern(node, sourceCode)
+    OBJECT_ASSIGNMENT_PATTERN,
+    ASSIGNMENT_PATTERN -> {
+        extractIdentifiersFromAssignmentPattern(node, sourceCode)
+    }
+    REST_PATTERN -> {
+        listOfNotNull(
+            TreeTraversal.findFirstChildTextByType(
+                node,
+                sourceCode,
+                IDENTIFIER
+            )
+        )
+    }
+    else -> node.children().flatMap { extractIdentifiersFromPattern(it, sourceCode) }.toList()
 }
 
 /**
  * Extracts identifiers from pair patterns in object destructuring.
  */
-internal fun extractIdentifiersFromPairPattern(node: TSNode, sourceCode: String): List<String> {
-    return node.children().flatMap { child ->
+internal fun extractIdentifiersFromPairPattern(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .flatMap { child ->
         when (child.type) {
             IDENTIFIER -> {
                 listOf(TreeTraversal.getNodeText(child, sourceCode))
@@ -54,13 +53,10 @@ internal fun extractIdentifiersFromPairPattern(node: TSNode, sourceCode: String)
             else -> emptyList()
         }
     }.toList()
-}
 
 /**
  * Extracts identifiers from assignment patterns with default values.
  */
-internal fun extractIdentifiersFromAssignmentPattern(node: TSNode, sourceCode: String): List<String> {
-    return node.children().firstOrNull()?.let {
-        extractIdentifiersFromPattern(it, sourceCode)
-    } ?: emptyList()
-}
+internal fun extractIdentifiersFromAssignmentPattern(node: TSNode, sourceCode: String): List<String> = node.children().firstOrNull()?.let {
+    extractIdentifiersFromPattern(it, sourceCode)
+} ?: emptyList()

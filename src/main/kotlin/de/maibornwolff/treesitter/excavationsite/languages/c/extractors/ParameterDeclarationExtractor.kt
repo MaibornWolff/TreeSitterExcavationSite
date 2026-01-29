@@ -5,6 +5,5 @@ import org.treesitter.TSNode
 /**
  * Extracts identifier from parameter declaration.
  */
-internal fun extractFromParameterDeclaration(node: TSNode, sourceCode: String): String? {
-    return CDeclaratorParser.extractIdentifierFromDeclaratorField(node, sourceCode)
-}
+internal fun extractFromParameterDeclaration(node: TSNode, sourceCode: String): String? =
+    CDeclaratorParser.extractIdentifierFromDeclaratorField(node, sourceCode)

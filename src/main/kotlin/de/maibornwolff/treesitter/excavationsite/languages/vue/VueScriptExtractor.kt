@@ -20,7 +20,5 @@ object VueScriptExtractor {
     /**
      * Checks if the Vue file has a script section.
      */
-    fun hasScriptSection(content: String): Boolean {
-        return SCRIPT_REGEX.containsMatchIn(content)
-    }
+    fun hasScriptSection(content: String): Boolean = SCRIPT_REGEX.containsMatchIn(content)
 }
