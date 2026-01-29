@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
     alias(libs.plugins.sonarqube)
     jacoco
     `java-library`
@@ -49,6 +50,14 @@ dependencies {
 
 kotlin {
     jvmToolchain(17)
+    compilerOptions {
+        allWarningsAsErrors.set(true)
+    }
+}
+
+detekt {
+    config.setFrom("$projectDir/config/detekt/detekt.yml")
+    buildUponDefaultConfig = true
 }
 
 tasks.test {
