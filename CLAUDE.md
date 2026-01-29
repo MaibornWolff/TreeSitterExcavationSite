@@ -37,6 +37,6 @@ Detailed guidelines are in `.claude/rules/`:
 | `architecture.md` | Vertical slice + hexagonal architecture |
 | `api-usage.md` | API usage patterns (applies to `api/` files) |
 | `language-definitions.md` | Adding new languages (applies to `languages/` files) |
-| `metrics.md` | Metric calculator patterns (applies to `features/metrics/` files) |
-| `extraction.md` | Text extraction patterns (applies to `features/extraction/` files) |
+| `metrics.md` | Metric calculator patterns (applies to `integration/metrics/` files) |
+| `extraction.md` | Text extraction patterns (applies to `integration/extraction/` files) |
 | `testing.md` | Testing conventions (applies to test files) |

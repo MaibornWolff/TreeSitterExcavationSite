@@ -1,31 +1,17 @@
+@file:Suppress("unused")
+
 package de.maibornwolff.treesitter.excavationsite.api
 
-import de.maibornwolff.treesitter.excavationsite.features.metrics.MetricsFacade
+import de.maibornwolff.treesitter.excavationsite.integration.metrics.MetricsFacade
 import de.maibornwolff.treesitter.excavationsite.languages.LanguageRegistry
+import de.maibornwolff.treesitter.excavationsite.shared.domain.Language
+import de.maibornwolff.treesitter.excavationsite.shared.domain.MetricsResult
 import java.io.File
 
 /**
- * Result of parsing a file for metrics.
- *
- * @property metrics Map of metric names to their values
- * @property perFunctionMetrics Map of per-function metric aggregations (min, max, mean, median)
+ * Re-export MetricsResult from shared/domain for public API backward compatibility.
  */
-data class MetricsResult(
-    val metrics: Map<String, Double>,
-    val perFunctionMetrics: Map<String, Double> = emptyMap()
-) {
-    val complexity: Double get() = metrics["complexity"] ?: 0.0
-    val logicComplexity: Double get() = metrics["logic_complexity"] ?: 0.0
-    val commentLines: Double get() = metrics["comment_lines"] ?: 0.0
-    val realLinesOfCode: Double get() = metrics["rloc"] ?: 0.0
-    val linesOfCode: Double get() = metrics["loc"] ?: 0.0
-    val numberOfFunctions: Double get() = metrics["number_of_functions"] ?: 0.0
-    val longMethod: Double get() = metrics["long_method"] ?: 0.0
-    val longParameterList: Double get() = metrics["long_parameter_list"] ?: 0.0
-    val excessiveComments: Double get() = metrics["excessive_comments"] ?: 0.0
-    val commentRatio: Double get() = metrics["comment_ratio"] ?: 0.0
-    val messageChains: Double get() = metrics["message_chains"] ?: 0.0
-}
+typealias MetricsResult = MetricsResult
 
 /**
  * Main entry point for calculating code metrics using TreeSitter.
@@ -74,6 +60,10 @@ object TreeSitterMetrics {
             definition = definition
         )
 
+        return toMetricsResult(metrics)
+    }
+
+    private fun toMetricsResult(metrics: Map<String, Double>): MetricsResult {
         val perFunctionMetrics = metrics.filterKeys { key ->
             key.endsWith("_per_function")
         }

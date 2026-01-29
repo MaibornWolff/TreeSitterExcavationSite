@@ -148,7 +148,7 @@ Aggregations (max, min, mean, median) for:
 ```
 src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 ├── api/                           # Public API (TreeSitterMetrics, TreeSitterExtraction)
-├── features/                      # Feature slices (vertical slice architecture)
+├── integration/                   # Feature integration (vertical slice architecture)
 │   ├── metrics/                   # Metrics feature
 │   │   ├── domain/                # Feature-specific models
 │   │   ├── ports/                 # Interfaces (MetricNodeTypes)
@@ -157,15 +157,15 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 │   └── extraction/                # Extraction feature
 │       ├── ports/                 # Interfaces (ExtractionNodeTypes)
 │       ├── adapters/              # Language definition adapters
-│       ├── model/                 # ExtractedText, ExtractionResult
-│       ├── extractors/            # Extraction logic
-│       │   ├── common/            # Shared extractors
-│       │   └── languagespecific/  # Per-language extractors
-│       └── parsers/               # Text parsing utilities
+│       └── extractors/common/     # Shared extractors
 ├── languages/                     # Language definitions (14 languages)
-│   └── *Definition.kt             # Per-language node mappings
+│   └── <lang>/                    # Per-language directory
+│       ├── *Definition.kt         # Combines metric and extraction mappings
+│       ├── *MetricMapping.kt      # Metric node mappings
+│       ├── *ExtractionMapping.kt  # Extraction node mappings
+│       └── extractors/            # Language-specific extractors
 └── shared/                        # Cross-cutting concerns
-    ├── domain/                    # Core types (Metric, Extract, etc.)
+    ├── domain/                    # Core types (Metric, Extract, ExtractionResult, etc.)
     └── infrastructure/walker/     # Tree traversal utilities
 ```
 

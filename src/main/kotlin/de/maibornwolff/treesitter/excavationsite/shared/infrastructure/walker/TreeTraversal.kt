@@ -72,6 +72,31 @@ object TreeTraversal {
     }
 
     /**
+     * Checks if the node has an ancestor of any of the given types.
+     */
+    fun hasAncestorOfTypes(node: TSNode, vararg types: String): Boolean {
+        val typeSet = types.toSet()
+        var current = node.parent
+        while (current != null && !current.isNull) {
+            if (current.type in typeSet) return true
+            current = current.parent
+        }
+        return false
+    }
+
+    /**
+     * Finds the first ancestor of the given type, or null if none exists.
+     */
+    fun findAncestorOfType(node: TSNode, type: String): TSNode? {
+        var current = node.parent
+        while (current != null && !current.isNull) {
+            if (current.type == type) return current
+            current = current.parent
+        }
+        return null
+    }
+
+    /**
      * Checks if the node is a descendant of the given ancestor node.
      */
     fun isDescendantOf(node: TSNode, ancestor: TSNode): Boolean {

@@ -2,7 +2,7 @@ package de.maibornwolff.treesitter.excavationsite.languages.typescript
 
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
-import de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionContext
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -449,7 +449,7 @@ class TypescriptExtractionTest {
             val result = TreeSitterExtraction.extract(code, Language.TYPESCRIPT)
 
             // Assert
-            assertThat(result.identifiers).contains("identity", "T", "x")
+            assertThat(result.identifiers).containsExactly("identity", "T", "x")
         }
 
         @Test
@@ -574,7 +574,8 @@ class TypescriptExtractionTest {
             val result = TreeSitterExtraction.extract(code, Language.TYPESCRIPT)
 
             // Assert
-            assertThat(result.identifiers).contains("MyClass", "myProperty")
+            // Note: Property decorators like @Input() are not extracted, only class/method/accessor decorators
+            assertThat(result.identifiers).containsExactly("MyClass", "myProperty")
         }
 
         @Test
@@ -590,7 +591,8 @@ class TypescriptExtractionTest {
             val result = TreeSitterExtraction.extract(code, Language.TYPESCRIPT)
 
             // Assert
-            assertThat(result.identifiers).contains("MyClass", "myMethod")
+            // Note: Parameter decorators like @Inject() are not extracted, only class/method/accessor decorators
+            assertThat(result.identifiers).containsExactly("MyClass", "myMethod", "service")
         }
 
         @Test
@@ -625,7 +627,7 @@ class TypescriptExtractionTest {
             val result = TreeSitterExtraction.extract(code, Language.TYPESCRIPT)
 
             // Assert
-            assertThat(result.identifiers).contains("Point", "configurable", "x")
+            assertThat(result.identifiers).containsExactly("Point", "configurable", "x")
         }
     }
 
@@ -1008,8 +1010,8 @@ class TypescriptExtractionTest {
             val result = TreeSitterExtraction.extract(code, Language.TYPESCRIPT)
 
             // Assert
-            // Note: Variable name extraction for arrow functions with JSX may be limited
-            assertThat(result.identifiers).contains("props")
+            // Note: Variable name for arrow function with JSX is not extracted via const declarator
+            assertThat(result.identifiers).containsExactly("props")
         }
 
         @Test
@@ -1043,7 +1045,8 @@ class TypescriptExtractionTest {
             val result = TreeSitterExtraction.extract(code, Language.TYPESCRIPT)
 
             // Assert
-            assertThat(result.identifiers).contains("List", "T", "items")
+            // Note: JSX tag names like 'ul' are also extracted
+            assertThat(result.identifiers).containsExactly("List", "T", "props", "items", "ul")
         }
     }
 
@@ -1272,20 +1275,15 @@ class TypescriptExtractionTest {
 
         @Test
         fun `should return TypeScript in supported languages`() {
-            // Act
-            val supported = TreeSitterExtraction.getSupportedLanguages()
-
-            // Assert
-            assertThat(supported).contains(Language.TYPESCRIPT)
+            // Act & Assert
+            assertThat(TreeSitterExtraction.isExtractionSupported(Language.TYPESCRIPT)).isTrue()
         }
 
         @Test
         fun `should return ts and tsx in supported extensions`() {
-            // Act
-            val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-            // Assert
-            assertThat(extensions).contains(".ts", ".tsx")
+            // Act & Assert
+            assertThat(TreeSitterExtraction.isExtractionSupported(".ts")).isTrue()
+            assertThat(TreeSitterExtraction.isExtractionSupported(".tsx")).isTrue()
         }
     }
 
@@ -1405,7 +1403,7 @@ class TypescriptExtractionTest {
             val result = TreeSitterExtraction.extract(code, Language.TYPESCRIPT)
 
             // Assert
-            assertThat(result.identifiers).contains("Injectable", "Repository", "T", "items", "Log", "find", "id")
+            assertThat(result.identifiers).containsExactly("Injectable", "Repository", "T", "items", "Log", "find", "id")
         }
     }
 

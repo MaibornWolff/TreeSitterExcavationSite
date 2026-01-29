@@ -1,6 +1,25 @@
 package de.maibornwolff.treesitter.excavationsite.languages
 
+import de.maibornwolff.treesitter.excavationsite.languages.abl.AblDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.bash.BashDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.c.CDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.cpp.CppDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.csharp.CSharpDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.go.GoDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.java.JavaDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.JavascriptDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.TypescriptDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.kotlin.KotlinDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.objectivec.ObjectiveCDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.php.PhpDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.python.PythonDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.ruby.RubyDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.swift.SwiftDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.vue.VueDefinition
+import de.maibornwolff.treesitter.excavationsite.shared.domain.Language
+import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDefinition
 import org.treesitter.TSLanguage
+import org.treesitter.TreeSitterAbl
 import org.treesitter.TreeSitterBash
 import org.treesitter.TreeSitterC
 import org.treesitter.TreeSitterCSharp
@@ -42,6 +61,8 @@ object LanguageRegistry {
             Language.CPP -> TreeSitterCpp()
             Language.C -> TreeSitterC()
             Language.OBJECTIVE_C -> TreeSitterObjc()
+            Language.VUE -> TreeSitterJavascript()
+            Language.ABL -> TreeSitterAbl()
         }
     }
 
@@ -64,6 +85,8 @@ object LanguageRegistry {
             Language.CPP -> CppDefinition
             Language.C -> CDefinition
             Language.OBJECTIVE_C -> ObjectiveCDefinition
+            Language.VUE -> VueDefinition
+            Language.ABL -> AblDefinition
         }
     }
 }

@@ -10,11 +10,11 @@ The codebase follows a vertical slice architecture where each feature (metrics, 
 src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 ├── api/                           # Public API (thin facade)
 │   ├── Language.kt                # Public enum of supported languages
-│   ├── TreeSitterMetrics.kt       # Delegates to features/metrics/
-│   ├── TreeSitterExtraction.kt    # Delegates to features/extraction/
+│   ├── TreeSitterMetrics.kt       # Delegates to integration/metrics/
+│   ├── TreeSitterExtraction.kt    # Delegates to integration/extraction/
 │   ├── AvailableMetrics.kt        # Public metric enums
-│   └── ExtractionTypes.kt         # Public extraction types
-├── features/                      # Feature slices (vertical slices)
+│   └── ExtractionTypes.kt         # Public extraction types (re-exports)
+├── integration/                   # Feature integration (vertical slices)
 │   ├── metrics/                   # Metrics feature
 │   │   ├── domain/                # Feature-specific models (CalculationContext, etc.)
 │   │   ├── ports/                 # Interfaces (MetricNodeTypes)
@@ -26,19 +26,18 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 │   └── extraction/                # Extraction feature
 │       ├── ports/                 # Interfaces (ExtractionNodeTypes)
 │       ├── adapters/              # Adapters (LanguageDefinitionExtractionAdapter)
-│       ├── model/                 # ExtractedText, ExtractionContext
-│       ├── extractors/            # Extraction logic
-│       │   ├── common/            # Common extractors (CommentExtractor, StringExtractor)
-│       │   └── languagespecific/  # Per-language extractors
-│       ├── parsers/               # Text parsing utilities
+│       ├── extractors/common/     # Common extractors (CommentExtractor, StringExtractor)
 │       ├── ExtractionFacade.kt    # Feature entry point
 │       ├── ExtractionExecutor.kt  # Orchestrates extraction
 │       └── DirectTextExtractor.kt # AST walker
 ├── languages/                     # Language definitions
 │   ├── Language.kt                # Internal language enum with definitions
 │   ├── LanguageRegistry.kt        # Language lookup
-│   ├── LanguageDefinition.kt      # Interface for language definitions
-│   └── *Definition.kt             # Per-language definitions (14 languages)
+│   └── <lang>/                    # Per-language directory (14 languages)
+│       ├── *Definition.kt         # Combines metric and extraction mappings
+│       ├── *MetricMapping.kt      # Metric node type mappings
+│       ├── *ExtractionMapping.kt  # Extraction node type mappings
+│       └── extractors/            # Language-specific extractors
 └── shared/                        # Cross-cutting concerns
     ├── domain/                    # Domain core (innermost layer - no dependencies)
     │   ├── Metric.kt              # Metric types
@@ -46,8 +45,16 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
     │   ├── CalculationExtensions.kt  # Language-specific calculation hooks
     │   ├── Extract.kt             # Extraction behavior types
     │   ├── ExtractionStrategy.kt  # Generic extraction strategies
+    │   ├── ExtractionResult.kt    # Extraction result data class
+    │   ├── ExtractedText.kt       # Extracted text with context
+    │   ├── ExtractionContext.kt   # Context enum (IDENTIFIER, COMMENT, STRING)
+    │   ├── LanguageDefinition.kt  # Interface for language definitions
+    │   ├── MetricMapping.kt       # Metric mapping interface
+    │   ├── ExtractionMapping.kt   # Extraction mapping interface
     │   ├── CommentFormats.kt      # Comment format definitions
-    │   └── StringFormats.kt       # String format definitions
+    │   ├── StringFormats.kt       # String format definitions
+    │   ├── CommentParser.kt       # Comment parsing utilities
+    │   └── StringParser.kt        # String parsing utilities
     └── infrastructure/
         └── walker/                # Tree traversal utilities
             ├── TreeTraversal.kt   # Node traversal helpers
@@ -64,7 +71,7 @@ The architecture follows concentric layers with `shared/domain/` at the center:
                     ┌─────────────────────────────────────────┐
                     │              api/ (outermost)           │
                     │  ┌───────────────────────────────────┐  │
-                    │  │         features/ (adapters)      │  │
+                    │  │       integration/ (adapters)     │  │
                     │  │  ┌─────────────────────────────┐  │  │
                     │  │  │      languages/ (ports)     │  │  │
                     │  │  │  ┌───────────────────────┐  │  │  │
@@ -80,14 +87,14 @@ The architecture follows concentric layers with `shared/domain/` at the center:
 ```
 
 **Dependency Flow** (all arrows point inward):
-- `api/` → `features/`, `languages/`, `shared/domain/`
-- `features/` → `languages/`, `shared/domain/`
+- `api/` → `integration/`, `languages/`, `shared/domain/`
+- `integration/` → `languages/`, `shared/domain/`
 - `languages/` → `shared/domain/`
 - `shared/domain/` → nothing (no internal dependencies)
 
-- **Domain Core** (`shared/domain/`): Core types like `Metric`, `Extract`, `CommentFormats` with no dependencies
-- **Ports** (`languages/`): `LanguageDefinition` interface that defines language behavior
-- **Adapters** (`features/`): Convert language definitions to feature-specific interfaces
+- **Domain Core** (`shared/domain/`): Core types like `Metric`, `Extract`, `CommentFormats`, `ExtractionResult` with no dependencies
+- **Ports** (`languages/`): `LanguageDefinition` interface implementations that define language behavior
+- **Adapters** (`integration/`): Convert language definitions to feature-specific interfaces
 - **API** (`api/`): Public entry points for external consumers
 
 ## Data Flow
@@ -110,15 +117,25 @@ Aggregate results (complexity = logic + function complexity)
 MetricsResult (metrics map + per-function metrics map)
 ```
 
-## Unified Language Definition Architecture
+## Language Definition Architecture
 
-Each language implements `LanguageDefinition` with two maps:
+Each language is organized in its own directory with separated concerns:
 
 ```kotlin
-interface LanguageDefinition {
-    val nodeMetrics: Map<String, Set<Metric>>      // Node type → metric contributions
-    val nodeExtractions: Map<String, Extract>       // Node type → extraction behavior
-    val calculationExtensions: CalculationExtensions // Language-specific hooks
+// languages/java/JavaDefinition.kt - Combines mappings
+object JavaDefinition : LanguageDefinition {
+    override val nodeMetrics = JavaMetricMapping.nodeMetrics
+    override val nodeExtractions = JavaExtractionMapping.nodeExtractions
+}
+
+// languages/java/JavaMetricMapping.kt - Metric mappings only
+object JavaMetricMapping : MetricMapping {
+    override val nodeMetrics: Map<String, Set<Metric>> = buildMap { ... }
+}
+
+// languages/java/JavaExtractionMapping.kt - Extraction mappings only
+object JavaExtractionMapping : ExtractionMapping {
+    override val nodeExtractions: Map<String, Extract> = buildMap { ... }
 }
 ```
 
@@ -128,11 +145,12 @@ interface LanguageDefinition {
 |---------|----------|
 | Public API | `api/` |
 | **Domain core types** | `shared/domain/` |
-| Metrics feature | `features/metrics/` |
-| Extraction feature | `features/extraction/` |
-| Language definitions | `languages/` |
-| Metric calculators | `features/metrics/calculators/` |
-| Language-specific extractors | `features/extraction/extractors/languagespecific/<lang>/` |
+| Metrics integration | `integration/metrics/` |
+| Extraction integration | `integration/extraction/` |
+| Language definitions | `languages/<lang>/` |
+| Metric calculators | `integration/metrics/calculators/` |
+| Common extractors | `integration/extraction/extractors/common/` |
+| Language-specific extractors | `languages/<lang>/extractors/` |
 | Tree traversal utilities | `shared/infrastructure/walker/` |
 | Language tests | `src/test/kotlin/.../languages/<lang>/` |
 | Architecture tests | `src/test/kotlin/.../architecture/` |
