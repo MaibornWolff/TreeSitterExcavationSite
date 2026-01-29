@@ -4,9 +4,9 @@ A Kotlin library for calculating code metrics and extracting text from source co
 
 ## Features
 
-- **Code Metrics**: Complexity, lines of code, comment lines, function counts, per-function aggregations
+- **Code Metrics**: Complexity, lines of code, comment lines, function counts, code smells, per-function aggregations
 - **Text Extraction**: Identifiers, comments, and string literals with context
-- **14 Languages**: Java, Kotlin, TypeScript, JavaScript, Python, Go, PHP, Ruby, Swift, Bash, C#, C++, C, Objective-C
+- **16 Languages and Frameworks**: Java, Kotlin, TypeScript, JavaScript, Python, Go, PHP, Ruby, Swift, Bash, C#, C++, C, Objective-C, Vue, ABL
 - **Zero External Dependencies**: Only TreeSitter bindings required
 
 ## Requirements
@@ -50,6 +50,10 @@ println(result.realLinesOfCode)   // Non-empty, non-comment lines
 println(result.commentLines)      // Comment lines
 println(result.numberOfFunctions) // Function count
 println(result.messageChains)     // Method chains (4+ calls)
+println(result.longMethod)        // Functions exceeding length threshold
+println(result.longParameterList) // Functions with many parameters
+println(result.excessiveComments) // Excessive comment indicators
+println(result.commentRatio)      // Comment to code ratio
 
 // Per-function metrics
 println(result.perFunctionMetrics["max_complexity_per_function"])
@@ -81,7 +85,7 @@ result.extractedTexts.forEach { item ->
 }
 ```
 
-## Supported Languages
+## Supported Languages and Frameworks
 
 | Language | Extension(s) | Metrics | Extraction |
 |----------|-------------|---------|------------|
@@ -99,6 +103,8 @@ result.extractedTexts.forEach { item ->
 | C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.h` | Yes | Yes |
 | C | `.c` | Yes | Yes |
 | Objective-C | `.m`, `.mm` | Yes | Yes |
+| Vue | `.vue` | Yes | Yes |
+| ABL | `.p`, `.cls`, `.w` | Yes | Yes |
 
 ## Available Metrics
 
@@ -113,6 +119,9 @@ result.extractedTexts.forEach { item ->
 | `comment_lines` | Lines containing comments |
 | `number_of_functions` | Function/method count |
 | `message_chains` | Method chains with 4+ calls |
+| `long_method` | Functions exceeding length threshold |
+| `long_parameter_list` | Functions with excessive parameters |
+| `excessive_comments` | Files with excessive commenting |
 | `comment_ratio` | Comments to code ratio |
 
 ### Per-Function Metrics
@@ -158,7 +167,7 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 │       ├── ports/                 # Interfaces (ExtractionNodeTypes)
 │       ├── adapters/              # Language definition adapters
 │       └── extractors/common/     # Shared extractors
-├── languages/                     # Language definitions (14 languages)
+├── languages/                     # Language definitions (16 languages and frameworks)
 │   └── <lang>/                    # Per-language directory
 │       ├── *Definition.kt         # Combines metric and extraction mappings
 │       ├── *MetricMapping.kt      # Metric node mappings
