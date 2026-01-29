@@ -533,7 +533,7 @@ class GoExtractionTest {
 
         // Assert
         assertThat(result.comments).hasSize(1)
-        assertThat(result.comments[0]).contains("multiline")
+        assertThat(result.comments[0]).isEqualTo("This is a multiline\nblock comment")
     }
 
     // === String Extraction Tests ===
@@ -1102,19 +1102,13 @@ class GoExtractionTest {
 
     @Test
     fun `should return Go in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.GO)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.GO)).isTrue()
     }
 
     @Test
     fun `should return go in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".go")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".go")).isTrue()
     }
 }

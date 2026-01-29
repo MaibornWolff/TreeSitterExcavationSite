@@ -1419,8 +1419,14 @@ class PhpExtractionTest {
 
         @Test
         fun `should return PHP in supported languages`() {
-            val supported = TreeSitterExtraction.getSupportedLanguages()
-            assertThat(supported).contains(Language.PHP)
+            // Act & Assert
+            assertThat(TreeSitterExtraction.isExtractionSupported(Language.PHP)).isTrue()
+        }
+
+        @Test
+        fun `should return php in supported extensions`() {
+            // Act & Assert
+            assertThat(TreeSitterExtraction.isExtractionSupported(".php")).isTrue()
         }
     }
 }

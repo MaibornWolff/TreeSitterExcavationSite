@@ -374,7 +374,7 @@ class CSharpExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.CSHARP)
 
         // Assert
-        assertThat(result.strings).isNotEmpty()
+        assertThat(result.strings).containsExactly("Hello {name}")
     }
 
     @Test
@@ -462,20 +462,14 @@ class CSharpExtractionTest {
 
     @Test
     fun `should return CSharp in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.CSHARP)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.CSHARP)).isTrue()
     }
 
     @Test
     fun `should return cs extension in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".cs")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".cs")).isTrue()
     }
 
     // === Lambda Parameter Tests ===

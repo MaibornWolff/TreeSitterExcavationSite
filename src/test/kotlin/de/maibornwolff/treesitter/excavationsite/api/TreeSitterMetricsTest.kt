@@ -27,11 +27,11 @@ class TreeSitterMetricsTest {
 
         // Assert
         assertThat(result.numberOfFunctions).isEqualTo(2.0)
-        assertThat(result.complexity).isGreaterThanOrEqualTo(2.0) // 2 methods
-        assertThat(result.logicComplexity).isGreaterThanOrEqualTo(1.0) // 1 if statement
-        assertThat(result.commentLines).isGreaterThanOrEqualTo(1.0)
-        assertThat(result.linesOfCode).isGreaterThan(0.0)
-        assertThat(result.realLinesOfCode).isGreaterThan(0.0)
+        assertThat(result.complexity).isEqualTo(3.0) // 2 methods + 1 if
+        assertThat(result.logicComplexity).isEqualTo(1.0) // 1 if statement
+        assertThat(result.commentLines).isEqualTo(1.0)
+        assertThat(result.linesOfCode).isEqualTo(12.0)
+        assertThat(result.realLinesOfCode).isEqualTo(10.0)
     }
 
     @Test
@@ -60,7 +60,7 @@ class TreeSitterMetricsTest {
 
         // Assert
         assertThat(result.numberOfFunctions).isEqualTo(2.0)
-        assertThat(result.complexity).isGreaterThan(0.0)
+        assertThat(result.complexity).isEqualTo(5.0) // 2 functions + 1 if + 2 when branches
     }
 
     @Test
@@ -83,7 +83,7 @@ class TreeSitterMetricsTest {
 
         // Assert
         assertThat(result.numberOfFunctions).isEqualTo(2.0)
-        assertThat(result.commentLines).isGreaterThanOrEqualTo(1.0)
+        assertThat(result.commentLines).isEqualTo(1.0)
     }
 
     @Test
@@ -113,8 +113,13 @@ class TreeSitterMetricsTest {
         val extensions = TreeSitterMetrics.getSupportedExtensions()
 
         // Assert
-        assertThat(extensions).contains(".java", ".kt", ".ts", ".py", ".go", ".rb", ".swift")
-        assertThat(extensions.size).isGreaterThan(14) // at least 14 primary extensions
+        assertThat(extensions).containsExactlyInAnyOrder(
+            ".java", ".kt", ".kts", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+            ".py", ".go", ".php", ".rb", ".swift", ".sh", ".bash", ".cs",
+            ".cpp", ".cc", ".cxx", ".hpp", ".hxx", ".h", ".c", ".m", ".mm",
+            ".vue", ".p", ".cls", ".w"
+        )
+        assertThat(extensions).hasSize(30)
     }
 
     @Test
@@ -169,6 +174,6 @@ class TreeSitterMetricsTest {
         val result = TreeSitterMetrics.parse(javaCode, Language.JAVA)
 
         // Assert
-        assertThat(result.messageChains).isGreaterThanOrEqualTo(1.0)
+        assertThat(result.messageChains).isEqualTo(1.0)
     }
 }

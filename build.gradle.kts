@@ -35,6 +35,7 @@ dependencies {
     implementation(libs.treesitter.c)
     implementation(libs.treesitter.objc)
     implementation(libs.treesitter.vue)
+    implementation(libs.treesitter.abl)
 
     // Testing
     testImplementation(libs.junit.jupiter.api)

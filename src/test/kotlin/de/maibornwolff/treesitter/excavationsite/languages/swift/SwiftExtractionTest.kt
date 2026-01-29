@@ -791,9 +791,7 @@ class SwiftExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.SWIFT)
 
         // Assert
-        assertThat(result.strings).hasSize(1)
-        assertThat(result.strings[0]).contains("This is a")
-        assertThat(result.strings[0]).contains("multiline string")
+        assertThat(result.strings).containsExactly("\nThis is a\nmultiline string\n")
     }
 
     @Test
@@ -873,19 +871,13 @@ class SwiftExtractionTest {
 
     @Test
     fun `should return Swift in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.SWIFT)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.SWIFT)).isTrue()
     }
 
     @Test
     fun `should return swift in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".swift")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".swift")).isTrue()
     }
 }

@@ -1,5 +1,6 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractArrowFunctionSingleParameter
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractFirstBindingIdentifiers
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractIdentifiersFromClassDeclaration
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractIdentifiersFromEnumDeclaration
@@ -51,7 +52,7 @@ object JavascriptExtractionMapping : ExtractionMapping {
         )
         put(
             "arrow_function",
-            Extract.Identifier(single = ExtractionStrategy.FirstChildByType(IDENTIFIER))
+            Extract.Identifier(customSingle = ::extractArrowFunctionSingleParameter)
         )
         put(
             "required_parameter",

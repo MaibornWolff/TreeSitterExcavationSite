@@ -686,6 +686,14 @@ class RobustnessContractTest {
                     }
                     </script>
                 """.trimIndent()
+                Language.ABL -> """
+                    // Comment
+                    PROCEDURE foo:
+                        DEFINE VARIABLE s AS CHARACTER NO-UNDO.
+                        s = "hello".
+                        IF TRUE THEN MESSAGE s.
+                    END PROCEDURE.
+                """.trimIndent()
             }
         }
     }

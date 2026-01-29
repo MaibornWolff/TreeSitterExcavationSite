@@ -1,5 +1,6 @@
 package de.maibornwolff.treesitter.excavationsite.languages
 
+import de.maibornwolff.treesitter.excavationsite.languages.abl.AblDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.bash.BashDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.c.CDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.cpp.CppDefinition
@@ -18,6 +19,7 @@ import de.maibornwolff.treesitter.excavationsite.languages.vue.VueDefinition
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Language
 import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDefinition
 import org.treesitter.TSLanguage
+import org.treesitter.TreeSitterAbl
 import org.treesitter.TreeSitterBash
 import org.treesitter.TreeSitterC
 import org.treesitter.TreeSitterCSharp
@@ -60,6 +62,7 @@ object LanguageRegistry {
             Language.C -> TreeSitterC()
             Language.OBJECTIVE_C -> TreeSitterObjc()
             Language.VUE -> TreeSitterJavascript()
+            Language.ABL -> TreeSitterAbl()
         }
     }
 
@@ -83,6 +86,7 @@ object LanguageRegistry {
             Language.C -> CDefinition
             Language.OBJECTIVE_C -> ObjectiveCDefinition
             Language.VUE -> VueDefinition
+            Language.ABL -> AblDefinition
         }
     }
 }

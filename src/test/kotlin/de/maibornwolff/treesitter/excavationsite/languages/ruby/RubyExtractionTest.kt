@@ -570,20 +570,14 @@ class RubyExtractionTest {
 
     @Test
     fun `should return Ruby in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.RUBY)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.RUBY)).isTrue()
     }
 
     @Test
     fun `should return rb in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".rb")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".rb")).isTrue()
     }
 
     // === Rescue Exception Variable Tests ===

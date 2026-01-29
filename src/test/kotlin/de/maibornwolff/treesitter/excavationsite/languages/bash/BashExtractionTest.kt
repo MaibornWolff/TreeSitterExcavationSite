@@ -337,9 +337,7 @@ class BashExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.BASH)
 
         // Assert
-        assertThat(result.strings).hasSize(1)
-        assertThat(result.strings[0]).contains("This is a heredoc")
-        assertThat(result.strings[0]).contains("with multiple lines")
+        assertThat(result.strings).containsExactly("This is a heredoc\nwith multiple lines")
     }
 
     @Test
@@ -423,20 +421,15 @@ class BashExtractionTest {
 
     @Test
     fun `should return Bash in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.BASH)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.BASH)).isTrue()
     }
 
     @Test
     fun `should return sh and bash in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".sh", ".bash")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".sh")).isTrue()
+        assertThat(TreeSitterExtraction.isExtractionSupported(".bash")).isTrue()
     }
 
     // === For Loop Variable Tests ===
