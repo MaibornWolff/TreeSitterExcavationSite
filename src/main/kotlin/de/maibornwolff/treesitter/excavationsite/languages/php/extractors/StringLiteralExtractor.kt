@@ -32,12 +32,10 @@ internal fun extractNonImportEncapsedString(node: TSNode, sourceCode: String): S
     return text.removeSurrounding("\"")
 }
 
-private fun isIncludeString(node: TSNode): Boolean {
-    return TreeTraversal.hasAncestorOfTypes(
-        node,
-        INCLUDE_EXPRESSION,
-        REQUIRE_EXPRESSION,
-        INCLUDE_ONCE_EXPRESSION,
-        REQUIRE_ONCE_EXPRESSION
-    )
-}
+private fun isIncludeString(node: TSNode): Boolean = TreeTraversal.hasAncestorOfTypes(
+    node,
+    INCLUDE_EXPRESSION,
+    REQUIRE_EXPRESSION,
+    INCLUDE_ONCE_EXPRESSION,
+    REQUIRE_ONCE_EXPRESSION
+)

@@ -5,7 +5,9 @@ import de.maibornwolff.treesitter.excavationsite.integration.metrics.domain.Calc
 import de.maibornwolff.treesitter.excavationsite.integration.metrics.ports.MetricNodeTypes
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.NodeTypeMatcher
 
-class RealLinesOfCodeCalc(val nodeTypeProvider: MetricNodeTypes) : MetricPerFileCalc, MetricPerFunctionCalc() {
+class RealLinesOfCodeCalc(val nodeTypeProvider: MetricNodeTypes) :
+    MetricPerFunctionCalc(),
+    MetricPerFileCalc {
     override val metric = AvailableFunctionMetrics.RLOC
     private var lastCountedLine = -1
     private var isFirstOrLastNodeInFunction = false
@@ -69,9 +71,7 @@ class RealLinesOfCodeCalc(val nodeTypeProvider: MetricNodeTypes) : MetricPerFile
         }
     }
 
-    private fun isInFunctionBodyAndAllowedNode(): Boolean {
-        return isInFunctionBody && !isFirstOrLastNodeInFunction
-    }
+    private fun isInFunctionBodyAndAllowedNode(): Boolean = isInFunctionBody && !isFirstOrLastNodeInFunction
 
     private fun updateInFunctionStatusForRloc(nodeContext: CalculationContext, nodeTypeProvider: MetricNodeTypes) {
         val node = nodeContext.node

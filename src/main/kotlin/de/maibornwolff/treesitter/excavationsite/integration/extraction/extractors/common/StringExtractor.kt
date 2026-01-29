@@ -10,9 +10,7 @@ import org.treesitter.TSNode
  *
  * @param stringFormats Map of node type to string format
  */
-class StringExtractor(
-    private val stringFormats: Map<String, StringFormats>
-) {
+class StringExtractor(private val stringFormats: Map<String, StringFormats>) {
     /**
      * Extracts string content from a node, stripping appropriate delimiters.
      */
@@ -44,12 +42,10 @@ class StringExtractor(
         }
     }
 
-    private fun extractJavaTextBlock(text: String): String {
-        return if (text.startsWith("\"\"\"")) {
-            StringParser.extractJavaTextBlock(text)
-        } else {
-            text.removeSurrounding("\"")
-        }
+    private fun extractJavaTextBlock(text: String): String = if (text.startsWith("\"\"\"")) {
+        StringParser.extractJavaTextBlock(text)
+    } else {
+        text.removeSurrounding("\"")
     }
 
     private fun extractFromChild(node: TSNode, sourceCode: String, childType: String): String {

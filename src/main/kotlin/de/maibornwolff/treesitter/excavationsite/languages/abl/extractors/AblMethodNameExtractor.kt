@@ -10,7 +10,8 @@ import org.treesitter.TSNode
  * The method name is the second identifier child (first is return type).
  */
 fun extractAblMethodName(node: TSNode, code: String): String? {
-    val identifiers = node.children()
+    val identifiers = node
+        .children()
         .filter { it.type == "identifier" }
         .toList()
 

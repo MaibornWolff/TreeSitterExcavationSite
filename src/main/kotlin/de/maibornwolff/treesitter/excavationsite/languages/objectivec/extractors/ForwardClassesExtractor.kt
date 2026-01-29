@@ -7,9 +7,8 @@ import org.treesitter.TSNode
 private const val IDENTIFIER = "identifier"
 private const val TYPE_IDENTIFIER = "type_identifier"
 
-internal fun extractAllForwardClasses(node: TSNode, sourceCode: String): List<String> {
-    return node.children()
-        .filter { it.type == IDENTIFIER || it.type == TYPE_IDENTIFIER }
-        .map { TreeTraversal.getNodeText(it, sourceCode) }
-        .toList()
-}
+internal fun extractAllForwardClasses(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .filter { it.type == IDENTIFIER || it.type == TYPE_IDENTIFIER }
+    .map { TreeTraversal.getNodeText(it, sourceCode) }
+    .toList()

@@ -12,7 +12,8 @@ private const val DECORATOR = "decorator"
  * Extracts identifiers from class declaration including decorators.
  */
 internal fun extractIdentifiersFromClassDeclaration(node: TSNode, sourceCode: String): List<String> {
-    val decorators = node.children()
+    val decorators = node
+        .children()
         .filter { it.type == DECORATOR }
         .mapNotNull { extractDecoratorName(it, sourceCode) }
         .toList()

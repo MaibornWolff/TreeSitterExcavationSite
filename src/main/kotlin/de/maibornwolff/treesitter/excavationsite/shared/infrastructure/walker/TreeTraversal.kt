@@ -25,26 +25,23 @@ object TreeTraversal {
     /**
      * Finds the first child of the given types and returns its text.
      */
-    fun findFirstChildTextByType(node: TSNode, sourceCode: String, vararg types: String): String? {
-        return node.children().firstOrNull { it.type in types }?.let { getNodeText(it, sourceCode) }
-    }
+    fun findFirstChildTextByType(node: TSNode, sourceCode: String, vararg types: String): String? =
+        node.children().firstOrNull { it.type in types }?.let { getNodeText(it, sourceCode) }
 
     /**
      * Finds all children of the given types and returns their text.
      */
-    fun findAllChildrenTextByType(node: TSNode, sourceCode: String, vararg types: String): List<String> {
-        return node.children()
-            .filter { it.type in types }
-            .map { getNodeText(it, sourceCode) }
-            .toList()
-    }
+    fun findAllChildrenTextByType(node: TSNode, sourceCode: String, vararg types: String): List<String> = node
+        .children()
+        .filter { it.type in types }
+        .map { getNodeText(it, sourceCode) }
+        .toList()
 
     /**
      * Finds the last child of the given types and returns its text.
      */
-    fun findLastChildTextByType(node: TSNode, sourceCode: String, vararg types: String): String? {
-        return node.children().lastOrNull { it.type in types }?.let { getNodeText(it, sourceCode) }
-    }
+    fun findLastChildTextByType(node: TSNode, sourceCode: String, vararg types: String): String? =
+        node.children().lastOrNull { it.type in types }?.let { getNodeText(it, sourceCode) }
 
     /**
      * Finds a single child by type and returns its text.

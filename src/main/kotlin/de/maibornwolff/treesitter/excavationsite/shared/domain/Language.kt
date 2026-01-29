@@ -3,10 +3,7 @@ package de.maibornwolff.treesitter.excavationsite.shared.domain
 /**
  * Supported programming languages for metric collection and text extraction.
  */
-enum class Language(
-    val primaryExtension: String,
-    val otherExtensions: Set<String> = emptySet()
-) {
+enum class Language(val primaryExtension: String, val otherExtensions: Set<String> = emptySet()) {
     JAVA(primaryExtension = ".java"),
     KOTLIN(primaryExtension = ".kt", otherExtensions = setOf(".kts")),
     TYPESCRIPT(primaryExtension = ".ts", otherExtensions = setOf(".tsx")),
@@ -39,9 +36,7 @@ enum class Language(
          *
          * @param extension The file extension including the dot (e.g., ".java")
          */
-        fun fromExtension(extension: String): Language? {
-            return extensionMap[extension.lowercase()]
-        }
+        fun fromExtension(extension: String): Language? = extensionMap[extension.lowercase()]
 
         /**
          * Returns the Language for the given filename, or null if not supported.

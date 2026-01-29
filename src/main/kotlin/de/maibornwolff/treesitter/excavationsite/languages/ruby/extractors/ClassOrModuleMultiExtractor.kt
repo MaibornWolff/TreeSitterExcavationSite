@@ -27,12 +27,12 @@ internal fun extractFromClassOrModuleMultiple(node: TSNode, sourceCode: String):
 /**
  * Recursively extracts all constants from a scope_resolution node.
  */
-private fun extractConstantsFromScopeResolution(node: TSNode, sourceCode: String): List<String> {
-    return node.children().flatMap { child ->
+private fun extractConstantsFromScopeResolution(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .flatMap { child ->
         when (child.type) {
             SCOPE_RESOLUTION -> extractConstantsFromScopeResolution(child, sourceCode)
             CONSTANT -> listOf(TreeTraversal.getNodeText(child, sourceCode))
             else -> emptyList()
         }
     }.toList()
-}

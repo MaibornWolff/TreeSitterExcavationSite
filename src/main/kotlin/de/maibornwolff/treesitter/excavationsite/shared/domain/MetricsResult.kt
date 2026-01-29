@@ -6,10 +6,7 @@ package de.maibornwolff.treesitter.excavationsite.shared.domain
  * @property metrics Map of metric names to their values
  * @property perFunctionMetrics Map of per-function metric aggregations (min, max, mean, median)
  */
-data class MetricsResult(
-    val metrics: Map<String, Double>,
-    val perFunctionMetrics: Map<String, Double> = emptyMap()
-) {
+data class MetricsResult(val metrics: Map<String, Double>, val perFunctionMetrics: Map<String, Double> = emptyMap()) {
     val complexity: Double get() = metrics["complexity"] ?: 0.0
     val logicComplexity: Double get() = metrics["logic_complexity"] ?: 0.0
     val commentLines: Double get() = metrics["comment_lines"] ?: 0.0

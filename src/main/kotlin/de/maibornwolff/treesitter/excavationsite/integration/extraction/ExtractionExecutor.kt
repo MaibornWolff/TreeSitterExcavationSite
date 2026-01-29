@@ -16,33 +16,30 @@ object ExtractionExecutor {
     /**
      * Executes an extraction strategy to extract a single identifier from a node.
      */
-    fun extractSingle(node: TSNode, sourceCode: String, method: ExtractionStrategy): String? {
-        return when (method) {
-            is ExtractionStrategy.FirstChildByType ->
-                TreeTraversal.findFirstChildTextByType(node, sourceCode, method.type)
+    fun extractSingle(node: TSNode, sourceCode: String, method: ExtractionStrategy): String? = when (method) {
+        is ExtractionStrategy.FirstChildByType ->
+            TreeTraversal.findFirstChildTextByType(node, sourceCode, method.type)
 
-            is ExtractionStrategy.FirstChildByTypes ->
-                TreeTraversal.findFirstChildTextByType(node, sourceCode, *method.types.toTypedArray())
+        is ExtractionStrategy.FirstChildByTypes ->
+            TreeTraversal.findFirstChildTextByType(node, sourceCode, *method.types.toTypedArray())
 
-            is ExtractionStrategy.NestedInChild ->
-                node.children()
-                    .firstOrNull { it.type == method.containerType }
-                    ?.let { TreeTraversal.findFirstChildTextByType(it, sourceCode, method.targetType) }
+        is ExtractionStrategy.NestedInChild ->
+            node
+                .children()
+                .firstOrNull { it.type == method.containerType }
+                ?.let { TreeTraversal.findFirstChildTextByType(it, sourceCode, method.targetType) }
 
-            is ExtractionStrategy.AllChildrenByType ->
-                TreeTraversal.findFirstChildTextByType(node, sourceCode, method.type)
-        }
+        is ExtractionStrategy.AllChildrenByType ->
+            TreeTraversal.findFirstChildTextByType(node, sourceCode, method.type)
     }
 
     /**
      * Executes an extraction strategy to extract multiple identifiers from a node.
      */
-    fun extractMultiple(node: TSNode, sourceCode: String, method: ExtractionStrategy): List<String> {
-        return when (method) {
-            is ExtractionStrategy.AllChildrenByType ->
-                TreeTraversal.findAllChildrenTextByType(node, sourceCode, method.type)
+    fun extractMultiple(node: TSNode, sourceCode: String, method: ExtractionStrategy): List<String> = when (method) {
+        is ExtractionStrategy.AllChildrenByType ->
+            TreeTraversal.findAllChildrenTextByType(node, sourceCode, method.type)
 
-            else -> listOfNotNull(extractSingle(node, sourceCode, method))
-        }
+        else -> listOfNotNull(extractSingle(node, sourceCode, method))
     }
 }

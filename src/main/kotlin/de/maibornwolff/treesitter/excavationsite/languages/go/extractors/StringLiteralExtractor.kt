@@ -30,6 +30,4 @@ internal fun extractNonImportRawString(node: TSNode, sourceCode: String): String
     return StringParser.stripBackticks(text)
 }
 
-private fun isImportString(node: TSNode): Boolean {
-    return TreeTraversal.hasAncestorOfTypes(node, IMPORT_DECLARATION, IMPORT_SPEC)
-}
+private fun isImportString(node: TSNode): Boolean = TreeTraversal.hasAncestorOfTypes(node, IMPORT_DECLARATION, IMPORT_SPEC)

@@ -12,8 +12,7 @@ private const val VARIABLE_DECLARATOR = "variable_declarator"
  *
  * Used by various extractors for finding variables in declarations.
  */
-internal fun findIdentifierInVariableDeclarator(node: TSNode, sourceCode: String): String? {
-    return node.children()
-        .firstOrNull { it.type == VARIABLE_DECLARATOR }
-        ?.let { TreeTraversal.findFirstChildTextByType(it, sourceCode, IDENTIFIER) }
-}
+internal fun findIdentifierInVariableDeclarator(node: TSNode, sourceCode: String): String? = node
+    .children()
+    .firstOrNull { it.type == VARIABLE_DECLARATOR }
+    ?.let { TreeTraversal.findFirstChildTextByType(it, sourceCode, IDENTIFIER) }

@@ -20,9 +20,7 @@ object StringParser {
      * @param quoteChar The quote character to strip (default: double quote)
      * @return The string content without surrounding quotes
      */
-    fun stripQuotes(text: String, quoteChar: String = DOUBLE_QUOTE): String {
-        return text.removeSurrounding(quoteChar)
-    }
+    fun stripQuotes(text: String, quoteChar: String = DOUBLE_QUOTE): String = text.removeSurrounding(quoteChar)
 
     /**
      * Strips double or single quotes from a string literal.
@@ -32,9 +30,7 @@ object StringParser {
      * @param text The string literal text including quotes
      * @return The string content without surrounding quotes
      */
-    fun stripAnyQuotes(text: String): String {
-        return text.removeSurrounding(DOUBLE_QUOTE).removeSurrounding(SINGLE_QUOTE)
-    }
+    fun stripAnyQuotes(text: String): String = text.removeSurrounding(DOUBLE_QUOTE).removeSurrounding(SINGLE_QUOTE)
 
     /**
      * Strips triple quotes from a multiline string literal (Python/Kotlin style).
@@ -42,14 +38,12 @@ object StringParser {
      * @param text The string literal text including triple quotes
      * @return The string content without surrounding triple quotes
      */
-    fun stripTripleQuotes(text: String): String {
-        return when {
-            text.startsWith(TRIPLE_DOUBLE_QUOTE) && text.endsWith(TRIPLE_DOUBLE_QUOTE) ->
-                text.removeSurrounding(TRIPLE_DOUBLE_QUOTE)
-            text.startsWith(TRIPLE_SINGLE_QUOTE) && text.endsWith(TRIPLE_SINGLE_QUOTE) ->
-                text.removeSurrounding(TRIPLE_SINGLE_QUOTE)
-            else -> text
-        }
+    fun stripTripleQuotes(text: String): String = when {
+        text.startsWith(TRIPLE_DOUBLE_QUOTE) && text.endsWith(TRIPLE_DOUBLE_QUOTE) ->
+            text.removeSurrounding(TRIPLE_DOUBLE_QUOTE)
+        text.startsWith(TRIPLE_SINGLE_QUOTE) && text.endsWith(TRIPLE_SINGLE_QUOTE) ->
+            text.removeSurrounding(TRIPLE_SINGLE_QUOTE)
+        else -> text
     }
 
     /**
@@ -58,9 +52,7 @@ object StringParser {
      * @param text The template string text including backticks
      * @return The string content without surrounding backticks
      */
-    fun stripBackticks(text: String): String {
-        return text.removeSurrounding(BACKTICK)
-    }
+    fun stripBackticks(text: String): String = text.removeSurrounding(BACKTICK)
 
     /**
      * Strips C++ raw string literal format: R"delimiter(content)delimiter"
@@ -109,9 +101,7 @@ object StringParser {
      * @param text The verbatim string literal text
      * @return The string content without @" prefix and " suffix
      */
-    fun stripCSharpVerbatimString(text: String): String {
-        return text.removePrefix("@\"").removeSuffix(DOUBLE_QUOTE)
-    }
+    fun stripCSharpVerbatimString(text: String): String = text.removePrefix("@\"").removeSuffix(DOUBLE_QUOTE)
 
     /**
      * Strips C# interpolated string prefix and quotes: $"content"
@@ -119,9 +109,7 @@ object StringParser {
      * @param text The interpolated string literal text
      * @return The string content without $" prefix and " suffix
      */
-    fun stripCSharpInterpolatedString(text: String): String {
-        return text.removePrefix("\$\"").removeSuffix(DOUBLE_QUOTE)
-    }
+    fun stripCSharpInterpolatedString(text: String): String = text.removePrefix("\$\"").removeSuffix(DOUBLE_QUOTE)
 
     /**
      * Strips Python string prefixes (f, r, b, u, fr, rf, br, rb) and quotes.
@@ -137,7 +125,8 @@ object StringParser {
 
         var stripped = text
         for (prefix in prefixes) {
-            if (stripped.startsWith(prefix) && stripped.length > prefix.length &&
+            if (stripped.startsWith(prefix) &&
+                stripped.length > prefix.length &&
                 (stripped[prefix.length] == '"' || stripped[prefix.length] == '\'')
             ) {
                 stripped = stripped.substring(prefix.length)
@@ -177,9 +166,10 @@ object StringParser {
             .minOfOrNull { line -> line.takeWhile { it == ' ' || it == '\t' }.length }
             ?: 0
 
-        return contentLines.joinToString("\n") { line ->
-            if (line.isBlank()) "" else line.drop(minIndent)
-        }.trim()
+        return contentLines
+            .joinToString("\n") { line ->
+                if (line.isBlank()) "" else line.drop(minIndent)
+            }.trim()
     }
 
     /**
@@ -188,9 +178,7 @@ object StringParser {
      * @param text The symbol text including the : prefix
      * @return The symbol name without the : prefix
      */
-    fun stripRubySymbol(text: String): String {
-        return text.removePrefix(":")
-    }
+    fun stripRubySymbol(text: String): String = text.removePrefix(":")
 
     /**
      * Strips Ruby regex delimiters and flags.
@@ -198,7 +186,5 @@ object StringParser {
      * @param text The regex literal text including / delimiters and flags
      * @return The regex pattern without delimiters and flags
      */
-    fun stripRubyRegex(text: String): String {
-        return text.removePrefix("/").replace(Regex("/[imxo]*$"), "")
-    }
+    fun stripRubyRegex(text: String): String = text.removePrefix("/").replace(Regex("/[imxo]*$"), "")
 }

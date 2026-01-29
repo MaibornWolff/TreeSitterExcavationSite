@@ -10,8 +10,7 @@ private const val EXCEPTION_VARIABLE = "exception_variable"
 /**
  * Extracts exception variable from rescue clause.
  */
-internal fun extractFromRescue(node: TSNode, sourceCode: String): String? {
-    return node.children()
-        .firstOrNull { it.type == EXCEPTION_VARIABLE }
-        ?.let { TreeTraversal.findFirstChildTextByType(it, sourceCode, IDENTIFIER) }
-}
+internal fun extractFromRescue(node: TSNode, sourceCode: String): String? = node
+    .children()
+    .firstOrNull { it.type == EXCEPTION_VARIABLE }
+    ?.let { TreeTraversal.findFirstChildTextByType(it, sourceCode, IDENTIFIER) }

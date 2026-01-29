@@ -10,9 +10,7 @@ import org.treesitter.TSNode
  *
  * @param commentFormats Map of node type to comment format
  */
-class CommentExtractor(
-    private val commentFormats: Map<String, CommentFormats>
-) {
+class CommentExtractor(private val commentFormats: Map<String, CommentFormats>) {
     /**
      * Extracts comment text from a node, stripping appropriate markers.
      */

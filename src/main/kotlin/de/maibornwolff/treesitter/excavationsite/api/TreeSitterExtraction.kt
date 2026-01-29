@@ -95,9 +95,7 @@ object TreeSitterExtraction {
     /**
      * Returns all languages that support text extraction.
      */
-    fun getSupportedLanguages(): List<Language> {
-        return Language.entries.filter { isExtractionSupported(it) }
-    }
+    fun getSupportedLanguages(): List<Language> = Language.entries.filter { isExtractionSupported(it) }
 
     /**
      * Returns all file extensions that support text extraction.

@@ -18,14 +18,13 @@ internal fun extractDecoratorName(node: TSNode, sourceCode: String, findFirstIde
     return null
 }
 
-private fun extractDecoratorNameFromChild(child: TSNode, sourceCode: String, findFirstIdentifier: (TSNode, String) -> String?): String? {
-    return when (child.type) {
+private fun extractDecoratorNameFromChild(child: TSNode, sourceCode: String, findFirstIdentifier: (TSNode, String) -> String?): String? =
+    when (child.type) {
         "identifier" -> TreeTraversal.getNodeText(child, sourceCode)
         "call" -> extractDecoratorNameFromCall(child, sourceCode, findFirstIdentifier)
         "attribute" -> findFirstIdentifier(child, sourceCode)
         else -> null
     }
-}
 
 private fun extractDecoratorNameFromCall(callNode: TSNode, sourceCode: String, findFirstIdentifier: (TSNode, String) -> String?): String? {
     val func = callNode.children().firstOrNull() ?: return null

@@ -10,6 +10,4 @@ private const val INIT_KEYWORD = "init"
 internal fun extractInitKeyword(
     @Suppress("UNUSED_PARAMETER") node: TSNode,
     @Suppress("UNUSED_PARAMETER") sourceCode: String
-): String {
-    return INIT_KEYWORD
-}
+): String = INIT_KEYWORD

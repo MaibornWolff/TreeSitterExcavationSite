@@ -173,7 +173,6 @@ class GoldenFileContractTest {
                 |
                 |If this change is intentional, set UPDATE_GOLDEN_FILES=true and re-run.
                 """.trimMargin()
-            }
-            .isEqualTo(expected)
+            }.isEqualTo(expected)
     }
 }

@@ -8,9 +8,7 @@ package de.maibornwolff.treesitter.excavationsite.shared.domain
  *
  * @property extractedTexts All extracted text items with their contexts
  */
-data class ExtractionResult(
-    val extractedTexts: List<ExtractedText>
-) {
+data class ExtractionResult(val extractedTexts: List<ExtractedText>) {
     /** All extracted identifier names */
     val identifiers: List<String> by lazy {
         extractedTexts
