@@ -87,24 +87,24 @@ result.extractedTexts.forEach { item ->
 
 ## Supported Languages and Frameworks
 
-| Language | Extension(s) | Metrics | Extraction |
-|----------|-------------|---------|------------|
-| Java | `.java` | Yes | Yes |
-| Kotlin | `.kt`, `.kts` | Yes | Yes |
-| TypeScript | `.ts`, `.tsx` | Yes | Yes |
-| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | Yes | Yes |
-| Python | `.py` | Yes | Yes |
-| Go | `.go` | Yes | Yes |
-| PHP | `.php` | Yes | Yes |
-| Ruby | `.rb` | Yes | Yes |
-| Swift | `.swift` | Yes | Yes |
-| Bash | `.sh`, `.bash` | Yes | Yes |
-| C# | `.cs` | Yes | Yes |
-| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.h` | Yes | Yes |
-| C | `.c` | Yes | Yes |
-| Objective-C | `.m`, `.mm` | Yes | Yes |
-| Vue | `.vue` | Yes | Yes |
-| ABL | `.p`, `.cls`, `.w` | Yes | Yes |
+| Language | Extension(s) | Metrics | Extraction | Status |
+|----------|-------------|---------|------------|--------|
+| Java | `.java` | Yes | Yes | Stable |
+| Kotlin | `.kt`, `.kts` | Yes | Yes | Stable |
+| TypeScript | `.ts`, `.tsx` | Yes | Yes | Stable |
+| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | Yes | Yes | Stable |
+| Python | `.py` | Yes | Yes | Stable |
+| Go | `.go` | Yes | Yes | Stable |
+| PHP | `.php` | Yes | Yes | Stable |
+| Ruby | `.rb` | Yes | Yes | Stable |
+| Swift | `.swift` | Yes | Yes | Stable |
+| Bash | `.sh`, `.bash` | Yes | Yes | Stable |
+| C# | `.cs` | Yes | Yes | Stable |
+| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.h` | Yes | Yes | Stable |
+| C | `.c` | Yes | Yes | Stable |
+| Objective-C | `.m`, `.mm` | Yes | Yes | Stable |
+| Vue | `.vue` | Yes | Yes | Stable |
+| ABL | `.p`, `.cls`, `.w` | Yes | Yes | Experimental |
 
 ## Available Metrics
 
