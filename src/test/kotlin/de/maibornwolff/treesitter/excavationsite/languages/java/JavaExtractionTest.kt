@@ -2,7 +2,7 @@ package de.maibornwolff.treesitter.excavationsite.languages.java
 
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
-import de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionContext
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -391,20 +391,14 @@ class JavaExtractionTest {
 
     @Test
     fun `should return Java in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.JAVA)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.JAVA)).isTrue()
     }
 
     @Test
     fun `should return java extension in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".java")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".java")).isTrue()
     }
 
     // === Text Block Tests (Java 15+) ===
@@ -446,9 +440,7 @@ class JavaExtractionTest {
 
         // Assert
         assertThat(result.identifiers).containsExactly("Example", "html")
-        assertThat(result.strings).hasSize(1)
-        assertThat(result.strings[0]).contains("<html>")
-        assertThat(result.strings[0]).contains("<body>Hello</body>")
+        assertThat(result.strings).containsExactly("<html>\n    <body>Hello</body>\n</html>")
     }
 
     // === Lambda Parameter Tests ===

@@ -21,9 +21,9 @@ class TreeSitterExtractionTest {
         val result = TreeSitterExtraction.extract(javaCode, Language.JAVA)
 
         // Assert
-        assertThat(result.identifiers).contains("HelloWorld", "sayHello", "message")
+        assertThat(result.identifiers).containsExactlyInAnyOrder("HelloWorld", "sayHello", "message")
         assertThat(result.comments).isNotEmpty
-        assertThat(result.strings).contains("Hello, World!")
+        assertThat(result.strings).containsExactly("Hello, World!")
     }
 
     @Test
@@ -41,9 +41,9 @@ class TreeSitterExtractionTest {
         val result = TreeSitterExtraction.extract(kotlinCode, Language.KOTLIN)
 
         // Assert
-        assertThat(result.identifiers).contains("greet", "name", "greeting")
+        assertThat(result.identifiers).containsExactlyInAnyOrder("greet", "name", "greeting")
         assertThat(result.comments).isNotEmpty
-        assertThat(result.strings).isNotEmpty
+        assertThat(result.strings).containsExactlyInAnyOrder("Hello", ", ")
     }
 
     @Test
@@ -62,9 +62,9 @@ class TreeSitterExtractionTest {
         val result = TreeSitterExtraction.extract(pythonCode, Language.PYTHON)
 
         // Assert
-        assertThat(result.identifiers).contains("add", "a", "b", "result", "message")
+        assertThat(result.identifiers).containsExactlyInAnyOrder("add", "a", "b", "result", "message")
         assertThat(result.comments).isNotEmpty
-        assertThat(result.strings).contains("Sum calculated")
+        assertThat(result.strings).containsExactly("Sum calculated")
     }
 
     @Test
@@ -91,8 +91,13 @@ class TreeSitterExtractionTest {
         val languages = TreeSitterExtraction.getSupportedLanguages()
 
         // Assert
-        assertThat(languages).contains(Language.JAVA, Language.KOTLIN, Language.PYTHON, Language.GO)
-        assertThat(languages.size).isGreaterThanOrEqualTo(14)
+        assertThat(languages).containsExactlyInAnyOrder(
+            Language.JAVA, Language.KOTLIN, Language.TYPESCRIPT, Language.JAVASCRIPT,
+            Language.PYTHON, Language.GO, Language.PHP, Language.RUBY, Language.SWIFT,
+            Language.BASH, Language.CSHARP, Language.CPP, Language.C, Language.OBJECTIVE_C,
+            Language.VUE, Language.ABL
+        )
+        assertThat(languages).hasSize(16)
     }
 
     @Test
@@ -101,8 +106,13 @@ class TreeSitterExtractionTest {
         val extensions = TreeSitterExtraction.getSupportedExtensions()
 
         // Assert
-        assertThat(extensions).contains(".java", ".kt", ".ts", ".py", ".go", ".rb", ".swift")
-        assertThat(extensions.size).isGreaterThan(14)
+        assertThat(extensions).containsExactlyInAnyOrder(
+            ".java", ".kt", ".kts", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+            ".py", ".go", ".php", ".rb", ".swift", ".sh", ".bash", ".cs",
+            ".cpp", ".cc", ".cxx", ".hpp", ".hxx", ".h", ".c", ".m", ".mm",
+            ".vue", ".p", ".cls", ".w"
+        )
+        assertThat(extensions).hasSize(30)
     }
 
     @Test
@@ -120,7 +130,7 @@ class TreeSitterExtractionTest {
 
         // Assert
         assertThat(result.extractedTexts).isNotEmpty
-        assertThat(result.extractedTexts.map { it.context }).contains(
+        assertThat(result.extractedTexts.map { it.context }.distinct()).containsExactlyInAnyOrder(
             ExtractionContext.IDENTIFIER,
             ExtractionContext.COMMENT,
             ExtractionContext.STRING

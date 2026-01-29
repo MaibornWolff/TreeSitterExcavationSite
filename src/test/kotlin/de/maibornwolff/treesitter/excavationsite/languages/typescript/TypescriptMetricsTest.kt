@@ -345,4 +345,59 @@ class TypescriptMetricsTest {
         // Assert
         assertThat(result.messageChains).isEqualTo(1.0)
     }
+
+    @Test
+    fun `should count LOC correctly for multiline component without trailing newline`() {
+        // Arrange - 7 physical lines, no blanks, no comments
+        val code = """
+            const Button = ({ label, onClick }: ButtonProps) => {
+                return (
+                    <button onClick={onClick}>
+                        {label}
+                    </button>
+                );
+            };
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterMetrics.parse(code, Language.TYPESCRIPT)
+
+        // Assert - LOC equals RLOC for code without blanks or comments
+        assertThat(result.linesOfCode).isEqualTo(7.0)
+        assertThat(result.realLinesOfCode).isEqualTo(7.0)
+    }
+
+    @Test
+    fun `should count LOC correctly for multiline arrow function`() {
+        // Arrange - simple 3 line function
+        val code = """
+            const fn = () => {
+                return 1;
+            };
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterMetrics.parse(code, Language.TYPESCRIPT)
+
+        // Assert - LOC equals RLOC for code without blanks or comments
+        assertThat(result.linesOfCode).isEqualTo(3.0)
+        assertThat(result.realLinesOfCode).isEqualTo(3.0)
+    }
+
+    @Test
+    fun `should count LOC correctly for single line statements`() {
+        // Arrange
+        val code = """
+            const a = 1;
+            const b = 2;
+            const c = 3;
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterMetrics.parse(code, Language.TYPESCRIPT)
+
+        // Assert - LOC equals RLOC for code without blanks or comments
+        assertThat(result.linesOfCode).isEqualTo(3.0)
+        assertThat(result.realLinesOfCode).isEqualTo(3.0)
+    }
 }

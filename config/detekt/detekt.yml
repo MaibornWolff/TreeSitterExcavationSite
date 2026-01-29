@@ -1,0 +1,42 @@
+build:
+  maxIssues: 0
+
+style:
+  UnusedImports:
+    active: true
+  UnusedPrivateMember:
+    active: true
+  UnusedParameter:
+    active: true
+    allowedNames: '_.*'
+  MaxLineLength:
+    active: true
+    maxLineLength: 140  # Match .editorconfig
+    excludeCommentStatements: true
+  ReturnCount:
+    active: true
+    max: 5
+    excludeGuardClauses: true
+  MagicNumber:
+    active: false
+
+performance:
+  SpreadOperator:
+    active: false
+
+complexity:
+  LongMethod:
+    active: true
+    threshold: 120  # More lenient for test code
+  TooManyFunctions:
+    active: true
+    thresholdInClasses: 15
+    thresholdInObjects: 15
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 20
+  ComplexCondition:
+    active: true
+    threshold: 5
+  LargeClass:
+    active: false  # Test classes are intentionally large

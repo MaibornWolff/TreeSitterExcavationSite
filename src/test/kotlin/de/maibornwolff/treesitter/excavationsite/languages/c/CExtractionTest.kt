@@ -2,7 +2,7 @@ package de.maibornwolff.treesitter.excavationsite.languages.c
 
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
-import de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionContext
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -397,7 +397,7 @@ class CExtractionTest {
 
         // Assert
         assertThat(result.comments).hasSize(1)
-        assertThat(result.comments[0]).contains("multiline")
+        assertThat(result.comments[0]).isEqualTo("This is a multiline\nblock comment")
     }
 
     @Test
@@ -419,7 +419,7 @@ class CExtractionTest {
 
         // Assert
         assertThat(result.comments).hasSize(1)
-        assertThat(result.comments[0]).contains("Calculate the total price")
+        assertThat(result.comments[0]).isEqualTo("Calculate the total price.\n@param count Number of items\n@param price Price per item")
     }
 
     // === String Extraction Tests ===
@@ -529,20 +529,14 @@ class CExtractionTest {
 
     @Test
     fun `should return C in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.C)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.C)).isTrue()
     }
 
     @Test
     fun `should return c in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".c")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".c")).isTrue()
     }
 
     // === Macro Extraction Tests ===

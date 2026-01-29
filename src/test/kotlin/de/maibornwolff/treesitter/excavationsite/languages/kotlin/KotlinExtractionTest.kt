@@ -2,7 +2,7 @@ package de.maibornwolff.treesitter.excavationsite.languages.kotlin
 
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
-import de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionContext
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -430,20 +430,15 @@ class KotlinExtractionTest {
 
     @Test
     fun `should return Kotlin in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.KOTLIN)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.KOTLIN)).isTrue()
     }
 
     @Test
     fun `should return kt and kts in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".kt", ".kts")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".kt")).isTrue()
+        assertThat(TreeSitterExtraction.isExtractionSupported(".kts")).isTrue()
     }
 
     // === Lambda Parameter Extraction Tests ===

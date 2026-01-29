@@ -2,7 +2,7 @@ package de.maibornwolff.treesitter.excavationsite.languages.objectivec
 
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
-import de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionContext
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -326,7 +326,7 @@ class ObjectiveCExtractionTest {
 
         // Assert
         assertThat(result.comments).hasSize(1)
-        assertThat(result.comments[0]).contains("multiline")
+        assertThat(result.comments[0]).isEqualTo("This is a multiline\nblock comment")
     }
 
     @Test
@@ -346,7 +346,7 @@ class ObjectiveCExtractionTest {
 
         // Assert
         assertThat(result.comments).hasSize(1)
-        assertThat(result.comments[0]).contains("Process the given order")
+        assertThat(result.comments[0]).isEqualTo("Process the given order.\n@param order The order to process")
     }
 
     // === String Extraction Tests ===
@@ -469,20 +469,15 @@ class ObjectiveCExtractionTest {
 
     @Test
     fun `should return ObjectiveC in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.OBJECTIVE_C)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.OBJECTIVE_C)).isTrue()
     }
 
     @Test
     fun `should return m and mm in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".m", ".mm")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".m")).isTrue()
+        assertThat(TreeSitterExtraction.isExtractionSupported(".mm")).isTrue()
     }
 
     // === Fast Enumeration (for-in) Tests ===
@@ -1133,7 +1128,7 @@ class ObjectiveCExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.OBJECTIVE_C)
 
         // Assert
-        assertThat(result.identifiers).contains("x", "y")
+        assertThat(result.identifiers).containsExactlyInAnyOrder("x", "y")
     }
 
     @Test

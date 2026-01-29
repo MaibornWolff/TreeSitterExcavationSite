@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
     alias(libs.plugins.sonarqube)
     jacoco
     `java-library`
@@ -34,6 +35,8 @@ dependencies {
     implementation(libs.treesitter.cpp)
     implementation(libs.treesitter.c)
     implementation(libs.treesitter.objc)
+    implementation(libs.treesitter.vue)
+    implementation(libs.treesitter.abl)
 
     // Testing
     testImplementation(libs.junit.jupiter.api)
@@ -47,6 +50,14 @@ dependencies {
 
 kotlin {
     jvmToolchain(17)
+    compilerOptions {
+        allWarningsAsErrors.set(true)
+    }
+}
+
+detekt {
+    config.setFrom("$projectDir/config/detekt/detekt.yml")
+    buildUponDefaultConfig = true
 }
 
 tasks.test {
@@ -93,7 +104,7 @@ publishing {
     repositories {
         maven {
             name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/MaibornWolff/treesitter-excavationsite")
+            url = uri("https://maven.pkg.github.com/MaibornWolff/TreeSitterExcavationSite")
             credentials {
                 username = System.getenv("GITHUB_ACTOR")
                 password = System.getenv("GITHUB_TOKEN")

@@ -1,8 +1,8 @@
 package de.maibornwolff.treesitter.excavationsite.api
 
-import de.maibornwolff.treesitter.excavationsite.features.extraction.ExtractionFacade
-import de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionResult
+import de.maibornwolff.treesitter.excavationsite.integration.extraction.ExtractionFacade
 import de.maibornwolff.treesitter.excavationsite.languages.LanguageRegistry
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionResult
 import java.io.File
 
 /**
@@ -95,9 +95,7 @@ object TreeSitterExtraction {
     /**
      * Returns all languages that support text extraction.
      */
-    fun getSupportedLanguages(): List<Language> {
-        return Language.entries.filter { isExtractionSupported(it) }
-    }
+    fun getSupportedLanguages(): List<Language> = Language.entries.filter { isExtractionSupported(it) }
 
     /**
      * Returns all file extensions that support text extraction.

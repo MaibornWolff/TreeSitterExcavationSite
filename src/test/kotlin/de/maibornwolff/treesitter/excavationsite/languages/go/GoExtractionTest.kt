@@ -2,7 +2,7 @@ package de.maibornwolff.treesitter.excavationsite.languages.go
 
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
-import de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionContext
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -533,7 +533,7 @@ class GoExtractionTest {
 
         // Assert
         assertThat(result.comments).hasSize(1)
-        assertThat(result.comments[0]).contains("multiline")
+        assertThat(result.comments[0]).isEqualTo("This is a multiline\nblock comment")
     }
 
     // === String Extraction Tests ===
@@ -977,6 +977,120 @@ class GoExtractionTest {
         assertThat(result.identifiers).containsExactly("Transform", "K", "V1", "V2", "m", "f")
     }
 
+    // === Import String Tests ===
+
+    @Test
+    fun `should not extract import path strings`() {
+        // Arrange
+        val code = """
+            import "fmt"
+            import "os"
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.GO)
+
+        // Assert
+        assertThat(result.strings).isEmpty()
+    }
+
+    @Test
+    fun `should not extract grouped import path strings`() {
+        // Arrange
+        val code = """
+            import (
+                "fmt"
+                "strings"
+                "encoding/json"
+            )
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.GO)
+
+        // Assert
+        assertThat(result.strings).isEmpty()
+    }
+
+    @Test
+    fun `should not extract aliased import path strings`() {
+        // Arrange
+        val code = """
+            import (
+                j "encoding/json"
+                . "fmt"
+                _ "database/sql"
+            )
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.GO)
+
+        // Assert
+        assertThat(result.strings).isEmpty()
+    }
+
+    @Test
+    fun `should still extract regular strings alongside imports`() {
+        // Arrange
+        val code = """
+            import "fmt"
+
+            func main() {
+                msg := "Hello World"
+                fmt.Println(msg)
+            }
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.GO)
+
+        // Assert
+        assertThat(result.strings).containsExactly("Hello World")
+    }
+
+    @Test
+    fun `should still extract raw strings alongside imports`() {
+        // Arrange
+        val backtick = '`'
+        val code = """
+            import "fmt"
+
+            func main() {
+                pattern := ${backtick}raw string$backtick
+            }
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.GO)
+
+        // Assert
+        assertThat(result.strings).containsExactly("raw string")
+    }
+
+    @Test
+    fun `should handle mixed imports and regular strings`() {
+        // Arrange
+        val code = """
+            import (
+                "fmt"
+                "os"
+            )
+
+            const AppName = "MyApp"
+
+            func main() {
+                version := "1.0.0"
+            }
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.GO)
+
+        // Assert
+        assertThat(result.strings).containsExactly("MyApp", "1.0.0")
+    }
+
     // === API Tests ===
 
     @Test
@@ -988,19 +1102,13 @@ class GoExtractionTest {
 
     @Test
     fun `should return Go in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.GO)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.GO)).isTrue()
     }
 
     @Test
     fun `should return go in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".go")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".go")).isTrue()
     }
 }

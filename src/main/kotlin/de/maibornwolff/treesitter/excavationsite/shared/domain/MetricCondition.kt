@@ -19,10 +19,7 @@ sealed class MetricCondition {
      * @param fieldName The field name to look up the child node
      * @param allowedValues The set of allowed node types or text values
      */
-    data class ChildFieldMatches(
-        val fieldName: String,
-        val allowedValues: Set<String>
-    ) : MetricCondition()
+    data class ChildFieldMatches(val fieldName: String, val allowedValues: Set<String>) : MetricCondition()
 
     /**
      * Matches when a child node at a specific position has one of the allowed types.
@@ -31,9 +28,5 @@ sealed class MetricCondition {
      * @param requiredChildCount The required number of children for this match
      * @param allowedTypes The set of allowed node types
      */
-    data class ChildPositionMatches(
-        val position: Int,
-        val requiredChildCount: Int,
-        val allowedTypes: Set<String>
-    ) : MetricCondition()
+    data class ChildPositionMatches(val position: Int, val requiredChildCount: Int, val allowedTypes: Set<String>) : MetricCondition()
 }

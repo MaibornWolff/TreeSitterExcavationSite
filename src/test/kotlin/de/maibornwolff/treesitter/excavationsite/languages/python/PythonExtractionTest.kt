@@ -2,7 +2,7 @@ package de.maibornwolff.treesitter.excavationsite.languages.python
 
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
-import de.maibornwolff.treesitter.excavationsite.features.extraction.model.ExtractionContext
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionContext
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
@@ -1163,19 +1163,13 @@ class PythonExtractionTest {
 
     @Test
     fun `should return Python in supported languages`() {
-        // Act
-        val supported = TreeSitterExtraction.getSupportedLanguages()
-
-        // Assert
-        assertThat(supported).contains(Language.PYTHON)
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(Language.PYTHON)).isTrue()
     }
 
     @Test
     fun `should return py in supported extensions`() {
-        // Act
-        val extensions = TreeSitterExtraction.getSupportedExtensions()
-
-        // Assert
-        assertThat(extensions).contains(".py")
+        // Act & Assert
+        assertThat(TreeSitterExtraction.isExtractionSupported(".py")).isTrue()
     }
 }

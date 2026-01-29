@@ -709,15 +709,14 @@ class JavascriptExtractionTest {
 
         @Test
         fun `should handle decorator with member expression`() {
-            // @Foo.Bar style decorators - extracts Foo (the base)
+            // @Foo.Bar style decorators - only class name is extracted
             val code = """
                 @Ng.Component()
                 class MyComponent { }
             """.trimIndent()
             val result = TreeSitterExtraction.extract(code, Language.TYPESCRIPT)
-            // Note: Currently extracts "Ng" (first identifier in member expression)
-            println("Member expression decorator: ${result.identifiers}")
-            assertThat(result.identifiers).contains("MyComponent")
+            // Note: Member expression decorators like @Ng.Component() don't extract the Ng part
+            assertThat(result.identifiers).containsExactly("MyComponent")
         }
 
         @Test
@@ -729,9 +728,8 @@ class JavascriptExtractionTest {
                 }
             """.trimIndent()
             val result = TreeSitterExtraction.extract(code, Language.TYPESCRIPT)
-            println("Property decorator: ${result.identifiers}")
-            // Property decorators may or may not be extracted depending on AST structure
-            assertThat(result.identifiers).contains("MyClass", "myProperty")
+            // Note: Property decorators like @Input() are not extracted, only class/method/accessor decorators
+            assertThat(result.identifiers).containsExactly("MyClass", "myProperty")
         }
 
         // Arrow function edge cases
@@ -744,13 +742,10 @@ class JavascriptExtractionTest {
         }
 
         @Test
-        fun `should handle arrow function with rest parameter - expression body has duplicate`() {
-            // Known limitation: expression-body arrow functions with rest params extract the
-            // rest identifier twice due to AST structure. Block-body version works correctly.
+        fun `should handle arrow function with rest parameter - expression body`() {
             val code = "const fn = (...args) => args;"
             val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
-            // Extracts [fn, args, args] - documented behavior
-            assertThat(result.identifiers).contains("fn", "args")
+            assertThat(result.identifiers).containsExactly("fn", "args")
         }
 
         @Test
@@ -1278,8 +1273,7 @@ class JavascriptExtractionTest {
             val result = TreeSitterExtraction.extract(code, Language.TYPESCRIPT)
 
             // Assert
-            // Note: x appears twice due to TypeScript AST structure (parameter and type annotation reference)
-            assertThat(result.identifiers).containsExactly("identity", "x", "T", "x")
+            assertThat(result.identifiers).containsExactly("identity", "T", "x")
         }
     }
 
@@ -1404,6 +1398,112 @@ class JavascriptExtractionTest {
     }
 
     @Nested
+    inner class ImportStringTests {
+        @Test
+        fun `should not extract import path strings`() {
+            // Arrange
+            val code = """
+                import { Component } from '@angular/core';
+                import React from "react";
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should not extract export path strings`() {
+            // Arrange
+            val code = """
+                export { foo } from './foo';
+                export * from "../utils";
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should not extract require path strings`() {
+            // Arrange
+            val code = """
+                const fs = require('fs');
+                const path = require("path");
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should still extract regular strings alongside imports`() {
+            // Arrange
+            val code = """
+                import React from 'react';
+                const message = "Hello World";
+                const greeting = 'Welcome';
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).containsExactly("Hello World", "Welcome")
+        }
+
+        @Test
+        fun `should still extract template strings not in imports`() {
+            // Arrange
+            val code = "const msg = `Hello`;"
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).containsExactly("Hello")
+        }
+
+        @Test
+        fun `should not extract dynamic import strings`() {
+            // Arrange
+            val code = """const mod = import('./module');"""
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).isEmpty()
+        }
+
+        @Test
+        fun `should handle mixed imports and regular strings`() {
+            // Arrange
+            val code = """
+                import { service } from '@app/services';
+                const config = require('./config');
+                const name = "MyApp";
+                export { utils } from './utils';
+                const version = '1.0.0';
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.strings).containsExactly("MyApp", "1.0.0")
+        }
+    }
+
+    @Nested
     inner class APITests {
         @Test
         fun `should report extraction is supported for JavaScript`() {
@@ -1421,8 +1521,9 @@ class JavascriptExtractionTest {
 
         @Test
         fun `should return JavaScript and TypeScript in supported languages`() {
-            val supported = TreeSitterExtraction.getSupportedLanguages()
-            assertThat(supported).contains(Language.JAVASCRIPT, Language.TYPESCRIPT)
+            // Act & Assert
+            assertThat(TreeSitterExtraction.isExtractionSupported(Language.JAVASCRIPT)).isTrue()
+            assertThat(TreeSitterExtraction.isExtractionSupported(Language.TYPESCRIPT)).isTrue()
         }
     }
 }
