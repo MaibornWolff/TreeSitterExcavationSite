@@ -6,7 +6,7 @@ mockk = "1.14.7"
 archunit = "1.4.1"
 ktlint = "14.0.1"
 detekt = "1.23.8"
-sonarqube = "7.2.1.6560"
+sonarqube = "7.2.2.6593"
 
 # TreeSitter
 tree-sitter = "0.25.3"
