@@ -61,16 +61,18 @@ object PythonExtractionMapping : ExtractionMapping {
         put(
             TYPE_ALIAS_STATEMENT,
             Extract.Identifier(customSingle = {
-                    n,
-                    s ->
+                n,
+                s
+                ->
                 extractFromTypeAlias(n, s, ::findFirstIdentifier)
             })
         )
         put(
             AS_PATTERN,
             Extract.Identifier(customSingle = {
-                    n,
-                    s ->
+                n,
+                s
+                ->
                 extractFromAsPattern(
                     n,
                     s,
@@ -82,8 +84,9 @@ object PythonExtractionMapping : ExtractionMapping {
         put(
             DECORATOR,
             Extract.Identifier(customSingle = {
-                    n,
-                    s ->
+                n,
+                s
+                ->
                 extractDecoratorName(n, s, ::findFirstIdentifier)
             })
         )
@@ -120,8 +123,9 @@ object PythonExtractionMapping : ExtractionMapping {
         put(
             CASE_CLAUSE,
             Extract.Identifier(customMulti = {
-                    n,
-                    s ->
+                n,
+                s
+                ->
                 extractPatternCaptureVariables(n, s, ::findFirstIdentifier)
             })
         )

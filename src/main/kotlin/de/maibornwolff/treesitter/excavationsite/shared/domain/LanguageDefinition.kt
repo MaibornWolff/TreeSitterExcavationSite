@@ -22,7 +22,9 @@ package de.maibornwolff.treesitter.excavationsite.shared.domain
  * }
  * ```
  */
-interface LanguageDefinition : MetricMapping, ExtractionMapping {
+interface LanguageDefinition :
+    MetricMapping,
+    ExtractionMapping {
     /**
      * Language-specific calculation configuration.
      *

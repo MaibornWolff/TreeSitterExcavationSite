@@ -61,7 +61,8 @@ class AssertionStyleTest {
         val violations = mutableListOf<Violation>()
 
         // Act
-        TEST_SOURCE_ROOT.walkTopDown()
+        TEST_SOURCE_ROOT
+            .walkTopDown()
             .filter { it.isFile && it.extension == "kt" }
             .filter { file -> EXCLUDED_FILE_PATTERNS.none { it.matches(file.name) } }
             .forEach { file ->

@@ -7,9 +7,8 @@ import org.treesitter.TSNode
 /**
  * Extracts all identifiers from a node (used for global/nonlocal statements).
  */
-internal fun extractAllIdentifiers(node: TSNode, sourceCode: String): List<String> {
-    return node.children()
-        .filter { it.type == "identifier" }
-        .map { TreeTraversal.getNodeText(it, sourceCode) }
-        .toList()
-}
+internal fun extractAllIdentifiers(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .filter { it.type == "identifier" }
+    .map { TreeTraversal.getNodeText(it, sourceCode) }
+    .toList()

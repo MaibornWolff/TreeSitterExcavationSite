@@ -15,17 +15,15 @@ import org.treesitter.TSNode
 object CalculationExtensionsFactory {
     private const val EXPRESSION_STATEMENT = "expression_statement"
 
-    fun fromConfig(config: CalculationConfig): CalculationExtensions {
-        return CalculationExtensions(
-            hasFunctionBodyStartOrEndNode = config.hasFunctionBodyStartOrEndNode,
-            ignoreNodeForComplexity = buildIgnoreFunction(config.ignoreForComplexity),
-            ignoreNodeForCommentLines = buildIgnoreFunction(config.ignoreForCommentLines),
-            ignoreNodeForNumberOfFunctions = buildIgnoreFunction(config.ignoreForNumberOfFunctions),
-            ignoreNodeForRealLinesOfCode = buildIgnoreFunction(config.ignoreForRloc),
-            ignoreNodeForParameterOfFunctions = buildIgnoreFunction(config.ignoreForParameters),
-            countNodeAsLeafNode = buildLeafNodeFunction(config.countAsLeafNode)
-        )
-    }
+    fun fromConfig(config: CalculationConfig): CalculationExtensions = CalculationExtensions(
+        hasFunctionBodyStartOrEndNode = config.hasFunctionBodyStartOrEndNode,
+        ignoreNodeForComplexity = buildIgnoreFunction(config.ignoreForComplexity),
+        ignoreNodeForCommentLines = buildIgnoreFunction(config.ignoreForCommentLines),
+        ignoreNodeForNumberOfFunctions = buildIgnoreFunction(config.ignoreForNumberOfFunctions),
+        ignoreNodeForRealLinesOfCode = buildIgnoreFunction(config.ignoreForRloc),
+        ignoreNodeForParameterOfFunctions = buildIgnoreFunction(config.ignoreForParameters),
+        countNodeAsLeafNode = buildLeafNodeFunction(config.countAsLeafNode)
+    )
 
     private fun buildIgnoreFunction(rules: List<IgnoreRule>): (TSNode, String) -> Boolean {
         if (rules.isEmpty()) {
@@ -36,30 +34,28 @@ object CalculationExtensionsFactory {
         }
     }
 
-    private fun evaluateRule(rule: IgnoreRule, node: TSNode, nodeType: String): Boolean {
-        return when (rule) {
-            is IgnoreRule.TypeWithParentType -> {
-                nodeType == rule.nodeType && node.parent.type == rule.parentType
-            }
-            is IgnoreRule.TypeInSet -> {
-                rule.types.contains(nodeType)
-            }
-            is IgnoreRule.TypeEqualsParentTypeWhenInSet -> {
-                rule.types.contains(nodeType) && nodeType == node.parent.type
-            }
-            is IgnoreRule.SingleChildOfParentWithType -> {
-                nodeType == rule.nodeType && node.parent.childCount == 1
-            }
-            is IgnoreRule.TypeWhenParentTypeIsNot -> {
-                nodeType == rule.nodeType && node.parent.type != rule.requiredParentType
-            }
-            is IgnoreRule.FirstChildIsDocstring -> {
-                val childNode = node.getChild(0)
-                if (childNode.isNull) {
-                    false
-                } else {
-                    childNode.type == EXPRESSION_STATEMENT && childNode.childCount == 1
-                }
+    private fun evaluateRule(rule: IgnoreRule, node: TSNode, nodeType: String): Boolean = when (rule) {
+        is IgnoreRule.TypeWithParentType -> {
+            nodeType == rule.nodeType && node.parent.type == rule.parentType
+        }
+        is IgnoreRule.TypeInSet -> {
+            rule.types.contains(nodeType)
+        }
+        is IgnoreRule.TypeEqualsParentTypeWhenInSet -> {
+            rule.types.contains(nodeType) && nodeType == node.parent.type
+        }
+        is IgnoreRule.SingleChildOfParentWithType -> {
+            nodeType == rule.nodeType && node.parent.childCount == 1
+        }
+        is IgnoreRule.TypeWhenParentTypeIsNot -> {
+            nodeType == rule.nodeType && node.parent.type != rule.requiredParentType
+        }
+        is IgnoreRule.FirstChildIsDocstring -> {
+            val childNode = node.getChild(0)
+            if (childNode.isNull) {
+                false
+            } else {
+                childNode.type == EXPRESSION_STATEMENT && childNode.childCount == 1
             }
         }
     }

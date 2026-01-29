@@ -15,10 +15,10 @@ private const val VALUE_BINDING_PATTERN = "value_binding_pattern"
  */
 internal fun extractAllBoundVariables(node: TSNode, sourceCode: String): List<String> {
     val children = node.children().toList()
-    return children.zipWithNext()
+    return children
+        .zipWithNext()
         .filter { (current, next) ->
             current.type == VALUE_BINDING_PATTERN &&
                 next.type == SIMPLE_IDENTIFIER
-        }
-        .map { (_, next) -> TreeTraversal.getNodeText(next, sourceCode) }
+        }.map { (_, next) -> TreeTraversal.getNodeText(next, sourceCode) }
 }

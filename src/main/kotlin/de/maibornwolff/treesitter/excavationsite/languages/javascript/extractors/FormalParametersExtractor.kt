@@ -13,8 +13,9 @@ private const val REQUIRED_PARAMETER = "required_parameter"
 /**
  * Extracts identifiers from formal parameters, handling rest patterns.
  */
-internal fun extractIdentifiersFromFormalParameters(node: TSNode, sourceCode: String): List<String> {
-    return node.children().flatMap { child ->
+internal fun extractIdentifiersFromFormalParameters(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .flatMap { child ->
         when (child.type) {
             REST_PATTERN -> {
                 listOfNotNull(
@@ -44,4 +45,3 @@ internal fun extractIdentifiersFromFormalParameters(node: TSNode, sourceCode: St
             else -> emptyList()
         }
     }.toList()
-}

@@ -83,18 +83,14 @@ object TreeSitterMetrics {
      *
      * @param extension The file extension including the dot (e.g., ".java")
      */
-    fun isLanguageSupported(extension: String): Boolean {
-        return Language.fromExtension(extension) != null
-    }
+    fun isLanguageSupported(extension: String): Boolean = Language.fromExtension(extension) != null
 
     /**
      * Returns the language for the given file extension, or null if not supported.
      *
      * @param extension The file extension including the dot (e.g., ".java")
      */
-    fun getLanguage(extension: String): Language? {
-        return Language.fromExtension(extension)
-    }
+    fun getLanguage(extension: String): Language? = Language.fromExtension(extension)
 
     /**
      * Returns all supported file extensions.

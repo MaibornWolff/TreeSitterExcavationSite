@@ -15,7 +15,8 @@ private const val FUNCTION_DECLARATOR = "function_declarator"
  * Example: int a, b, c; extracts ["a", "b", "c"]
  */
 internal fun extractAllDeclarators(node: TSNode, sourceCode: String): List<String> {
-    val identifiers = node.children()
+    val identifiers = node
+        .children()
         .mapNotNull { extractIdentifierFromDeclaratorChild(it, sourceCode) }
         .distinct()
         .toList()
@@ -26,17 +27,15 @@ internal fun extractAllDeclarators(node: TSNode, sourceCode: String): List<Strin
 /**
  * Extracts identifier from a single declarator child node.
  */
-private fun extractIdentifierFromDeclaratorChild(child: TSNode, sourceCode: String): String? {
-    return when (child.type) {
-        INIT_DECLARATOR -> {
-            CDeclaratorParser.extractFromInitDeclarator(child, sourceCode)
-        }
-        POINTER_DECLARATOR,
-        ARRAY_DECLARATOR,
-        FUNCTION_DECLARATOR -> {
-            CDeclaratorParser.findIdentifierInDeclarator(child, sourceCode)
-        }
-        IDENTIFIER -> TreeTraversal.getNodeText(child, sourceCode)
-        else -> null
+private fun extractIdentifierFromDeclaratorChild(child: TSNode, sourceCode: String): String? = when (child.type) {
+    INIT_DECLARATOR -> {
+        CDeclaratorParser.extractFromInitDeclarator(child, sourceCode)
     }
+    POINTER_DECLARATOR,
+    ARRAY_DECLARATOR,
+    FUNCTION_DECLARATOR -> {
+        CDeclaratorParser.findIdentifierInDeclarator(child, sourceCode)
+    }
+    IDENTIFIER -> TreeTraversal.getNodeText(child, sourceCode)
+    else -> null
 }

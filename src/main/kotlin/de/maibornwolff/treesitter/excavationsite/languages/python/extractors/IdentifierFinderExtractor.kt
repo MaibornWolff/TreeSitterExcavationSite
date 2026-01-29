@@ -7,17 +7,15 @@ import org.treesitter.TSNode
 /**
  * Finds the first identifier child in a node.
  */
-internal fun findFirstIdentifier(node: TSNode, sourceCode: String): String? {
-    return node.children()
-        .firstOrNull { it.type == "identifier" }
-        ?.let { TreeTraversal.getNodeText(it, sourceCode) }
-}
+internal fun findFirstIdentifier(node: TSNode, sourceCode: String): String? = node
+    .children()
+    .firstOrNull { it.type == "identifier" }
+    ?.let { TreeTraversal.getNodeText(it, sourceCode) }
 
 /**
  * Finds the last identifier child in a node.
  */
-internal fun findLastIdentifier(node: TSNode, sourceCode: String): String? {
-    return node.children()
-        .lastOrNull { it.type == "identifier" }
-        ?.let { TreeTraversal.getNodeText(it, sourceCode) }
-}
+internal fun findLastIdentifier(node: TSNode, sourceCode: String): String? = node
+    .children()
+    .lastOrNull { it.type == "identifier" }
+    ?.let { TreeTraversal.getNodeText(it, sourceCode) }

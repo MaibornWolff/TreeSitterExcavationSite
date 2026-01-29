@@ -83,20 +83,18 @@ class LanguageDefinitionMetricsAdapter(definition: LanguageDefinition) : MetricN
     /**
      * Converts a feature-local MetricCondition to an infrastructure-level NestedNodeType.
      */
-    private fun toNestedNodeType(nodeType: String, condition: MetricCondition): NestedNodeType? {
-        return when (condition) {
-            is MetricCondition.Always -> null
-            is MetricCondition.ChildFieldMatches -> NestedNodeType(
-                baseNodeType = nodeType,
-                childNodeFieldName = condition.fieldName,
-                childNodeTypes = condition.allowedValues
-            )
-            is MetricCondition.ChildPositionMatches -> NestedNodeType(
-                baseNodeType = nodeType,
-                childNodeCount = condition.requiredChildCount,
-                childNodePosition = condition.position,
-                childNodeTypes = condition.allowedTypes
-            )
-        }
+    private fun toNestedNodeType(nodeType: String, condition: MetricCondition): NestedNodeType? = when (condition) {
+        is MetricCondition.Always -> null
+        is MetricCondition.ChildFieldMatches -> NestedNodeType(
+            baseNodeType = nodeType,
+            childNodeFieldName = condition.fieldName,
+            childNodeTypes = condition.allowedValues
+        )
+        is MetricCondition.ChildPositionMatches -> NestedNodeType(
+            baseNodeType = nodeType,
+            childNodeCount = condition.requiredChildCount,
+            childNodePosition = condition.position,
+            childNodeTypes = condition.allowedTypes
+        )
     }
 }

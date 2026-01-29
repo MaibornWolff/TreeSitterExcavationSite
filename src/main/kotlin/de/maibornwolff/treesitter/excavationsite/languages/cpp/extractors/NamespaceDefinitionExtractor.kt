@@ -6,7 +6,6 @@ import org.treesitter.TSNode
 private const val IDENTIFIER = "identifier"
 private const val NAMESPACE_IDENTIFIER = "namespace_identifier"
 
-internal fun extractFromNamespaceDefinition(node: TSNode, sourceCode: String): String? {
-    return TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER)
+internal fun extractFromNamespaceDefinition(node: TSNode, sourceCode: String): String? =
+    TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER)
         ?: TreeTraversal.findFirstChildTextByType(node, sourceCode, NAMESPACE_IDENTIFIER)
-}

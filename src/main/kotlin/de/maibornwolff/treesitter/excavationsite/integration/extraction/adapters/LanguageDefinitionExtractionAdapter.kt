@@ -21,8 +21,7 @@ class LanguageDefinitionExtractionAdapter(definition: LanguageDefinition) : Extr
                 is Extract.Comment -> extract.format?.let { nodeType to it }
                 else -> null
             }
-        }
-        .toMap()
+        }.toMap()
 
     override val stringFormats: Map<String, StringFormats> = definition.nodeExtractions
         .mapNotNull { (nodeType, extract) ->
@@ -30,6 +29,5 @@ class LanguageDefinitionExtractionAdapter(definition: LanguageDefinition) : Extr
                 is Extract.StringLiteral -> extract.format?.let { nodeType to it }
                 else -> null
             }
-        }
-        .toMap()
+        }.toMap()
 }

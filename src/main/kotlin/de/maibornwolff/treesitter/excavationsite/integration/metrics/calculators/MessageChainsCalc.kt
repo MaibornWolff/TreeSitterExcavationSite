@@ -46,7 +46,5 @@ class MessageChainsCalc(val nodeTypeProvider: MetricNodeTypes) : MetricPerFileCa
         return 0
     }
 
-    private fun isCallNode(nodeType: String): Boolean {
-        return nodeTypeProvider.messageChainsCallNodeTypes.simpleNodeTypes.contains(nodeType)
-    }
+    private fun isCallNode(nodeType: String): Boolean = nodeTypeProvider.messageChainsCallNodeTypes.simpleNodeTypes.contains(nodeType)
 }

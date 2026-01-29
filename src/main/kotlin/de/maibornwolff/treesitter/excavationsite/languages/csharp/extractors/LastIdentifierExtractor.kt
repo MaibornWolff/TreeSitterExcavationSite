@@ -11,8 +11,7 @@ private const val IDENTIFIER = "identifier"
  *
  * Used for parameter, catch_declaration, and declaration_pattern.
  */
-internal fun findLastIdentifier(node: TSNode, sourceCode: String): String? {
-    return node.children()
-        .lastOrNull { it.type == IDENTIFIER }
-        ?.let { TreeTraversal.getNodeText(it, sourceCode) }
-}
+internal fun findLastIdentifier(node: TSNode, sourceCode: String): String? = node
+    .children()
+    .lastOrNull { it.type == IDENTIFIER }
+    ?.let { TreeTraversal.getNodeText(it, sourceCode) }

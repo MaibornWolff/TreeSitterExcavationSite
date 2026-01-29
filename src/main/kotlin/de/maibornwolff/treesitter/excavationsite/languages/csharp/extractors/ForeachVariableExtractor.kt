@@ -29,7 +29,8 @@ private val typeNodes = setOf(
  * Finds the identifier after the type and before the "in" keyword.
  */
 internal fun extractForeachVariable(node: TSNode, sourceCode: String): String? {
-    val childrenBeforeIn = node.children()
+    val childrenBeforeIn = node
+        .children()
         .takeWhile { it.type != IN_KEYWORD }
         .toList()
     return findVariableAfterType(childrenBeforeIn, sourceCode)
@@ -39,11 +40,10 @@ private fun findVariableAfterType(children: List<TSNode>, sourceCode: String): S
     val indexOfType = children.indexOfFirst { isTypeNode(it) }
     if (indexOfType < 0) return null
 
-    return children.drop(indexOfType + 1)
+    return children
+        .drop(indexOfType + 1)
         .firstOrNull { it.type == IDENTIFIER }
         ?.let { TreeTraversal.getNodeText(it, sourceCode) }
 }
 
-private fun isTypeNode(node: TSNode): Boolean {
-    return node.type in typeNodes || node.type == IDENTIFIER
-}
+private fun isTypeNode(node: TSNode): Boolean = node.type in typeNodes || node.type == IDENTIFIER

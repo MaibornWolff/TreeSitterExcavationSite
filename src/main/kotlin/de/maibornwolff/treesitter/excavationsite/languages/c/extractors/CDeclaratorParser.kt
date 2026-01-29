@@ -95,7 +95,8 @@ object CDeclaratorParser {
         }
 
         // Fallback: find the last identifier child
-        return node.children()
+        return node
+            .children()
             .filter { it.type == IDENTIFIER || it.type == TYPE_IDENTIFIER }
             .lastOrNull()
             ?.let { TreeTraversal.getNodeText(it, sourceCode) }
@@ -130,8 +131,7 @@ object CDeclaratorParser {
         return null
     }
 
-    private fun extractFromDestructorName(node: TSNode, sourceCode: String): String? {
-        return TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER)
+    private fun extractFromDestructorName(node: TSNode, sourceCode: String): String? =
+        TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER)
             ?: TreeTraversal.findFirstChildTextByType(node, sourceCode, TYPE_IDENTIFIER)
-    }
 }

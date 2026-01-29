@@ -12,9 +12,8 @@ private const val CONSTANT = "constant"
 /**
  * Extracts identifier from assignment, stripping variable prefixes.
  */
-internal fun extractFromAssignment(node: TSNode, sourceCode: String): String? {
-    return extractFromAssignmentTarget(node.getChildByFieldName("left"), sourceCode)
-}
+internal fun extractFromAssignment(node: TSNode, sourceCode: String): String? =
+    extractFromAssignmentTarget(node.getChildByFieldName("left"), sourceCode)
 
 /**
  * Extracts identifier from assignment target, stripping @, @@, $ prefixes.

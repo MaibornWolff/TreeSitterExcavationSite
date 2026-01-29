@@ -9,9 +9,8 @@ private const val IDENTIFIER = "identifier"
 /**
  * Extracts both identifiers from alias: `alias new_name old_name`
  */
-internal fun extractAliasIdentifiers(node: TSNode, sourceCode: String): List<String> {
-    return node.children()
-        .filter { it.type == IDENTIFIER }
-        .map { TreeTraversal.getNodeText(it, sourceCode) }
-        .toList()
-}
+internal fun extractAliasIdentifiers(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .filter { it.type == IDENTIFIER }
+    .map { TreeTraversal.getNodeText(it, sourceCode) }
+    .toList()

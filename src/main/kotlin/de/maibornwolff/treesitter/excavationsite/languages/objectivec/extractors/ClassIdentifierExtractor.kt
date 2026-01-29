@@ -5,6 +5,4 @@ import org.treesitter.TSNode
 
 private const val IDENTIFIER = "identifier"
 
-internal fun extractClassIdentifier(node: TSNode, sourceCode: String): String? {
-    return TreeTraversal.findChildByType(node, IDENTIFIER, sourceCode)
-}
+internal fun extractClassIdentifier(node: TSNode, sourceCode: String): String? = TreeTraversal.findChildByType(node, IDENTIFIER, sourceCode)

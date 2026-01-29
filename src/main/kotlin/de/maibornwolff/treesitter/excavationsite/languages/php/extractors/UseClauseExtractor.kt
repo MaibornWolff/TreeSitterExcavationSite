@@ -14,13 +14,12 @@ private const val AS_KEYWORD = "as"
  * - `use App\Model\User;` -> "User"
  * - `use App\Model\User as Customer;` -> "Customer"
  */
-internal fun extractUseClauseName(node: TSNode, sourceCode: String): String? {
-    return findNameAfterAs(node, sourceCode)
-        ?: node.children()
-            .firstOrNull { it.type == QUALIFIED_NAME }
-            ?.let { findLastNameChild(it, sourceCode) }
-        ?: findFirstChildTextByType(node, sourceCode, NAME)
-}
+internal fun extractUseClauseName(node: TSNode, sourceCode: String): String? = findNameAfterAs(node, sourceCode)
+    ?: node
+        .children()
+        .firstOrNull { it.type == QUALIFIED_NAME }
+        ?.let { findLastNameChild(it, sourceCode) }
+    ?: findFirstChildTextByType(node, sourceCode, NAME)
 
 /**
  * Finds name child that appears after "as" keyword.
@@ -30,7 +29,8 @@ internal fun findNameAfterAs(node: TSNode, sourceCode: String): String? {
     val children = node.children().toList()
     val asIndex = children.indexOfFirst { TreeTraversal.getNodeText(it, sourceCode) == AS_KEYWORD }
     if (asIndex < 0) return null
-    return children.drop(asIndex + 1)
+    return children
+        .drop(asIndex + 1)
         .firstOrNull { it.type == NAME }
         ?.let { TreeTraversal.getNodeText(it, sourceCode) }
 }

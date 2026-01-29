@@ -5,6 +5,5 @@ import org.treesitter.TSNode
 
 private const val IDENTIFIER = "identifier"
 
-internal fun extractFromPreprocessorDef(node: TSNode, sourceCode: String): String? {
-    return TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER)
-}
+internal fun extractFromPreprocessorDef(node: TSNode, sourceCode: String): String? =
+    TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER)

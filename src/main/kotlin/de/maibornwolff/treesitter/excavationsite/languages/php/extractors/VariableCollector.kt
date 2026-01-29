@@ -15,8 +15,9 @@ private const val PAIR = "pair"
  * - Closure use clauses: `function() use ($x, $y)`
  * - List destructuring: `list($a, $b) = [1, 2]`
  */
-internal fun collectVariables(node: TSNode, sourceCode: String): List<String> {
-    return node.children().flatMap { child ->
+internal fun collectVariables(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .flatMap { child ->
         when (child.type) {
             VARIABLE_NAME ->
                 listOf(stripDollarPrefix(TreeTraversal.getNodeText(child, sourceCode)))
@@ -27,4 +28,3 @@ internal fun collectVariables(node: TSNode, sourceCode: String): List<String> {
             else -> emptyList()
         }
     }.toList()
-}

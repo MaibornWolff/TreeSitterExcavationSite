@@ -8,8 +8,9 @@ private const val IDENTIFIER = "identifier"
 private const val PARAMETER_DECLARATION = "parameter_declaration"
 private const val POINTER_DECLARATOR = "pointer_declarator"
 
-internal fun extractAllBlockParameters(node: TSNode, sourceCode: String): List<String> {
-    return node.children().mapNotNull { child ->
+internal fun extractAllBlockParameters(node: TSNode, sourceCode: String): List<String> = node
+    .children()
+    .mapNotNull { child ->
         when (child.type) {
             PARAMETER_DECLARATION -> extractFromParameterDeclaration(child, sourceCode)
             POINTER_DECLARATOR, IDENTIFIER -> {
@@ -18,4 +19,3 @@ internal fun extractAllBlockParameters(node: TSNode, sourceCode: String): List<S
             else -> null
         }
     }.toList()
-}
