@@ -2,7 +2,7 @@
 kotlin = "2.2.21"
 junit5 = "6.0.1"
 assertj = "3.27.7"
-mockk = "1.14.7"
+mockk = "1.14.9"
 archunit = "1.4.1"
 ktlint = "14.0.1"
 detekt = "1.23.8"
