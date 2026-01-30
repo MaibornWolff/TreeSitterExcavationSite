@@ -19,7 +19,7 @@ enum class Language(val primaryExtension: String, val otherExtensions: Set<Strin
     C(primaryExtension = ".c"),
     OBJECTIVE_C(primaryExtension = ".m", otherExtensions = setOf(".mm")),
     VUE(primaryExtension = ".vue"),
-    ABL(primaryExtension = ".p", otherExtensions = setOf(".cls", ".w"));
+    ABL(primaryExtension = ".p", otherExtensions = setOf(".cls", ".w", ".i"));
 
     companion object {
         private val extensionMap: Map<String, Language> by lazy {

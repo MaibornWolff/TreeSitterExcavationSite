@@ -320,4 +320,39 @@ class AblMetricsTest {
         // CASE (1) + 2 WHEN branches (2) + OTHERWISE (1) = 4
         assertThat(result.complexity).isEqualTo(4.0)
     }
+
+    @Test
+    fun `should recognize i extension as ABL include file`() {
+        // Arrange - .i files are ABL include files containing reusable code
+
+        // Act
+        val language = Language.fromExtension(".i")
+
+        // Assert
+        assertThat(language).isEqualTo(Language.ABL)
+    }
+
+    @Test
+    fun `should parse ABL include file content`() {
+        // Arrange - typical .i file content with variable definitions and procedures
+        val code = """
+            /* Common definitions include file */
+            DEFINE VARIABLE cCustomerId AS CHARACTER NO-UNDO.
+            DEFINE VARIABLE iOrderCount AS INTEGER NO-UNDO INITIAL 0.
+
+            PROCEDURE validateCustomer:
+                DEFINE INPUT PARAMETER pcId AS CHARACTER NO-UNDO.
+                IF pcId = "" THEN
+                    RETURN ERROR "Invalid customer ID".
+            END PROCEDURE.
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterMetrics.parse(code, Language.ABL)
+
+        // Assert
+        assertThat(result.linesOfCode).isEqualTo(9.0)
+        assertThat(result.numberOfFunctions).isEqualTo(1.0) // 1 procedure
+        assertThat(result.complexity).isEqualTo(2.0) // procedure + if
+    }
 }

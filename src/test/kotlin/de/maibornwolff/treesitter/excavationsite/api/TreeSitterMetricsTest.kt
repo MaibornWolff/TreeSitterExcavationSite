@@ -117,9 +117,9 @@ class TreeSitterMetricsTest {
             ".java", ".kt", ".kts", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
             ".py", ".go", ".php", ".rb", ".swift", ".sh", ".bash", ".cs",
             ".cpp", ".cc", ".cxx", ".hpp", ".hxx", ".h", ".c", ".m", ".mm",
-            ".vue", ".p", ".cls", ".w"
+            ".vue", ".p", ".cls", ".w", ".i"
         )
-        assertThat(extensions).hasSize(30)
+        assertThat(extensions).hasSize(31)
     }
 
     @Test

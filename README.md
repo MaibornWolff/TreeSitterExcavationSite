@@ -104,7 +104,7 @@ result.extractedTexts.forEach { item ->
 | C | `.c` | Yes | Yes | Stable |
 | Objective-C | `.m`, `.mm` | Yes | Yes | Stable |
 | Vue | `.vue` | Yes | Yes | Stable |
-| ABL | `.p`, `.cls`, `.w` | Yes | Yes | Experimental |
+| ABL | `.p`, `.cls`, `.w`, `.i` | Yes | Yes | Experimental |
 
 ## Available Metrics
 
