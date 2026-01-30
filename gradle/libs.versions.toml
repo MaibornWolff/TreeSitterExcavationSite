@@ -1,5 +1,5 @@
 [versions]
-kotlin = "2.2.21"
+kotlin = "2.3.0"
 junit5 = "6.0.2"
 assertj = "3.27.7"
 mockk = "1.14.9"
