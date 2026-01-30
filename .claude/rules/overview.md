@@ -6,8 +6,8 @@ TreeSitterLibrary is a standalone Kotlin library for calculating code metrics us
 
 - **Metrics API**: `TreeSitterMetrics.parse(code, language) -> MetricsResult`
 - **Extraction API**: `TreeSitterExtraction.extract(code, language) -> ExtractionResult`
-- Support for 14 programming languages (metrics and extraction)
-- Metrics: complexity, lines of code, comment lines, function counts, per-function aggregations
+- Support for 16 programming languages and frameworks (metrics and extraction)
+- Metrics: complexity, lines of code, comment lines, function counts, code smells, per-function aggregations
 - Extraction: identifiers, comments, string literals with context
 - No external dependencies beyond TreeSitter
 
@@ -16,9 +16,9 @@ TreeSitterLibrary is a standalone Kotlin library for calculating code metrics us
 - Java >= 11, <= 21
 - Gradle 8.x (wrapper included)
 
-## Supported Languages
+## Supported Languages and Frameworks
 
-- Java, Kotlin, TypeScript, JavaScript, Python, Go, PHP, Ruby, Swift, Bash, C#, C++, C, Objective-C
+- Java, Kotlin, TypeScript, JavaScript, Python, Go, PHP, Ruby, Swift, Bash, C#, C++, C, Objective-C, Vue, ABL
 
 ## Relationship to CodeCharta
 

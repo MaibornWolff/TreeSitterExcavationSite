@@ -4,9 +4,9 @@ A Kotlin library for calculating code metrics and extracting text from source co
 
 ## Features
 
-- **Code Metrics**: Complexity, lines of code, comment lines, function counts, per-function aggregations
+- **Code Metrics**: Complexity, lines of code, comment lines, function counts, code smells, per-function aggregations
 - **Text Extraction**: Identifiers, comments, and string literals with context
-- **14 Languages**: Java, Kotlin, TypeScript, JavaScript, Python, Go, PHP, Ruby, Swift, Bash, C#, C++, C, Objective-C
+- **16 Languages and Frameworks**: Java, Kotlin, TypeScript, JavaScript, Python, Go, PHP, Ruby, Swift, Bash, C#, C++, C, Objective-C, Vue, ABL
 - **Zero External Dependencies**: Only TreeSitter bindings required
 
 ## Requirements
@@ -50,6 +50,10 @@ println(result.realLinesOfCode)   // Non-empty, non-comment lines
 println(result.commentLines)      // Comment lines
 println(result.numberOfFunctions) // Function count
 println(result.messageChains)     // Method chains (4+ calls)
+println(result.longMethod)        // Functions exceeding length threshold
+println(result.longParameterList) // Functions with many parameters
+println(result.excessiveComments) // Excessive comment indicators
+println(result.commentRatio)      // Comment to code ratio
 
 // Per-function metrics
 println(result.perFunctionMetrics["max_complexity_per_function"])
@@ -81,24 +85,26 @@ result.extractedTexts.forEach { item ->
 }
 ```
 
-## Supported Languages
+## Supported Languages and Frameworks
 
-| Language | Extension(s) | Metrics | Extraction |
-|----------|-------------|---------|------------|
-| Java | `.java` | Yes | Yes |
-| Kotlin | `.kt`, `.kts` | Yes | Yes |
-| TypeScript | `.ts`, `.tsx` | Yes | Yes |
-| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | Yes | Yes |
-| Python | `.py` | Yes | Yes |
-| Go | `.go` | Yes | Yes |
-| PHP | `.php` | Yes | Yes |
-| Ruby | `.rb` | Yes | Yes |
-| Swift | `.swift` | Yes | Yes |
-| Bash | `.sh`, `.bash` | Yes | Yes |
-| C# | `.cs` | Yes | Yes |
-| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.h` | Yes | Yes |
-| C | `.c` | Yes | Yes |
-| Objective-C | `.m`, `.mm` | Yes | Yes |
+| Language | Extension(s) | Metrics | Extraction | Status |
+|----------|-------------|---------|------------|--------|
+| Java | `.java` | Yes | Yes | Stable |
+| Kotlin | `.kt`, `.kts` | Yes | Yes | Stable |
+| TypeScript | `.ts`, `.tsx` | Yes | Yes | Stable |
+| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | Yes | Yes | Stable |
+| Python | `.py` | Yes | Yes | Stable |
+| Go | `.go` | Yes | Yes | Stable |
+| PHP | `.php` | Yes | Yes | Stable |
+| Ruby | `.rb` | Yes | Yes | Stable |
+| Swift | `.swift` | Yes | Yes | Stable |
+| Bash | `.sh`, `.bash` | Yes | Yes | Stable |
+| C# | `.cs` | Yes | Yes | Stable |
+| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.h` | Yes | Yes | Stable |
+| C | `.c` | Yes | Yes | Stable |
+| Objective-C | `.m`, `.mm` | Yes | Yes | Stable |
+| Vue | `.vue` | Yes | Yes | Stable |
+| ABL | `.p`, `.cls`, `.w` | Yes | Yes | Experimental |
 
 ## Available Metrics
 
@@ -113,6 +119,9 @@ result.extractedTexts.forEach { item ->
 | `comment_lines` | Lines containing comments |
 | `number_of_functions` | Function/method count |
 | `message_chains` | Method chains with 4+ calls |
+| `long_method` | Functions exceeding length threshold |
+| `long_parameter_list` | Functions with excessive parameters |
+| `excessive_comments` | Files with excessive commenting |
 | `comment_ratio` | Comments to code ratio |
 
 ### Per-Function Metrics
@@ -158,7 +167,7 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 │       ├── ports/                 # Interfaces (ExtractionNodeTypes)
 │       ├── adapters/              # Language definition adapters
 │       └── extractors/common/     # Shared extractors
-├── languages/                     # Language definitions (14 languages)
+├── languages/                     # Language definitions (16 languages and frameworks)
 │   └── <lang>/                    # Per-language directory
 │       ├── *Definition.kt         # Combines metric and extraction mappings
 │       ├── *MetricMapping.kt      # Metric node mappings
