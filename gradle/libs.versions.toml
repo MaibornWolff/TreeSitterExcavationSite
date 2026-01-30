@@ -24,7 +24,7 @@ tree-sitter-ruby = "0.23.1"
 tree-sitter-swift = "0.5.0"
 tree-sitter-objc = "main-a"
 tree-sitter-bash = "0.23.3"
-tree-sitter-vue = "0.2.1a"
+tree-sitter-vue = "0.2.1"
 # tree-sitter-ng is an experimental fork with ABL support (JitPack)
 tree-sitter-abl = "de274a6"
 
