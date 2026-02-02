@@ -11,6 +11,11 @@
       "automerge": true,
       "automergeType": "pr",
       "platformAutomerge": true
+    },
+    {
+      "matchPackageNames": ["io.github.bonede:tree-sitter-objc"],
+      "allowedVersions": "main-a",
+      "description": "main-a is compatible with tree-sitter 0.26.x; main has binary incompatibility"
     }
   ]
 }
