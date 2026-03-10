@@ -49,6 +49,10 @@ object LanguageRegistry {
         Language.JAVA -> TreeSitterJava()
         Language.KOTLIN -> TreeSitterKotlin()
         Language.TYPESCRIPT -> TreeSitterTypescript()
+        Language.TSX -> TreeSitterTypescript()
+        // TODO: Replace with TreeSitterTsx() once tree-sitter-tsx is available as a dependency.
+        // tree-sitter-tsx exists in bonede/tree-sitter-ng but JitPack builds fail due to Java 8.
+        // Maybe Christian Hühn can add tree-sitter-tsx to his fork (used for tree-sitter-abl).
         Language.JAVASCRIPT -> TreeSitterJavascript()
         Language.PYTHON -> TreeSitterPython()
         Language.GO -> TreeSitterGo()
@@ -71,6 +75,7 @@ object LanguageRegistry {
         Language.JAVA -> JavaDefinition
         Language.KOTLIN -> KotlinDefinition
         Language.TYPESCRIPT -> TypescriptDefinition
+        Language.TSX -> TypescriptDefinition // placeholder until TsxDefinition is created
         Language.JAVASCRIPT -> JavascriptDefinition
         Language.PYTHON -> PythonDefinition
         Language.GO -> GoDefinition
