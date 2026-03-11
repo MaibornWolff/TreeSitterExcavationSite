@@ -28,8 +28,10 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
         if (matches.isEmpty()) return emptyList()
 
         val packageNode = matches.first().captures[0].node
-        val scopedIdentifier = packageNode.children().firstOrNull { it.type == "scoped_identifier" } ?: return emptyList()
-        val packageText = TreeTraversal.getNodeText(scopedIdentifier, sourceCode)
+        val identifierNode = packageNode.children().firstOrNull {
+            it.type == "scoped_identifier" || it.type == "identifier"
+        } ?: return emptyList()
+        val packageText = TreeTraversal.getNodeText(identifierNode, sourceCode)
         return packageText.split(".")
     }
 

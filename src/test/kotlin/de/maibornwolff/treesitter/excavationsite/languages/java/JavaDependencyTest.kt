@@ -26,6 +26,22 @@ class JavaDependencyTest {
         }
 
         @Test
+        fun `should extract single-segment package path`() {
+            // Arrange
+            val code = """
+            package mypackage;
+
+            public class MyService {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVA)
+
+            // Assert
+            assertThat(result.packagePath).containsExactly("mypackage")
+        }
+
+        @Test
         fun `should return empty package path when no package declaration`() {
             // Arrange
             val code = "public class MyService {}"
