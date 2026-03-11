@@ -126,3 +126,12 @@ fun TSNode.children(): Sequence<TSNode> = sequence {
         yield(getChild(i))
     }
 }
+
+/**
+ * Extension function to iterate over all named children of a TSNode.
+ */
+fun TSNode.namedChildren(): Sequence<TSNode> = sequence {
+    for (i in 0 until namedChildCount) {
+        yield(getNamedChild(i))
+    }
+}
