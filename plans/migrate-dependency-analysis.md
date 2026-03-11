@@ -71,6 +71,11 @@ Expand `JavaDependencyAnalyzer` with declaration finding and all used type queri
 - [ ] Complete Task 2: TSE Java declaration + used type extraction
 - [ ] Complete Task 3: DC integration — JavaAnalyzer delegates to TSE
 
+## Future Improvements
+
+- Extract record component types (`record User(String name, int age)` — `String` and `int` are currently not captured as used types). Gap exists in DC too. Add after Task 3 is verified.
+- Filter nested declaration types from outer declarations (types from an inner class leak into the outer class's `usedTypes`). Gap exists in DC too. Add after Task 3 is verified.
+
 ## Notes
 
 - Architecture: New vertical slice `integration/dependencies/`, NOT extending the existing extraction feature (dependencies are structured semantic data, not flat text)
