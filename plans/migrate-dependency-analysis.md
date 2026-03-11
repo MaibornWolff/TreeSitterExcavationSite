@@ -17,16 +17,11 @@ New vertical slice `integration/dependencies/` following hexagonal architecture 
 
 **New files** (all source paths relative to `src/main/kotlin/de/maibornwolff/treesitter/excavationsite/`):
 - `shared/domain/DependencyResult.kt` — `DependencyResult`, `ImportDeclaration`, `Declaration`, `DeclarationType`, `UsedType`
-- `shared/domain/DependencyMapping.kt` — Interface with optional `dependencyAnalyzer`
-- `integration/dependencies/DependencyAnalyzer.kt` — Interface: `analyze(rootNode, sourceCode) -> DependencyResult`
+- `shared/domain/DependencyMapping.kt` — `DependencyMapping` interface with optional `dependencyAnalyzer`, `DependencyAnalyzer` interface: `analyze(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage) -> DependencyResult`
 - `integration/dependencies/DependenciesFacade.kt` — Facade (follows `ExtractionFacade` pattern)
-- `shared/infrastructure/walker/TreeSitterQueryUtils.kt` — New file with two extensions ported from DC's `TreeSitterUtils.kt`:
-  - `TSNode.executeQuery(query: TSQuery): List<TSQueryMatch>` — Runs TSQuery pattern matching
-  - `TSNode.namedChildren(): Sequence<TSNode>` — Named children only, skipping punctuation
-  - NOT ported: `nodeAsString` (already `TreeTraversal.getNodeText`), `getChildren` (already `TSNode.children()`)
+- `shared/infrastructure/walker/TreeSitterQueryUtils.kt` — `QueryMatch`/`QueryCapture` types and `TSNode.executeQuery(queryString: String, treeSitterLanguage: TSLanguage): List<QueryMatch>` extension ported from DC's `TreeSitterUtils.kt`
 - `languages/java/JavaDependencyAnalyzer.kt` — Package + import extraction (port of `JavaPackageQuery` + `JavaImportQuery`)
 - `api/TreeSitterDependencies.kt` — Public API
-- `api/DependencyTypes.kt` — Public type re-exports
 
 **Modified files:**
 - `shared/domain/LanguageDefinition.kt` — Extend with `DependencyMapping`
