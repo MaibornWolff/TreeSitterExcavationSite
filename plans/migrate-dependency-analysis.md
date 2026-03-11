@@ -1,7 +1,7 @@
 ---
 name: migrate-dependency-analysis
 issue:
-state: todo
+state: progress
 version: 2
 ---
 
@@ -32,7 +32,7 @@ New vertical slice `integration/dependencies/` following hexagonal architecture 
 - `shared/domain/LanguageDefinition.kt` — Extend with `DependencyMapping`
 - `languages/java/JavaDefinition.kt` — Override `dependencyAnalyzer`
 
-**Tests:** `languages/java/JavaDependencyTest.kt` — package path, imports, wildcards
+**Tests:** `languages/java/JavaDependencyTest.kt` — package path, imports, wildcards, static imports
 
 **DC source references to port from:**
 - `JavaPackageQuery.kt` — TSQuery `(package_declaration) @package`
@@ -72,7 +72,7 @@ Expand `JavaDependencyAnalyzer` with declaration finding and all used type queri
 
 ## Steps
 
-- [ ] Complete Task 1: TSE domain types + API + Java package/import extraction
+- [x] Complete Task 1: TSE domain types + API + Java package/import extraction
 - [ ] Complete Task 2: TSE Java declaration + used type extraction
 - [ ] Complete Task 3: DC integration — JavaAnalyzer delegates to TSE
 
