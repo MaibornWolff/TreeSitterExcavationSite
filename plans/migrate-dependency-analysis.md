@@ -7,7 +7,8 @@ version: 2
 
 ## Goal
 
-Migrate TreeSitter-based dependency analysis from DependaCharta (DC) to TreeSitterExcavationSite (TSE), starting with Java. This removes DC's direct TreeSitter dependency for Java and makes the parsing logic reusable.
+Migrate TreeSitter-based dependency analysis from DependaCharta (DC) to TreeSitterExcavationSite (TSE), starting with Java. This removes
+DC's direct TreeSitter dependency for Java and makes the parsing logic reusable.
 
 ## Tasks
 
@@ -16,20 +17,26 @@ Migrate TreeSitter-based dependency analysis from DependaCharta (DC) to TreeSitt
 New vertical slice `integration/dependencies/` following hexagonal architecture (like metrics/extraction).
 
 **New files** (all source paths relative to `src/main/kotlin/de/maibornwolff/treesitter/excavationsite/`):
+
 - `shared/domain/DependencyResult.kt` — `DependencyResult`, `ImportDeclaration`, `Declaration`, `DeclarationType`, `UsedType`
-- `shared/domain/DependencyMapping.kt` — `DependencyMapping` interface with optional `dependencyAnalyzer`, `DependencyAnalyzer` interface: `analyze(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage) -> DependencyResult`
+- `shared/domain/DependencyMapping.kt` — `DependencyMapping` interface with optional `dependencyAnalyzer`, `DependencyAnalyzer` interface:
+  `analyze(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage) -> DependencyResult`
 - `integration/dependencies/DependenciesFacade.kt` — Facade (follows `ExtractionFacade` pattern)
-- `shared/infrastructure/walker/TreeSitterQueryUtils.kt` — `QueryMatch`/`QueryCapture` types and `TSNode.executeQuery(queryString: String, treeSitterLanguage: TSLanguage): List<QueryMatch>` extension ported from DC's `TreeSitterUtils.kt`
+- `shared/infrastructure/walker/TreeSitterQueryUtils.kt` — `QueryMatch`/`QueryCapture` types and
+  `TSNode.executeQuery(queryString: String, treeSitterLanguage: TSLanguage): List<QueryMatch>` extension ported from DC's
+  `TreeSitterUtils.kt`
 - `languages/java/JavaDependencyAnalyzer.kt` — Package + import extraction (port of `JavaPackageQuery` + `JavaImportQuery`)
 - `api/TreeSitterDependencies.kt` — Public API
 
 **Modified files:**
+
 - `shared/domain/LanguageDefinition.kt` — Extend with `DependencyMapping`
 - `languages/java/JavaDefinition.kt` — Override `dependencyAnalyzer`
 
 **Tests:** `languages/java/JavaDependencyTest.kt` — package path, imports, wildcards, static imports
 
 **DC source references to port from:**
+
 - `JavaPackageQuery.kt` — TSQuery `(package_declaration) @package`
 - `JavaImportQuery.kt` — TSQuery `(import_declaration) @import`, wildcard via asterisk child
 - `TreeSitterUtils.kt` — `execute()`, `nodeAsString()`, `getNamedChildren()`
@@ -39,6 +46,7 @@ New vertical slice `integration/dependencies/` following hexagonal architecture 
 Expand `JavaDependencyAnalyzer` with declaration finding and all used type queries.
 
 **Add to `JavaDependencyAnalyzer.kt`:**
+
 - `extractDeclarations()` — TSQuery for class/record/interface/enum/annotation declarations
 - `extractType()` — Recursive generic type extraction (port of `JavaUtils.extractType()`)
 - Used type queries ported from DC:
@@ -54,35 +62,45 @@ Expand `JavaDependencyAnalyzer` with declaration finding and all used type queri
 
 ### 3. DC Integration: JavaAnalyzer Delegates to TSE
 
-**Transition strategy: just swap internals.** Replace `JavaAnalyzer`'s body to call TSE directly. No CLI flags, no dual mode. DC's existing `JavaAnalyzerTest` provides safety — if tests pass, the swap is correct.
+**Transition strategy: just swap internals.** Replace `JavaAnalyzer`'s body to call TSE directly. No CLI flags, no dual mode. DC's existing
+`JavaAnalyzerTest` provides safety — if tests pass, the swap is correct.
 
 **Modified files in DC:**
+
 - `analysis/settings.gradle.kts` — `includeBuild("../TreeSitterExcavationSite")`
 - `analysis/build.gradle.kts` — Add TSE dependency
 - `JavaAnalyzer.kt` — Call `TreeSitterDependencies.analyze()`, map results to DC's `FileReport`/`Node`
 
-**Delete from DC:** All Java query files (`JavaPackageQuery`, `JavaImportQuery`, `JavaDeclarationsQuery`, `SimpleJavaQueries`, `JavaInheritanceQuery`, `JavaMethodAndConstructorQuery`, `JavaThrownTypesQuery`) + `JavaUtils.kt`
+**Delete from DC:** All Java query files (`JavaPackageQuery`, `JavaImportQuery`, `JavaDeclarationsQuery`, `SimpleJavaQueries`,
+`JavaInheritanceQuery`, `JavaMethodAndConstructorQuery`, `JavaThrownTypesQuery`) + `JavaUtils.kt`
 
 **Verify:** `JavaAnalyzerTest.kt` passes unchanged
 
 ## Steps
 
 - [x] Complete Task 1: TSE domain types + API + Java package/import extraction
-- [ ] Complete Task 2: TSE Java declaration + used type extraction
+-
+- [x] Complete Task 2: TSE Java declaration + used type extraction
 - [ ] Complete Task 3: DC integration — JavaAnalyzer delegates to TSE
 
 ## Future Improvements
 
-- Extract record component types (`record User(String name, int age)` — `String` and `int` are currently not captured as used types). Gap exists in DC too. Add after Task 3 is verified.
-- Filter nested declaration types from outer declarations (types from an inner class leak into the outer class's `usedTypes`). Gap exists in DC too. Add after Task 3 is verified.
+- Extract record component types (`record User(String name, int age)` — `String` and `int` are currently not captured as used types). Gap
+  exists in DC too. Add after Task 3 is verified.
+- Filter nested declaration types from outer declarations (types from an inner class leak into the outer class's `usedTypes`). Gap exists in
+  DC too. Add after Task 3 is verified.
 
 ## Notes
 
-- Architecture: New vertical slice `integration/dependencies/`, NOT extending the existing extraction feature (dependencies are structured semantic data, not flat text)
+- Architecture: New vertical slice `integration/dependencies/`, NOT extending the existing extraction feature (dependencies are structured
+  semantic data, not flat text)
 - Uses TSQuery-based pattern matching (different from walker-based metrics/extraction)
 - `LanguageDefinition` gains optional `DependencyMapping` with default `null` — existing languages unaffected
-- `DependencyAnalyzer` interface lives in `shared/domain/` (not `integration/`) because `LanguageDefinition` references it and domain already uses TSNode (see `Extract.kt`). The facade and orchestration still live in `integration/dependencies/`, language implementations in `languages/java/`.
-- `DependencyMapping.isDependencyAnalysisSupported` keeps the null-check on the mapping itself — API layer only orchestrates, no business logic
+- `DependencyAnalyzer` interface lives in `shared/domain/` (not `integration/`) because `LanguageDefinition` references it and domain
+  already uses TSNode (see `Extract.kt`). The facade and orchestration still live in `integration/dependencies/`, language implementations
+  in `languages/java/`.
+- `DependencyMapping.isDependencyAnalysisSupported` keeps the null-check on the mapping itself — API layer only orchestrates, no business
+  logic
 - DC-TSE link: Gradle composite build (`includeBuild`)
 - `UsageKind` skipped for now — Java defaults all types to plain USAGE; can be added when migrating languages that need it
 - Type resolution (matching used types to project dictionary) stays in DC — it's project-level, not file-level
