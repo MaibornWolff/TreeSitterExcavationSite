@@ -6,7 +6,7 @@ import org.treesitter.TreeSitterJava
 
 class TreeSitterQueryUtilsTest {
     @Test
-    fun `should preserve multiple captures per match in executeQuery`() {
+    fun `should resolve captures by name in executeQuery`() {
         // Arrange
         val code = """
             public class MyClass {
@@ -20,12 +20,11 @@ class TreeSitterQueryUtilsTest {
         // Act
         val matches = rootNode.executeQuery(query, java)
 
-        // Assert — captures are ordered by source position, use index for query-order lookup
+        // Assert
         assertThat(matches).hasSize(1)
         assertThat(matches[0].captures).hasSize(3)
-        val capturesByIndex = matches[0].captures.sortedBy { it.index }
-        assertThat(TreeTraversal.getNodeText(capturesByIndex[0].node, code)).isEqualTo("ReturnType")
-        assertThat(TreeTraversal.getNodeText(capturesByIndex[1].node, code)).isEqualTo("(ParamType p)")
-        assertThat(capturesByIndex[2].node.type).isEqualTo("method_declaration")
+        assertThat(TreeTraversal.getNodeText(matches[0].capture("return_type").node, code)).isEqualTo("ReturnType")
+        assertThat(TreeTraversal.getNodeText(matches[0].capture("params").node, code)).isEqualTo("(ParamType p)")
+        assertThat(matches[0].capture("method").node.type).isEqualTo("method_declaration")
     }
 }
