@@ -518,7 +518,6 @@ class JavaDependencyTest {
             // Assert
             val usedTypes = result.declarations.first().usedTypes
             assertThat(usedTypes).containsExactlyInAnyOrder(UsedType("void"))
-            assertThat(usedTypes.none { it.name.contains("unparsable") }).isTrue()
         }
 
         @Test

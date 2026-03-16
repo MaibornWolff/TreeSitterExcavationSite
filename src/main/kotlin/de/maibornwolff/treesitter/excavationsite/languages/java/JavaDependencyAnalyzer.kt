@@ -96,11 +96,21 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
     }
 
     private fun extractUsedTypes(declaration: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): Set<UsedType> {
-        val fieldTypes = extractTypesByFieldName(declaration, sourceCode, treeSitterLanguage, FIELD_QUERY, "field", "type")
-        val variableTypes = extractTypesByFieldName(declaration, sourceCode, treeSitterLanguage, VARIABLE_QUERY, "variable", "type")
-        val annotationTypes = extractTypesByFieldName(declaration, sourceCode, treeSitterLanguage, ANNOTATION_QUERY, "annotation", "name")
-        val constructorCallTypes = extractTypesByFieldName(declaration, sourceCode, treeSitterLanguage, CONSTRUCTOR_CALL_QUERY, "creation", "type")
-        val methodInvocationTypes = extractMethodInvocationAndFieldAccessTypes(declaration, sourceCode, treeSitterLanguage)
+        val fieldTypes = declaration.executeQuery(FIELD_QUERY, treeSitterLanguage).mapNotNull {
+            extractType(it.capture("field").node.getChildByFieldName("type"), sourceCode)
+        }
+        val variableTypes = declaration.executeQuery(VARIABLE_QUERY, treeSitterLanguage).mapNotNull {
+            extractType(it.capture("variable").node.getChildByFieldName("type"), sourceCode)
+        }
+        val annotationTypes = declaration.executeQuery(ANNOTATION_QUERY, treeSitterLanguage).mapNotNull {
+            extractType(it.capture("annotation").node.getChildByFieldName("name"), sourceCode)
+        }
+        val constructorCallTypes = declaration.executeQuery(CONSTRUCTOR_CALL_QUERY, treeSitterLanguage).mapNotNull {
+            extractType(it.capture("creation").node.getChildByFieldName("type"), sourceCode)
+        }
+        val methodInvocationTypes = extractMethodInvocationAndFieldAccessTypes(
+            declaration, sourceCode, treeSitterLanguage
+        )
         val inheritanceTypes = extractInheritanceTypes(declaration, sourceCode, treeSitterLanguage)
         val thrownTypes = extractThrownTypes(declaration, sourceCode, treeSitterLanguage)
         val methodTypes = extractMethodAndConstructorTypes(declaration, sourceCode, treeSitterLanguage)
@@ -111,23 +121,11 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
         ).toSet()
     }
 
-    private fun extractTypesByFieldName(
+    private fun extractMethodInvocationAndFieldAccessTypes(
         node: TSNode,
         sourceCode: String,
-        treeSitterLanguage: TSLanguage,
-        queryString: String,
-        captureName: String,
-        fieldName: String
+        treeSitterLanguage: TSLanguage
     ): List<UsedType> {
-        val matches = node.executeQuery(queryString, treeSitterLanguage)
-        return matches.mapNotNull { match ->
-            val capturedNode = match.capture(captureName).node
-            val typeNode = capturedNode.getChildByFieldName(fieldName)
-            extractType(typeNode, sourceCode)
-        }
-    }
-
-    private fun extractMethodInvocationAndFieldAccessTypes(node: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<UsedType> {
         val matches = node.executeQuery(METHOD_INVOCATION_AND_FIELD_ACCESS_QUERY, treeSitterLanguage)
         return matches
             .mapNotNull { match ->
