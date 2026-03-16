@@ -87,7 +87,8 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
     }
 
     private fun declarationType(node: TSNode): DeclarationType = when (node.type) {
-        "class_declaration", "record_declaration" -> DeclarationType.CLASS
+        "class_declaration" -> DeclarationType.CLASS
+        "record_declaration" -> DeclarationType.RECORD
         "interface_declaration" -> DeclarationType.INTERFACE
         "enum_declaration" -> DeclarationType.ENUM
         "annotation_type_declaration" -> DeclarationType.ANNOTATION

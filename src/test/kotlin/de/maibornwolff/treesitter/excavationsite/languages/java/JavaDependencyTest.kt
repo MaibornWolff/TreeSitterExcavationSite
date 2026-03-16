@@ -207,7 +207,7 @@ class JavaDependencyTest {
             val byName = result.declarations.associateBy { it.name }
             assertThat(byName["MyClass"]?.type).isEqualTo(DeclarationType.CLASS)
             assertThat(byName["MyEnum"]?.type).isEqualTo(DeclarationType.ENUM)
-            assertThat(byName["MyRecord"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["MyRecord"]?.type).isEqualTo(DeclarationType.RECORD)
             assertThat(byName["MyAnnotation"]?.type).isEqualTo(DeclarationType.ANNOTATION)
             assertThat(byName["MyInterface"]?.type).isEqualTo(DeclarationType.INTERFACE)
         }
