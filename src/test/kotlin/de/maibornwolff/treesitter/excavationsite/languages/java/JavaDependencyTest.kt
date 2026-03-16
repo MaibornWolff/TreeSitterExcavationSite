@@ -500,6 +500,28 @@ class JavaDependencyTest {
         }
 
         @Test
+        fun `should exclude unparsable types from results`() {
+            // Arrange - standalone method calls have no object node, producing a null TSNode
+            val code = """
+            package com.example;
+
+            public class MyClass {
+                public void myMethod() {
+                    doSomething();
+                }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVA)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(UsedType("void"))
+            assertThat(usedTypes.none { it.name.contains("unparsable") }).isTrue()
+        }
+
+        @Test
         fun `should scope used types per declaration`() {
             // Arrange
             val code = """
