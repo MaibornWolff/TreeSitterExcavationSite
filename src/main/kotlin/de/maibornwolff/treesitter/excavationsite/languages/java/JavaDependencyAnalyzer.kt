@@ -136,7 +136,11 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
                 val capturedNode = match.captures[0].node
                 val objectNode = capturedNode.getChildByFieldName("object")
                 extractType(objectNode, nodeBody)
-            }.filter { it.isUppercase() }
+            }
+            // Heuristic: uppercase-first names are likely type references (e.g., SomeClass.method()),
+            // lowercase-first are likely variables (e.g., myVar.method()). This misclassifies
+            // uppercase variables like LOGGER as types, but matches DC's existing behavior.
+            .filter { it.isUppercase() }
     }
 
     private fun extractInheritanceTypes(node: TSNode, nodeBody: String, treeSitterLanguage: TSLanguage): List<UsedType> {
