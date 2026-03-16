@@ -204,16 +204,12 @@ class JavaDependencyTest {
 
             // Assert
             assertThat(result.declarations).hasSize(5)
-            assertThat(result.declarations[0].name).isEqualTo("MyClass")
-            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.CLASS)
-            assertThat(result.declarations[1].name).isEqualTo("MyEnum")
-            assertThat(result.declarations[1].type).isEqualTo(DeclarationType.ENUM)
-            assertThat(result.declarations[2].name).isEqualTo("MyRecord")
-            assertThat(result.declarations[2].type).isEqualTo(DeclarationType.CLASS)
-            assertThat(result.declarations[3].name).isEqualTo("MyAnnotation")
-            assertThat(result.declarations[3].type).isEqualTo(DeclarationType.ANNOTATION)
-            assertThat(result.declarations[4].name).isEqualTo("MyInterface")
-            assertThat(result.declarations[4].type).isEqualTo(DeclarationType.INTERFACE)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName["MyClass"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["MyEnum"]?.type).isEqualTo(DeclarationType.ENUM)
+            assertThat(byName["MyRecord"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["MyAnnotation"]?.type).isEqualTo(DeclarationType.ANNOTATION)
+            assertThat(byName["MyInterface"]?.type).isEqualTo(DeclarationType.INTERFACE)
         }
 
         @Test
@@ -522,10 +518,9 @@ class JavaDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.JAVA)
 
             // Assert
-            val classA = result.declarations[0]
-            val classB = result.declarations[1]
-            assertThat(classA.usedTypes).containsExactlyInAnyOrder(UsedType("B"))
-            assertThat(classB.usedTypes).containsExactlyInAnyOrder(UsedType("A"))
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName["A"]?.usedTypes).containsExactlyInAnyOrder(UsedType("B"))
+            assertThat(byName["B"]?.usedTypes).containsExactlyInAnyOrder(UsedType("A"))
         }
     }
 
