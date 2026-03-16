@@ -11,6 +11,10 @@ object DependenciesFacade {
             ?: throw UnsupportedOperationException("Dependency analysis is not supported for the given language")
 
         val rootNode = TreeSitterParser.parse(content, treeSitterLanguage)
-        return analyzer.analyze(rootNode, content, treeSitterLanguage)
+        return DependencyResult(
+            packagePath = analyzer.extractPackagePath(rootNode, content, treeSitterLanguage),
+            imports = analyzer.extractImports(rootNode, content, treeSitterLanguage),
+            declarations = analyzer.extractDeclarations(rootNode, content, treeSitterLanguage)
+        )
     }
 }

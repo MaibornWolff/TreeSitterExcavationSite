@@ -3,7 +3,6 @@ package de.maibornwolff.treesitter.excavationsite.languages.java
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.shared.domain.DependencyAnalyzer
-import de.maibornwolff.treesitter.excavationsite.shared.domain.DependencyResult
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportDeclaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.UsedType
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.QueryMatch
@@ -39,18 +38,7 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
     private const val CONSTRUCTOR_QUERY =
         "(constructor_declaration parameters: (formal_parameters) @parameters) @constructor"
 
-    override fun analyze(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): DependencyResult {
-        val packagePath = extractPackagePath(rootNode, sourceCode, treeSitterLanguage)
-        val imports = extractImports(rootNode, sourceCode, treeSitterLanguage)
-        val declarations = extractDeclarations(rootNode, sourceCode, treeSitterLanguage)
-        return DependencyResult(
-            packagePath = packagePath,
-            imports = imports,
-            declarations = declarations
-        )
-    }
-
-    private fun extractPackagePath(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<String> {
+    override fun extractPackagePath(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<String> {
         val matches = rootNode.executeQuery(PACKAGE_QUERY, treeSitterLanguage)
         if (matches.isEmpty()) return emptyList()
 
@@ -60,7 +48,7 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
         return packageText.split(".")
     }
 
-    private fun extractImports(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<ImportDeclaration> {
+    override fun extractImports(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<ImportDeclaration> {
         val matches = rootNode.executeQuery(IMPORT_QUERY, treeSitterLanguage)
         return matches.map { match ->
             val importNode = match.capture("import").node
@@ -71,7 +59,7 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
         }
     }
 
-    private fun extractDeclarations(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<Declaration> {
+    override fun extractDeclarations(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<Declaration> {
         val matches = rootNode.executeQuery(DECLARATION_QUERY, treeSitterLanguage)
         return matches.map { match ->
             val declarationNode = match.capture("declaration").node

@@ -10,7 +10,11 @@ import org.treesitter.TSNode
  * TreeSitter queries for package, import, and type extraction.
  */
 interface DependencyAnalyzer {
-    fun analyze(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): DependencyResult
+    fun extractPackagePath(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<String>
+
+    fun extractImports(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<ImportDeclaration>
+
+    fun extractDeclarations(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<Declaration>
 }
 
 /**
