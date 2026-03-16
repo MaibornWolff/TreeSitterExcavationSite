@@ -109,7 +109,9 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
             extractType(it.capture("creation").node.getChildByFieldName("type"), sourceCode)
         }
         val methodInvocationTypes = extractMethodInvocationAndFieldAccessTypes(
-            declaration, sourceCode, treeSitterLanguage
+            declaration,
+            sourceCode,
+            treeSitterLanguage
         )
         val inheritanceTypes = extractInheritanceTypes(declaration, sourceCode, treeSitterLanguage)
         val thrownTypes = extractThrownTypes(declaration, sourceCode, treeSitterLanguage)
@@ -152,7 +154,9 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
 
     private fun extractThrownTypes(node: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<UsedType> =
         node.executeQuery(THROWS_QUERY, treeSitterLanguage).flatMap { match ->
-            match.capture("throws").node
+            match
+                .capture("throws")
+                .node
                 .namedChildren()
                 .mapNotNull { extractType(it, sourceCode) }
                 .toList()
