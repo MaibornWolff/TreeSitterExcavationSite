@@ -16,6 +16,8 @@ import org.treesitter.TSNode
  */
 interface DependencyExtractor {
     fun extractPackagePath(rootNode: TSNode, sourceCode: String): List<String>
+
     fun extractImports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration>
+
     fun extractDeclarations(rootNode: TSNode, sourceCode: String): List<Declaration>
 }
