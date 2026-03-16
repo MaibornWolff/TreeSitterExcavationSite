@@ -7,7 +7,6 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.DependencyResult
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportDeclaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.UsedType
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.QueryMatch
-import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeSitterParser
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.executeQuery
@@ -76,16 +75,13 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
         val matches = rootNode.executeQuery(DECLARATION_QUERY, treeSitterLanguage)
         return matches.map { match ->
             val declarationNode = match.captures[0].node
-            val nodeBody = TreeTraversal.getNodeText(declarationNode, sourceCode)
-            val reParsedRoot = TreeSitterParser.parse(nodeBody, treeSitterLanguage)
-            val reParsedDeclaration = reParsedRoot.getChild(0)
 
             val name = TreeTraversal.getNodeText(
-                reParsedDeclaration.getChildByFieldName("name"),
-                nodeBody
+                declarationNode.getChildByFieldName("name"),
+                sourceCode
             )
-            val type = declarationType(reParsedDeclaration)
-            val usedTypes = extractUsedTypes(reParsedDeclaration, nodeBody, treeSitterLanguage)
+            val type = declarationType(declarationNode)
+            val usedTypes = extractUsedTypes(declarationNode, sourceCode, treeSitterLanguage)
             Declaration(name = name, type = type, usedTypes = usedTypes)
         }
     }
@@ -98,15 +94,15 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
         else -> DeclarationType.UNKNOWN
     }
 
-    private fun extractUsedTypes(declaration: TSNode, nodeBody: String, treeSitterLanguage: TSLanguage): Set<UsedType> {
-        val fieldTypes = extractTypesByFieldName(declaration, nodeBody, treeSitterLanguage, FIELD_QUERY, "type")
-        val variableTypes = extractTypesByFieldName(declaration, nodeBody, treeSitterLanguage, VARIABLE_QUERY, "type")
-        val annotationTypes = extractTypesByFieldName(declaration, nodeBody, treeSitterLanguage, ANNOTATION_QUERY, "name")
-        val constructorCallTypes = extractTypesByFieldName(declaration, nodeBody, treeSitterLanguage, CONSTRUCTOR_CALL_QUERY, "type")
-        val methodInvocationTypes = extractMethodInvocationAndFieldAccessTypes(declaration, nodeBody, treeSitterLanguage)
-        val inheritanceTypes = extractInheritanceTypes(declaration, nodeBody, treeSitterLanguage)
-        val thrownTypes = extractThrownTypes(declaration, nodeBody, treeSitterLanguage)
-        val methodTypes = extractMethodAndConstructorTypes(declaration, nodeBody, treeSitterLanguage)
+    private fun extractUsedTypes(declaration: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): Set<UsedType> {
+        val fieldTypes = extractTypesByFieldName(declaration, sourceCode, treeSitterLanguage, FIELD_QUERY, "type")
+        val variableTypes = extractTypesByFieldName(declaration, sourceCode, treeSitterLanguage, VARIABLE_QUERY, "type")
+        val annotationTypes = extractTypesByFieldName(declaration, sourceCode, treeSitterLanguage, ANNOTATION_QUERY, "name")
+        val constructorCallTypes = extractTypesByFieldName(declaration, sourceCode, treeSitterLanguage, CONSTRUCTOR_CALL_QUERY, "type")
+        val methodInvocationTypes = extractMethodInvocationAndFieldAccessTypes(declaration, sourceCode, treeSitterLanguage)
+        val inheritanceTypes = extractInheritanceTypes(declaration, sourceCode, treeSitterLanguage)
+        val thrownTypes = extractThrownTypes(declaration, sourceCode, treeSitterLanguage)
+        val methodTypes = extractMethodAndConstructorTypes(declaration, sourceCode, treeSitterLanguage)
 
         return (
             fieldTypes + variableTypes + annotationTypes + constructorCallTypes +
@@ -116,7 +112,7 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
 
     private fun extractTypesByFieldName(
         node: TSNode,
-        nodeBody: String,
+        sourceCode: String,
         treeSitterLanguage: TSLanguage,
         queryString: String,
         fieldName: String
@@ -125,17 +121,17 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
         return matches.map { match ->
             val capturedNode = match.captures[0].node
             val typeNode = capturedNode.getChildByFieldName(fieldName)
-            extractType(typeNode, nodeBody)
+            extractType(typeNode, sourceCode)
         }
     }
 
-    private fun extractMethodInvocationAndFieldAccessTypes(node: TSNode, nodeBody: String, treeSitterLanguage: TSLanguage): List<UsedType> {
+    private fun extractMethodInvocationAndFieldAccessTypes(node: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<UsedType> {
         val matches = node.executeQuery(METHOD_INVOCATION_AND_FIELD_ACCESS_QUERY, treeSitterLanguage)
         return matches
             .map { match ->
                 val capturedNode = match.captures[0].node
                 val objectNode = capturedNode.getChildByFieldName("object")
-                extractType(objectNode, nodeBody)
+                extractType(objectNode, sourceCode)
             }
             // Heuristic: uppercase-first names are likely type references (e.g., SomeClass.method()),
             // lowercase-first are likely variables (e.g., myVar.method()). This misclassifies
@@ -143,68 +139,68 @@ object JavaDependencyAnalyzer : DependencyAnalyzer {
             .filter { it.isUppercase() }
     }
 
-    private fun extractInheritanceTypes(node: TSNode, nodeBody: String, treeSitterLanguage: TSLanguage): List<UsedType> {
+    private fun extractInheritanceTypes(node: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<UsedType> {
         val implementsAndExtends = node.executeQuery(IMPLEMENTS_AND_EXTENDS_QUERY, treeSitterLanguage).flatMap {
             it.captures.flatMap { capture ->
                 val typeListNode = capture.node.getNamedChild(0)
-                typeListNode.namedChildren().map { child -> extractType(child, nodeBody) }.toList()
+                typeListNode.namedChildren().map { child -> extractType(child, sourceCode) }.toList()
             }
         }
         val superClasses = node.executeQuery(SUPERCLASS_QUERY, treeSitterLanguage).flatMap {
             it.captures.map { capture ->
-                extractType(capture.node.getNamedChild(0), nodeBody)
+                extractType(capture.node.getNamedChild(0), sourceCode)
             }
         }
         return implementsAndExtends + superClasses
     }
 
-    private fun extractThrownTypes(node: TSNode, nodeBody: String, treeSitterLanguage: TSLanguage): List<UsedType> =
+    private fun extractThrownTypes(node: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<UsedType> =
         node.executeQuery(THROWS_QUERY, treeSitterLanguage).flatMap { match ->
             match.captures[0]
                 .node
                 .namedChildren()
-                .map { extractType(it, nodeBody) }
+                .map { extractType(it, sourceCode) }
                 .toList()
         }
 
-    private fun extractMethodAndConstructorTypes(node: TSNode, nodeBody: String, treeSitterLanguage: TSLanguage): List<UsedType> {
+    private fun extractMethodAndConstructorTypes(node: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<UsedType> {
         val constructorParams = node
             .executeQuery(CONSTRUCTOR_QUERY, treeSitterLanguage)
-            .flatMap { extractMethodParameters(it, nodeBody) }
+            .flatMap { extractMethodParameters(it, sourceCode) }
 
         val methodTypes = node.executeQuery(METHOD_QUERY, treeSitterLanguage).flatMap { match ->
-            extractMethodParameters(match, nodeBody) + extractMethodReturnType(match, nodeBody)
+            extractMethodParameters(match, sourceCode) + extractMethodReturnType(match, sourceCode)
         }
         return constructorParams + methodTypes
     }
 
-    private fun extractMethodReturnType(match: QueryMatch, nodeBody: String): UsedType {
+    private fun extractMethodReturnType(match: QueryMatch, sourceCode: String): UsedType {
         val methodNode = match.captures[0].node
         val typeNode = methodNode.getChildByFieldName("type")
-        return extractType(typeNode, nodeBody)
+        return extractType(typeNode, sourceCode)
     }
 
-    private fun extractMethodParameters(match: QueryMatch, nodeBody: String): List<UsedType> {
+    private fun extractMethodParameters(match: QueryMatch, sourceCode: String): List<UsedType> {
         val parametersNode = match.captures[1].node
         return parametersNode
             .namedChildren()
             .map {
                 val parameterType = it.getChildByFieldName("type")
-                extractType(parameterType, nodeBody)
+                extractType(parameterType, sourceCode)
             }.toList()
     }
 
-    private fun extractType(typeNode: TSNode, nodeBody: String): UsedType {
+    private fun extractType(typeNode: TSNode, sourceCode: String): UsedType {
         if (typeNode.isNull) return UsedType("unparsable_type_in_analysis")
         if (typeNode.type == "generic_type") {
             val typeIdentifier = typeNode.getNamedChild(0)
             val typeArguments = typeNode.getNamedChild(1)
-            val genericTypes = typeArguments.namedChildren().map { extractType(it, nodeBody) }.toList()
+            val genericTypes = typeArguments.namedChildren().map { extractType(it, sourceCode) }.toList()
             return UsedType(
-                name = TreeTraversal.getNodeText(typeIdentifier, nodeBody).trim(),
+                name = TreeTraversal.getNodeText(typeIdentifier, sourceCode).trim(),
                 genericTypes = genericTypes
             )
         }
-        return UsedType(name = TreeTraversal.getNodeText(typeNode, nodeBody).trim())
+        return UsedType(name = TreeTraversal.getNodeText(typeNode, sourceCode).trim())
     }
 }
