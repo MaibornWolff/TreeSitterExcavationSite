@@ -46,12 +46,34 @@ jsx_attribute            → Identifier, FirstChildByType("property_identifier")
 ## Steps
 
 - [ ] `./gradlew test --tests "*Tsx*"` — baseline
-- [ ] Add new JSX tests to `TsxExtractionTest.kt` (red)
-- [ ] Create `TsxMetricMapping.kt`
-- [ ] Create `TsxExtractionMapping.kt` (incl. JSX nodes)
-- [ ] Create `TsxDefinition.kt`
+- [ ] Create `TsxMetricMapping.kt`, `TsxExtractionMapping.kt` (without JSX nodes), `TsxDefinition.kt`
 - [ ] Update `LanguageRegistry.kt`
-- [ ] `./gradlew test --tests "*Tsx*"` — all tests green
+
+TDD Cycle Metrics: basic functionality
+- [ ] Write test: `should parse JSX element without producing error nodes` → run (red)
+- [ ] `./gradlew test --tests "*Tsx*"` — green (TsxMetricMapping as a copy of TypescriptMetricMapping is sufficient)
+- [ ] Further metrics tests as needed (LOC, complexity, functions, comments)
+
+TDD Cycle 1: `jsx_opening_element`
+- [ ] Write test: `should extract component name from jsx opening element` → run (red)
+- [ ] Add `jsx_opening_element` mapping to `TsxExtractionMapping.kt`
+- [ ] `./gradlew test --tests "*Tsx*"` — green
+
+TDD Cycle 2: `jsx_self_closing_element`
+- [ ] Write test: `should extract component name from jsx self-closing element` → run (red)
+- [ ] Add `jsx_self_closing_element` mapping
+- [ ] `./gradlew test --tests "*Tsx*"` — green
+
+TDD Cycle 3: `jsx_attribute`
+- [ ] Write test: `should extract attribute name from jsx attribute` → run (red)
+- [ ] Add `jsx_attribute` mapping
+- [ ] `./gradlew test --tests "*Tsx*"` — green
+
+TDD Cycle 4: destructured arrow function params
+- [ ] Write test: `should extract parameter names from typed props` → run (red)
+- [ ] Implement support for `({ name, age }: Props) =>` pattern
+- [ ] `./gradlew test --tests "*Tsx*"` — green
+
 - [ ] `./gradlew test` — full suite green
 
 ## JSX Node Types (from tsx/src/node-types.json)
