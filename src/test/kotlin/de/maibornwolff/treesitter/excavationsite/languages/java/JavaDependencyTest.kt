@@ -5,6 +5,7 @@ import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
 import de.maibornwolff.treesitter.excavationsite.shared.domain.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.shared.domain.UsedType
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -557,6 +558,17 @@ class JavaDependencyTest {
         fun `should report unsupported language`() {
             // Act & Assert
             assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.PYTHON)).isFalse()
+        }
+
+        @Test
+        fun `should throw when analyzing unsupported language`() {
+            // Arrange
+            val code = "x = 1"
+
+            // Act & Assert
+            assertThatThrownBy { TreeSitterDependencies.analyze(code, Language.PYTHON) }
+                .isInstanceOf(UnsupportedOperationException::class.java)
+                .hasMessageContaining("PYTHON")
         }
     }
 }
