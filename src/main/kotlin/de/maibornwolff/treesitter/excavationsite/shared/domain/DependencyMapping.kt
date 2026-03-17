@@ -4,12 +4,12 @@ import org.treesitter.TSLanguage
 import org.treesitter.TSNode
 
 /**
- * Analyzes an AST to extract dependency information.
+ * Defines language-specific dependency extraction behavior.
  *
  * Each language provides its own implementation with language-specific
  * TreeSitter queries for package, import, and type extraction.
  */
-interface DependencyAnalyzer {
+interface LanguageDependencyMapping {
     fun extractPackagePath(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<String>
 
     fun extractImports(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<ImportDeclaration>
@@ -18,15 +18,15 @@ interface DependencyAnalyzer {
 }
 
 /**
- * Interface for language-specific dependency analysis definitions.
+ * Interface for language-specific dependency mapping definitions.
  *
- * Languages that support dependency analysis provide a [DependencyAnalyzer].
+ * Languages that support dependency mapping provide a [LanguageDependencyMapping].
  * Languages without dependency support use the default (null).
  */
 interface DependencyMapping {
-    val dependencyAnalyzer: DependencyAnalyzer?
+    val dependencyMapping: LanguageDependencyMapping?
         get() = null
 
-    val isDependencyAnalysisSupported: Boolean
-        get() = dependencyAnalyzer != null
+    val isDependencyMappingSupported: Boolean
+        get() = dependencyMapping != null
 }

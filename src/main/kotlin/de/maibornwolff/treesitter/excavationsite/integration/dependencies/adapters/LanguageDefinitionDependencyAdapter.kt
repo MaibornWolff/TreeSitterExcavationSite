@@ -8,22 +8,20 @@ import org.treesitter.TSLanguage
 import org.treesitter.TSNode
 
 /**
- * Adapts a LanguageDefinition to the DependencyExtractor port interface.
- *
  * Binds the TSLanguage at construction time so that the port methods
  * do not need to carry it as a parameter.
  */
 class LanguageDefinitionDependencyAdapter(definition: LanguageDefinition, private val treeSitterLanguage: TSLanguage) :
     DependencyExtractor {
-    private val analyzer = definition.dependencyAnalyzer
+    private val languageDependencyMapping = definition.dependencyMapping
         ?: throw UnsupportedOperationException("Dependency analysis is not supported for the given language")
 
     override fun extractPackagePath(rootNode: TSNode, sourceCode: String): List<String> =
-        analyzer.extractPackagePath(rootNode, sourceCode, treeSitterLanguage)
+        languageDependencyMapping.extractPackagePath(rootNode, sourceCode, treeSitterLanguage)
 
     override fun extractImports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> =
-        analyzer.extractImports(rootNode, sourceCode, treeSitterLanguage)
+        languageDependencyMapping.extractImports(rootNode, sourceCode, treeSitterLanguage)
 
     override fun extractDeclarations(rootNode: TSNode, sourceCode: String): List<Declaration> =
-        analyzer.extractDeclarations(rootNode, sourceCode, treeSitterLanguage)
+        languageDependencyMapping.extractDeclarations(rootNode, sourceCode, treeSitterLanguage)
 }

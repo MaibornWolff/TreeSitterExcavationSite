@@ -25,7 +25,7 @@ object TreeSitterDependencies {
 
     fun isDependencyAnalysisSupported(language: Language): Boolean {
         val definition = LanguageRegistry.getLanguageDefinition(language)
-        return definition.isDependencyAnalysisSupported
+        return definition.isDependencyMappingSupported
     }
 
     fun getSupportedLanguages(): List<Language> = Language.entries.filter { isDependencyAnalysisSupported(it) }
