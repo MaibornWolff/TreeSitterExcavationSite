@@ -1,3 +1,5 @@
+@file:Suppress("unused")
+
 package de.maibornwolff.treesitter.excavationsite.api
 
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
