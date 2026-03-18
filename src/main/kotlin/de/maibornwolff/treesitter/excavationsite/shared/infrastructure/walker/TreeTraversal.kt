@@ -106,6 +106,24 @@ object TreeTraversal {
     }
 
     /**
+     * Finds all descendants matching any of the given types via recursive descent.
+     */
+    fun findAllDescendantsOfType(node: TSNode, vararg types: String): List<TSNode> {
+        val typeSet = types.toSet()
+        val result = mutableListOf<TSNode>()
+        collectDescendantsOfType(node, typeSet, result)
+        return result
+    }
+
+    private fun collectDescendantsOfType(node: TSNode, types: Set<String>, result: MutableList<TSNode>) {
+        for (child in node.children()) {
+            if (child.isNull) continue
+            if (child.type in types) result.add(child)
+            collectDescendantsOfType(child, types, result)
+        }
+    }
+
+    /**
      * Recursively checks if any descendant has the given type.
      */
     fun containsNodeOfType(node: TSNode, type: String): Boolean {
