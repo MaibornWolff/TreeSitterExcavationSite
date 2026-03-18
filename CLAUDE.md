@@ -9,6 +9,7 @@ TreeSitterLibrary is a standalone Kotlin library for calculating code metrics us
 **Key Features**:
 - **Metrics API**: `TreeSitterMetrics.parse(code, language) -> MetricsResult`
 - **Extraction API**: `TreeSitterExtraction.extract(code, language) -> ExtractionResult`
+- **Dependencies API**: `TreeSitterDependencies.analyze(code, language) -> DependencyResult`
 - Support for 16 languages and frameworks: Java, Kotlin, TypeScript, JavaScript, Python, Go, PHP, Ruby, Swift, Bash, C#, C++, C, Objective-C, Vue, ABL
 - No external dependencies beyond TreeSitter
 
@@ -35,7 +36,8 @@ Vertical slice + hexagonal architecture:
 api/                    # Public entry points (thin facade)
 integration/            # Feature slices
   ├── metrics/          # Metrics feature (calculators, ports, adapters)
-  └── extraction/       # Extraction feature (extractors, ports, adapters)
+  ├── extraction/       # Extraction feature (extractors, ports, adapters)
+  └── dependencies/     # Dependencies feature (extractors, ports, adapters)
 languages/              # Language definitions (16 languages and frameworks)
   └── <lang>/           # Per-language: Definition, MetricMapping, ExtractionMapping
 shared/

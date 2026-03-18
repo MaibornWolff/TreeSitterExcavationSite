@@ -85,6 +85,33 @@ result.extractedTexts.forEach { item ->
 }
 ```
 
+### Dependency Analysis
+
+```kotlin
+import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
+import de.maibornwolff.treesitter.excavationsite.api.Language
+
+val code = """
+    package com.example;
+
+    import java.util.List;
+
+    public class UserService {
+        private List<String> names;
+    }
+""".trimIndent()
+
+val result = TreeSitterDependencies.analyze(code, Language.JAVA)
+
+println(result.packagePath)   // [com, example]
+println(result.imports)       // [ImportDeclaration(path=[java, util, List], isWildcard=false)]
+println(result.declarations)  // [Declaration(name=UserService, type=CLASS, usedTypes=[...])]
+
+// Check language support
+println(TreeSitterDependencies.isDependencyAnalysisSupported(Language.JAVA))   // true
+println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA]
+```
+
 ## Supported Languages and Frameworks
 
 | Language | Extension(s) | Metrics | Extraction | Dependencies |
@@ -163,10 +190,13 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 │   │   ├── ports/                 # Interfaces (MetricNodeTypes)
 │   │   ├── adapters/              # Language definition adapters
 │   │   └── calculators/           # Individual metric calculators
-│   └── extraction/                # Extraction feature
-│       ├── ports/                 # Interfaces (ExtractionNodeTypes)
-│       ├── adapters/              # Language definition adapters
-│       └── extractors/common/     # Shared extractors
+│   ├── extraction/                # Extraction feature
+│   │   ├── ports/                 # Interfaces (ExtractionNodeTypes)
+│   │   ├── adapters/              # Language definition adapters
+│   │   └── extractors/common/     # Shared extractors
+│   └── dependencies/              # Dependencies feature
+│       ├── ports/                 # Interfaces (DependencyExtractor)
+│       └── adapters/              # Language definition adapters
 ├── languages/                     # Language definitions (16 languages and frameworks)
 │   └── <lang>/                    # Per-language directory
 │       ├── *Definition.kt         # Combines metric and extraction mappings
