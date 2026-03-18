@@ -14,7 +14,7 @@ object JavaDependencyMapping : LanguageDependencyMapping {
         PackageExtractor.extract(rootNode, sourceCode)
 
     override fun extractImports(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<ImportDeclaration> =
-        ImportExtractor.extract(rootNode, sourceCode, treeSitterLanguage)
+        ImportExtractor.extract(rootNode, sourceCode)
 
     override fun extractDeclarations(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<Declaration> =
         DeclarationExtractor.extract(rootNode, sourceCode, treeSitterLanguage)
