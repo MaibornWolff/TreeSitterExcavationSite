@@ -11,7 +11,7 @@ import org.treesitter.TSNode
 
 object JavaDependencyMapping : LanguageDependencyMapping {
     override fun extractPackagePath(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<String> =
-        PackageExtractor.extract(rootNode, sourceCode, treeSitterLanguage)
+        PackageExtractor.extract(rootNode, sourceCode)
 
     override fun extractImports(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<ImportDeclaration> =
         ImportExtractor.extract(rootNode, sourceCode, treeSitterLanguage)

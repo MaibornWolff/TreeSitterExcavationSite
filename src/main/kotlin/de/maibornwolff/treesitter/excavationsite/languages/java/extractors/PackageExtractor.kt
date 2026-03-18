@@ -1,20 +1,20 @@
 package de.maibornwolff.treesitter.excavationsite.languages.java.extractors
 
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
-import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.executeQuery
-import org.treesitter.TSLanguage
+import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import org.treesitter.TSNode
 
 internal object PackageExtractor {
-    private const val PACKAGE_QUERY = "(package_declaration) @package"
+    private const val PACKAGE_DECLARATION = "package_declaration"
+    private const val SCOPED_IDENTIFIER = "scoped_identifier"
+    private const val IDENTIFIER = "identifier"
+    private const val PACKAGE_SEPARATOR = "."
 
-    fun extract(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<String> {
-        val matches = rootNode.executeQuery(PACKAGE_QUERY, treeSitterLanguage)
-        if (matches.isEmpty()) return emptyList()
-
-        val packageNode = matches.first().capture("package").node
-        val packageText = TreeTraversal.findFirstChildTextByType(packageNode, sourceCode, "scoped_identifier", "identifier")
+    fun extract(rootNode: TSNode, sourceCode: String): List<String> {
+        val packageNode = rootNode.children().firstOrNull { it.type == PACKAGE_DECLARATION }
             ?: return emptyList()
-        return packageText.split(".")
+        val packageText = TreeTraversal.findFirstChildTextByType(packageNode, sourceCode, SCOPED_IDENTIFIER, IDENTIFIER)
+            ?: return emptyList()
+        return packageText.split(PACKAGE_SEPARATOR)
     }
 }
