@@ -547,6 +547,93 @@ class JavaDependencyTest {
     }
 
     @Nested
+    inner class CompletenessCheck {
+        @Test
+        fun `should extract all dependency types from a realistic multi-declaration file`() {
+            // Arrange
+            val code = """
+            package com.example.domain;
+
+            import java.util.List;
+            import java.util.Map;
+            import java.io.*;
+
+            @Fightable
+            public class Creature extends BaseEntity implements Serializable, Comparable {
+                private CreatureId id;
+                private Map<SpeedType, Speed> speeds;
+
+                public Creature(CreatureId id, CreatureType type) {}
+
+                public List<HitPoints> calculateDamage(ArmorClass armor) throws CombatException {
+                    Logger.info("attacking");
+                    return new DamageCalculator().compute();
+                }
+            }
+
+            enum CreatureType { DRAGON, GOBLIN }
+
+            record CreatureId(UUID value) {}
+
+            @interface Fightable {}
+
+            interface Movable extends Locomotion {
+                Speed getSpeed(SpeedType type);
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVA)
+
+            // Assert - Package
+            assertThat(result.packagePath).containsExactly("com", "example", "domain")
+
+            // Assert - Imports
+            assertThat(result.imports).hasSize(3)
+            assertThat(result.imports[0].path).containsExactly("java", "util", "List")
+            assertThat(result.imports[1].path).containsExactly("java", "util", "Map")
+            assertThat(result.imports[2].path).containsExactly("java", "io")
+            assertThat(result.imports[2].isWildcard).isTrue()
+
+            // Assert - All 5 declaration types found
+            assertThat(result.declarations).hasSize(5)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName["Creature"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["CreatureType"]?.type).isEqualTo(DeclarationType.ENUM)
+            assertThat(byName["CreatureId"]?.type).isEqualTo(DeclarationType.RECORD)
+            assertThat(byName["Fightable"]?.type).isEqualTo(DeclarationType.ANNOTATION)
+            assertThat(byName["Movable"]?.type).isEqualTo(DeclarationType.INTERFACE)
+
+            // Assert - Creature used types (fields, generics, inheritance, annotations,
+            //          constructor params, method params/returns, throws, constructor calls, method invocations)
+            assertThat(byName["Creature"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("Fightable"),
+                UsedType("BaseEntity"),
+                UsedType("Serializable"),
+                UsedType("Comparable"),
+                UsedType("CreatureId"),
+                UsedType("Map", listOf(UsedType("SpeedType"), UsedType("Speed"))),
+                UsedType("CreatureType"),
+                UsedType("List", listOf(UsedType("HitPoints"))),
+                UsedType("ArmorClass"),
+                UsedType("CombatException"),
+                UsedType("Logger"),
+                UsedType("DamageCalculator"),
+            )
+
+            // Assert - Movable scoped separately (not leaking Creature's types)
+            assertThat(byName["Movable"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("Locomotion"),
+                UsedType("Speed"),
+                UsedType("SpeedType"),
+            )
+
+            // Assert - Record has no extracted used types (record components use different AST structure)
+            assertThat(byName["CreatureId"]?.usedTypes).isEmpty()
+        }
+    }
+
+    @Nested
     inner class ApiSupportCheck {
         @Test
         fun `should report Java as supported for dependency analysis`() {
