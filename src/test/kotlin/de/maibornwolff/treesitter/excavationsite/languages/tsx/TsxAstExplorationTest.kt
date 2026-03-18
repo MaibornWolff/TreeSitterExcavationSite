@@ -15,6 +15,7 @@ import org.treesitter.TSNode
 class TsxAstExplorationTest {
 
     @Test
+    @Disabled("Exploration test - enable when needed to examine AST")
     fun `explore arrow function in variable declarator`() {
         val code = """
             const Button = ({ label, onClick, disabled }: ButtonProps) => {
@@ -33,6 +34,7 @@ class TsxAstExplorationTest {
     }
 
     @Test
+    @Disabled("Exploration test - enable when needed to examine AST")
     fun `explore string type annotation AST`() {
         val code = """
             interface ButtonProps {
@@ -46,6 +48,40 @@ class TsxAstExplorationTest {
 
         println("=== String type annotation AST ===")
         printAst(root, code, 0)
+    }
+
+    @Test
+    fun `find all variable declarators in tsx sample`() {
+        val code = java.io.File("src/test/resources/contract/tsx_sample.tsx").readText()
+        val language = LanguageRegistry.getTreeSitterLanguage(Language.TSX)
+        val root = TreeSitterParser.parse(code, language)
+
+        println("=== variable_declarator nodes and their value field type ===")
+        findVariableDeclarators(root, code)
+
+        println("\n=== ERROR nodes ===")
+        findErrorNodes(root, code)
+    }
+
+    private fun findVariableDeclarators(node: TSNode, code: String) {
+        if (node.type == "variable_declarator") {
+            val nameText = getNodeTextPreview(node.getChildByFieldName("name"), code)
+            val valueNode = node.getChildByFieldName("value")
+            val valueType = if (valueNode != null && !valueNode.isNull) valueNode.type else "null"
+            println("  variable_declarator: name=$nameText  value.type=$valueType")
+        }
+        for (child in node.children()) {
+            if (!child.isNull) findVariableDeclarators(child, code)
+        }
+    }
+
+    private fun findErrorNodes(node: TSNode, code: String) {
+        if (node.type == "ERROR") {
+            println("  ERROR at ${node.startPoint.row + 1}:${node.startPoint.column} — ${getNodeTextPreview(node, code)}")
+        }
+        for (child in node.children()) {
+            if (!child.isNull) findErrorNodes(child, code)
+        }
     }
 
     private fun printAst(node: TSNode, code: String, depth: Int) {

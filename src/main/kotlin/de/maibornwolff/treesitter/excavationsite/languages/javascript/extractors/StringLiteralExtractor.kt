@@ -19,6 +19,7 @@ private const val IMPORT = "import"
 internal fun extractNonImportString(node: TSNode, sourceCode: String): String? {
     if (isImportString(node, sourceCode)) return null
     val text = TreeTraversal.getNodeText(node, sourceCode)
+    if (!text.startsWith("\"") && !text.startsWith("'")) return null
     return StringParser.stripAnyQuotes(text)
 }
 
