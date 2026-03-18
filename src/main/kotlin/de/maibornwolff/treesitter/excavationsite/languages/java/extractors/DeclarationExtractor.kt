@@ -20,20 +20,18 @@ internal object DeclarationExtractor {
         RECORD_DECLARATION,
         INTERFACE_DECLARATION,
         ENUM_DECLARATION,
-        ANNOTATION_TYPE_DECLARATION,
+        ANNOTATION_TYPE_DECLARATION
     )
 
-    fun extract(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<Declaration> {
-        return rootNode.children()
-            .filter { it.type in DECLARATION_TYPES }
-            .map { declarationNode ->
-                val name = TreeTraversal.getNodeText(declarationNode.getChildByFieldName(NAME_FIELD), sourceCode)
-                val type = declarationType(declarationNode)
-                val usedTypes = UsedTypeExtractor.extract(declarationNode, sourceCode, treeSitterLanguage)
-                Declaration(name = name, type = type, usedTypes = usedTypes)
-            }
-            .toList()
-    }
+    fun extract(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<Declaration> = rootNode
+        .children()
+        .filter { it.type in DECLARATION_TYPES }
+        .map { declarationNode ->
+            val name = TreeTraversal.getNodeText(declarationNode.getChildByFieldName(NAME_FIELD), sourceCode)
+            val type = declarationType(declarationNode)
+            val usedTypes = UsedTypeExtractor.extract(declarationNode, sourceCode)
+            Declaration(name = name, type = type, usedTypes = usedTypes)
+        }.toList()
 
     private fun declarationType(node: TSNode): DeclarationType = when (node.type) {
         CLASS_DECLARATION -> DeclarationType.CLASS

@@ -1,44 +1,47 @@
 package de.maibornwolff.treesitter.excavationsite.languages.java.extractors
 
 import de.maibornwolff.treesitter.excavationsite.shared.domain.UsedType
-import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.QueryMatch
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
-import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.executeQuery
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.namedChildren
-import org.treesitter.TSLanguage
 import org.treesitter.TSNode
 
 internal object UsedTypeExtractor {
-    private const val ANNOTATION_QUERY = "[(annotation) (marker_annotation)] @annotation"
-    private const val FIELD_QUERY = "(field_declaration) @field"
-    private const val VARIABLE_QUERY = "(local_variable_declaration) @variable"
-    private const val CONSTRUCTOR_CALL_QUERY = "(object_creation_expression) @creation"
-    private const val METHOD_INVOCATION_AND_FIELD_ACCESS_QUERY = "[(method_invocation) (field_access)] @invocation"
-    private const val IMPLEMENTS_AND_EXTENDS_QUERY = "[(super_interfaces) (extends_interfaces)] @implementsStatement"
-    private const val SUPERCLASS_QUERY = "(superclass) @superclass"
-    private const val THROWS_QUERY = "(throws) @throws"
-    private const val METHOD_QUERY =
-        "(method_declaration parameters: (formal_parameters) @parameters) @method"
-    private const val CONSTRUCTOR_QUERY =
-        "(constructor_declaration parameters: (formal_parameters) @parameters) @constructor"
+    private const val ANNOTATION = "annotation"
+    private const val MARKER_ANNOTATION = "marker_annotation"
+    private const val FIELD_DECLARATION = "field_declaration"
+    private const val LOCAL_VARIABLE_DECLARATION = "local_variable_declaration"
+    private const val OBJECT_CREATION_EXPRESSION = "object_creation_expression"
+    private const val METHOD_INVOCATION = "method_invocation"
+    private const val FIELD_ACCESS = "field_access"
+    private const val SUPER_INTERFACES = "super_interfaces"
+    private const val EXTENDS_INTERFACES = "extends_interfaces"
+    private const val SUPERCLASS = "superclass"
+    private const val THROWS = "throws"
+    private const val METHOD_DECLARATION = "method_declaration"
+    private const val CONSTRUCTOR_DECLARATION = "constructor_declaration"
+    private const val GENERIC_TYPE = "generic_type"
+    private const val TYPE_FIELD = "type"
+    private const val NAME_FIELD = "name"
+    private const val OBJECT_FIELD = "object"
+    private const val PARAMETERS_FIELD = "parameters"
 
-    fun extract(declaration: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): Set<UsedType> {
-        val fieldTypes = declaration.executeQuery(FIELD_QUERY, treeSitterLanguage).mapNotNull {
-            extractType(it.capture("field").node.getChildByFieldName("type"), sourceCode)
+    fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
+        val fieldTypes = TreeTraversal.findAllDescendantsOfType(declaration, FIELD_DECLARATION).mapNotNull {
+            extractType(it.getChildByFieldName(TYPE_FIELD), sourceCode)
         }
-        val variableTypes = declaration.executeQuery(VARIABLE_QUERY, treeSitterLanguage).mapNotNull {
-            extractType(it.capture("variable").node.getChildByFieldName("type"), sourceCode)
+        val variableTypes = TreeTraversal.findAllDescendantsOfType(declaration, LOCAL_VARIABLE_DECLARATION).mapNotNull {
+            extractType(it.getChildByFieldName(TYPE_FIELD), sourceCode)
         }
-        val annotationTypes = declaration.executeQuery(ANNOTATION_QUERY, treeSitterLanguage).mapNotNull {
-            extractType(it.capture("annotation").node.getChildByFieldName("name"), sourceCode)
+        val annotationTypes = TreeTraversal.findAllDescendantsOfType(declaration, ANNOTATION, MARKER_ANNOTATION).mapNotNull {
+            extractType(it.getChildByFieldName(NAME_FIELD), sourceCode)
         }
-        val constructorCallTypes = declaration.executeQuery(CONSTRUCTOR_CALL_QUERY, treeSitterLanguage).mapNotNull {
-            extractType(it.capture("creation").node.getChildByFieldName("type"), sourceCode)
+        val constructorCallTypes = TreeTraversal.findAllDescendantsOfType(declaration, OBJECT_CREATION_EXPRESSION).mapNotNull {
+            extractType(it.getChildByFieldName(TYPE_FIELD), sourceCode)
         }
-        val methodInvocationTypes = extractMethodInvocationAndFieldAccessTypes(declaration, sourceCode, treeSitterLanguage)
-        val inheritanceTypes = extractInheritanceTypes(declaration, sourceCode, treeSitterLanguage)
-        val thrownTypes = extractThrownTypes(declaration, sourceCode, treeSitterLanguage)
-        val methodTypes = extractMethodAndConstructorTypes(declaration, sourceCode, treeSitterLanguage)
+        val methodInvocationTypes = extractMethodInvocationAndFieldAccessTypes(declaration, sourceCode)
+        val inheritanceTypes = extractInheritanceTypes(declaration, sourceCode)
+        val thrownTypes = extractThrownTypes(declaration, sourceCode)
+        val methodTypes = extractMethodAndConstructorTypes(declaration, sourceCode)
 
         return (
             fieldTypes + variableTypes + annotationTypes + constructorCallTypes +
@@ -46,75 +49,68 @@ internal object UsedTypeExtractor {
         ).toSet()
     }
 
-    private fun extractMethodInvocationAndFieldAccessTypes(
-        node: TSNode,
-        sourceCode: String,
-        treeSitterLanguage: TSLanguage
-    ): List<UsedType> {
-        val matches = node.executeQuery(METHOD_INVOCATION_AND_FIELD_ACCESS_QUERY, treeSitterLanguage)
-        return matches
-            .mapNotNull { match ->
-                val capturedNode = match.capture("invocation").node
-                val objectNode = capturedNode.getChildByFieldName("object")
-                extractType(objectNode, sourceCode)
-            }
-            // Heuristic: uppercase-first names are likely type references (e.g., SomeClass.method()),
-            // lowercase-first are likely variables (e.g., myVar.method()). This misclassifies
-            // uppercase variables like LOGGER as types, but matches DC's existing behavior.
-            .filter { it.isUppercase() }
-    }
-
-    private fun extractInheritanceTypes(node: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<UsedType> {
-        val implementsAndExtends = node.executeQuery(IMPLEMENTS_AND_EXTENDS_QUERY, treeSitterLanguage).flatMap { match ->
-            val typeListNode = match.capture("implementsStatement").node.getNamedChild(0)
-            typeListNode.namedChildren().mapNotNull { child -> extractType(child, sourceCode) }.toList()
+    private fun extractMethodInvocationAndFieldAccessTypes(node: TSNode, sourceCode: String): List<UsedType> = TreeTraversal
+        .findAllDescendantsOfType(node, METHOD_INVOCATION, FIELD_ACCESS)
+        .mapNotNull { capturedNode ->
+            val objectNode = capturedNode.getChildByFieldName(OBJECT_FIELD)
+            extractType(objectNode, sourceCode)
         }
-        val superClasses = node.executeQuery(SUPERCLASS_QUERY, treeSitterLanguage).mapNotNull { match ->
-            extractType(match.capture("superclass").node.getNamedChild(0), sourceCode)
+        // Heuristic: uppercase-first names are likely type references (e.g., SomeClass.method()),
+        // lowercase-first are likely variables (e.g., myVar.method()). This misclassifies
+        // uppercase variables like LOGGER as types, but matches DC's existing behavior.
+        .filter { it.isUppercase() }
+
+    private fun extractInheritanceTypes(node: TSNode, sourceCode: String): List<UsedType> {
+        val implementsAndExtends = TreeTraversal
+            .findAllDescendantsOfType(node, SUPER_INTERFACES, EXTENDS_INTERFACES)
+            .flatMap { typeListNode ->
+                val namedChild = typeListNode.getNamedChild(0)
+                if (namedChild.isNull) return@flatMap emptyList()
+                namedChild.namedChildren().mapNotNull { child -> extractType(child, sourceCode) }.toList()
+            }
+        val superClasses = TreeTraversal.findAllDescendantsOfType(node, SUPERCLASS).mapNotNull { superclassNode ->
+            val namedChild = superclassNode.getNamedChild(0)
+            if (namedChild.isNull) return@mapNotNull null
+            extractType(namedChild, sourceCode)
         }
         return implementsAndExtends + superClasses
     }
 
-    private fun extractThrownTypes(node: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<UsedType> =
-        node.executeQuery(THROWS_QUERY, treeSitterLanguage).flatMap { match ->
-            match
-                .capture("throws")
-                .node
+    private fun extractThrownTypes(node: TSNode, sourceCode: String): List<UsedType> =
+        TreeTraversal.findAllDescendantsOfType(node, THROWS).flatMap { throwsNode ->
+            throwsNode
                 .namedChildren()
                 .mapNotNull { extractType(it, sourceCode) }
                 .toList()
         }
 
-    private fun extractMethodAndConstructorTypes(node: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<UsedType> {
-        val constructorParams = node
-            .executeQuery(CONSTRUCTOR_QUERY, treeSitterLanguage)
-            .flatMap { extractMethodParameters(it, sourceCode) }
+    private fun extractMethodAndConstructorTypes(node: TSNode, sourceCode: String): List<UsedType> {
+        val constructorParams = TreeTraversal
+            .findAllDescendantsOfType(node, CONSTRUCTOR_DECLARATION)
+            .flatMap { constructor ->
+                val parameters = constructor.getChildByFieldName(PARAMETERS_FIELD) ?: return@flatMap emptyList()
+                extractParameterTypes(parameters, sourceCode)
+            }
 
-        val methodTypes = node.executeQuery(METHOD_QUERY, treeSitterLanguage).flatMap { match ->
-            extractMethodParameters(match, sourceCode) + listOfNotNull(extractMethodReturnType(match, sourceCode, "method"))
+        val methodTypes = TreeTraversal.findAllDescendantsOfType(node, METHOD_DECLARATION).flatMap { method ->
+            val parameters = method.getChildByFieldName(PARAMETERS_FIELD) ?: return@flatMap emptyList<UsedType>()
+            val paramTypes = extractParameterTypes(parameters, sourceCode)
+            val returnType = extractType(method.getChildByFieldName(TYPE_FIELD), sourceCode)
+            paramTypes + listOfNotNull(returnType)
         }
         return constructorParams + methodTypes
     }
 
-    private fun extractMethodReturnType(match: QueryMatch, sourceCode: String, captureName: String): UsedType? {
-        val methodNode = match.capture(captureName).node
-        val typeNode = methodNode.getChildByFieldName("type")
-        return extractType(typeNode, sourceCode)
-    }
-
-    private fun extractMethodParameters(match: QueryMatch, sourceCode: String): List<UsedType> {
-        val parametersNode = match.capture("parameters").node
-        return parametersNode
-            .namedChildren()
-            .mapNotNull {
-                val parameterType = it.getChildByFieldName("type")
-                extractType(parameterType, sourceCode)
-            }.toList()
-    }
+    private fun extractParameterTypes(parametersNode: TSNode, sourceCode: String): List<UsedType> = parametersNode
+        .namedChildren()
+        .mapNotNull {
+            val parameterType = it.getChildByFieldName(TYPE_FIELD)
+            extractType(parameterType, sourceCode)
+        }.toList()
 
     private fun extractType(typeNode: TSNode, sourceCode: String): UsedType? {
         if (typeNode.isNull) return null
-        if (typeNode.type == "generic_type") {
+        if (typeNode.type == GENERIC_TYPE) {
             val typeIdentifier = typeNode.getNamedChild(0)
             val typeArguments = typeNode.getNamedChild(1)
             val genericTypes = typeArguments.namedChildren().mapNotNull { extractType(it, sourceCode) }.toList()

@@ -618,14 +618,14 @@ class JavaDependencyTest {
                 UsedType("ArmorClass"),
                 UsedType("CombatException"),
                 UsedType("Logger"),
-                UsedType("DamageCalculator"),
+                UsedType("DamageCalculator")
             )
 
             // Assert - Movable scoped separately (not leaking Creature's types)
             assertThat(byName["Movable"]?.usedTypes).containsExactlyInAnyOrder(
                 UsedType("Locomotion"),
                 UsedType("Speed"),
-                UsedType("SpeedType"),
+                UsedType("SpeedType")
             )
 
             // Assert - Record has no extracted used types (record components use different AST structure)
