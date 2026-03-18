@@ -1,20 +1,19 @@
 package de.maibornwolff.treesitter.excavationsite.shared.domain
 
-import org.treesitter.TSLanguage
 import org.treesitter.TSNode
 
 /**
  * Defines language-specific dependency extraction behavior.
  *
  * Each language provides its own implementation with language-specific
- * TreeSitter queries for package, import, and type extraction.
+ * extractors for package, import, and type extraction.
  */
 interface LanguageDependencyMapping {
-    fun extractPackagePath(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<String>
+    fun extractPackagePath(rootNode: TSNode, sourceCode: String): List<String>
 
-    fun extractImports(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<ImportDeclaration>
+    fun extractImports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration>
 
-    fun extractDeclarations(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<Declaration>
+    fun extractDeclarations(rootNode: TSNode, sourceCode: String): List<Declaration>
 }
 
 /**

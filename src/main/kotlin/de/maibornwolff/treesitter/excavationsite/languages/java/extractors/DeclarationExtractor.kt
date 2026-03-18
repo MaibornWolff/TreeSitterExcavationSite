@@ -4,7 +4,6 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
-import org.treesitter.TSLanguage
 import org.treesitter.TSNode
 
 internal object DeclarationExtractor {
@@ -23,7 +22,7 @@ internal object DeclarationExtractor {
         ANNOTATION_TYPE_DECLARATION
     )
 
-    fun extract(rootNode: TSNode, sourceCode: String, treeSitterLanguage: TSLanguage): List<Declaration> = rootNode
+    fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> = rootNode
         .children()
         .filter { it.type in DECLARATION_TYPES }
         .map { declarationNode ->

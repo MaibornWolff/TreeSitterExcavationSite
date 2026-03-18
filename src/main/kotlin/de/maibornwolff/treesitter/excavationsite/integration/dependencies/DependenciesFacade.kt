@@ -8,7 +8,7 @@ import org.treesitter.TSLanguage
 object DependenciesFacade {
     fun analyze(content: String, treeSitterLanguage: TSLanguage, definition: LanguageDefinition): DependencyResult {
         val processedContent = definition.preprocessor?.invoke(content) ?: content
-        val extractor = LanguageDefinitionDependencyAdapter(definition, treeSitterLanguage)
+        val extractor = LanguageDefinitionDependencyAdapter(definition)
         val collector = DependencyCollector(treeSitterLanguage, extractor)
         return collector.collectDependencies(processedContent)
     }

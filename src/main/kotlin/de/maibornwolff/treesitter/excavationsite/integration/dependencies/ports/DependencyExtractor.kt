@@ -9,10 +9,6 @@ import org.treesitter.TSNode
  *
  * Each method extracts one aspect of dependency information from an AST.
  * Implementations are language-specific and live in the languages/ directory.
- *
- * TSLanguage is intentionally excluded from the method signatures — it is an
- * implementation detail of query-based extractors and should be provided at
- * construction time.
  */
 interface DependencyExtractor {
     fun extractPackagePath(rootNode: TSNode, sourceCode: String): List<String>
