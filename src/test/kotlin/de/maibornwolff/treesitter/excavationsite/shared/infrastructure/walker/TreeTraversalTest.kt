@@ -83,4 +83,70 @@ class TreeTraversalTest {
             assertThat(fields).isEmpty()
         }
     }
+
+    @Nested
+    inner class FindAllDescendantsByTypes {
+        @Test
+        fun `should bucket descendants by type`() {
+            // Arrange
+            val code = """
+                public class Foo {
+                    private int x;
+                    public void bar() {}
+                }
+            """.trimIndent()
+            val rootNode = TreeSitterParser.parse(code, java)
+
+            // Act
+            val buckets = TreeTraversal.findAllDescendantsByTypes(
+                rootNode,
+                setOf("field_declaration", "method_declaration")
+            )
+
+            // Assert
+            assertThat(buckets).hasSize(2)
+            assertThat(buckets["field_declaration"]).hasSize(1)
+            assertThat(buckets["method_declaration"]).hasSize(1)
+        }
+
+        @Test
+        fun `should return empty map when no matches found`() {
+            // Arrange
+            val code = """
+                public class Foo {}
+            """.trimIndent()
+            val rootNode = TreeSitterParser.parse(code, java)
+
+            // Act
+            val buckets = TreeTraversal.findAllDescendantsByTypes(
+                rootNode,
+                setOf("field_declaration")
+            )
+
+            // Assert
+            assertThat(buckets).isEmpty()
+        }
+
+        @Test
+        fun `should only include keys for requested types`() {
+            // Arrange
+            val code = """
+                public class Foo {
+                    private int x;
+                    public void bar() {}
+                }
+            """.trimIndent()
+            val rootNode = TreeSitterParser.parse(code, java)
+
+            // Act
+            val buckets = TreeTraversal.findAllDescendantsByTypes(
+                rootNode,
+                setOf("field_declaration")
+            )
+
+            // Assert
+            assertThat(buckets).containsOnlyKeys("field_declaration")
+            assertThat(buckets["field_declaration"]).hasSize(1)
+        }
+    }
 }
