@@ -37,7 +37,8 @@ class GoldenFileContractTest {
             Language.C to "c_sample.c",
             Language.OBJECTIVE_C to "objc_sample.m",
             Language.VUE to "vue_sample.vue",
-            Language.ABL to "abl_sample.p"
+            Language.ABL to "abl_sample.p",
+            Language.TSX to "tsx_sample.tsx"
         )
 
         private val GOLDEN_BASE_NAMES = mapOf(
@@ -56,7 +57,8 @@ class GoldenFileContractTest {
             Language.C to "c_sample",
             Language.OBJECTIVE_C to "objc_sample",
             Language.VUE to "vue_sample",
-            Language.ABL to "abl_sample"
+            Language.ABL to "abl_sample",
+            Language.TSX to "tsx_sample"
         )
     }
 

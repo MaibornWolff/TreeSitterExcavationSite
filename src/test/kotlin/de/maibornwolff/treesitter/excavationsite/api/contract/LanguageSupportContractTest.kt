@@ -52,9 +52,9 @@ class LanguageSupportContractTest {
         }
 
         @Test
-        fun `should map tsx extension to TYPESCRIPT`() {
+        fun `should map tsx extension to TSX`() {
             // Assert
-            assertThat(Language.fromExtension(".tsx")).isEqualTo(Language.TYPESCRIPT)
+            assertThat(Language.fromExtension(".tsx")).isEqualTo(Language.TSX)
         }
 
         @Test

@@ -1,0 +1,48 @@
+# Identifiers
+Button
+ButtonProps
+Card
+Status
+StatusBadge
+children
+className
+disabled
+formatLabel
+label
+onClick
+onClick
+onClick
+status
+text
+title
+value
+
+# Comments
+A sample TSX file demonstrating React component patterns.
+Used for golden file contract testing.
+Arrow function with chained calls
+Card component combining multiple elements
+Component with conditional rendering and state-like logic
+Interface for component props
+Simple functional component with props
+Type alias for status
+
+# Strings
+Error
+Loading...
+Ready
+Unknown
+badge badge-
+btn
+card
+card-body
+error
+error
+idle
+idle
+loading
+loading
+string
+string
+string
+string

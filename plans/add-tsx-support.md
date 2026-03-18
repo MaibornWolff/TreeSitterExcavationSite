@@ -45,14 +45,41 @@ jsx_attribute            → Identifier, FirstChildByType("property_identifier")
 
 ## Steps
 
-- [ ] `./gradlew test --tests "*Tsx*"` — baseline
-- [ ] Create `TsxMetricMapping.kt`, `TsxExtractionMapping.kt` (without JSX nodes), `TsxDefinition.kt`
-- [ ] Update `LanguageRegistry.kt`
+- [x] `./gradlew test --tests "*Tsx*"` — baseline
+- [x] Create `TsxMetricMapping.kt`, `TsxExtractionMapping.kt` (ohne JSX-Nodes), `TsxDefinition.kt`
+- [x] Update `LanguageRegistry.kt`
 
-TDD Cycle Metrics: basic functionality
-- [ ] Write test: `should parse JSX element without producing error nodes` → run (red)
-- [ ] `./gradlew test --tests "*Tsx*"` — green (TsxMetricMapping as a copy of TypescriptMetricMapping is sufficient)
-- [ ] Further metrics tests as needed (LOC, complexity, functions, comments)
+### 5. Fix failing contract/API tests (caused by LanguageRegistry change)
+
+**`ApiSignatureContractTest`**
+- [x] `should have exactly 16 language values` → change `hasSize(16)` to `hasSize(17)`
+
+**`TreeSitterExtractionTest`**
+- [x] `should return supported languages` → add `Language.TSX` to list, change `hasSize(16)` to `hasSize(17)`
+
+**`TreeSitterMetricsTest`**
+- [x] `should detect language from file extension` → change `.tsx` expectation from `Language.TYPESCRIPT` to `Language.TSX`
+
+**`LanguageSupportContractTest`**
+- [x] `should map tsx extension to TYPESCRIPT` → renamed + changed expected value to `Language.TSX`
+
+**`GoldenFileContractTest`** (needs sample file)
+- [x] Add `Language.TSX to "tsx_sample.tsx"` to `SAMPLE_FILE_NAMES` map
+- [x] Add `Language.TSX to "tsx_sample"` to `GOLDEN_BASE_NAMES` map
+- [x] Create `src/test/resources/contract/tsx_sample.tsx`
+- [x] Golden files auto-created: `tsx_sample_metrics.golden`, `tsx_sample_extraction.golden`
+- [x] Golden file content reviewed and correct (`number_of_functions=4` after fix)
+- [x] Fix: `extractNonImportString` skips nodes whose text doesn't start with `"` or `'` — prevents TypeScript predefined_type keywords (e.g. `string`) from being extracted as string literals
+
+**`Assertion Style Rules`**
+- [x] `TsxExtractionTest`: replaced `.contains()` with `.containsExactlyInAnyOrder()`
+
+- [x] `./gradlew test` — full suite green
+
+TDD-Zyklus Metrics: Grundfunktionalität
+- [x] Write JSX-specific test: `should parse JSX element without corrupting function count` → run (red)
+- [x] Copy all tests from `TypescriptMetricsTest`, change `Language.TYPESCRIPT` → `Language.TSX`
+- [x] `./gradlew test --tests "*TsxMetricsTest*"` — green
 
 TDD Cycle 1: `jsx_opening_element`
 - [ ] Write test: `should extract component name from jsx opening element` → run (red)
@@ -74,6 +101,13 @@ TDD Cycle 4: destructured arrow function params
 - [ ] Implement support for `({ name, age }: Props) =>` pattern
 - [ ] `./gradlew test --tests "*Tsx*"` — green
 
+- [ ] `./gradlew test` — full suite green (final check)
+
+### 6. Update sample file and regenerate golden files
+- [ ] Add `jsx_opening_element` example to `tsx_sample.tsx` (e.g. `<MyComponent>...</MyComponent>`)
+- [ ] Add `jsx_self_closing_element` example to `tsx_sample.tsx` (e.g. `<Icon />`)
+- [ ] Add `jsx_attribute` example to `tsx_sample.tsx` (e.g. `onClick={handler}`)
+- [ ] Regenerate golden files (`UPDATE_GOLDEN_FILES=true`, run, set back to `false`)
 - [ ] `./gradlew test` — full suite green
 
 ## JSX Node Types (from tsx/src/node-types.json)

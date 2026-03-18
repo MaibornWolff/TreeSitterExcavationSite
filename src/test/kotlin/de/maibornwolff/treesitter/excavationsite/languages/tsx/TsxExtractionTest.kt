@@ -19,7 +19,7 @@ class TsxExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.TSX)
 
         // Assert
-        assertThat(result.identifiers).contains("Button")
+        assertThat(result.identifiers).containsExactlyInAnyOrder("Button")
     }
 
     @Test
@@ -37,7 +37,7 @@ class TsxExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.TSX)
 
         // Assert
-        assertThat(result.identifiers).contains("MyComponent", "render")
+        assertThat(result.identifiers).containsExactlyInAnyOrder("MyComponent", "render")
     }
 
     @Test
@@ -81,7 +81,7 @@ class TsxExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.TSX)
 
         // Assert
-        assertThat(result.strings).contains("container")
+        assertThat(result.strings).containsExactlyInAnyOrder("container")
     }
 
     @Test
@@ -97,7 +97,7 @@ class TsxExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.TSX)
 
         // Assert
-        assertThat(result.identifiers).contains("ButtonProps")
+        assertThat(result.identifiers).containsExactlyInAnyOrder("ButtonProps", "label")
     }
 
     @Test

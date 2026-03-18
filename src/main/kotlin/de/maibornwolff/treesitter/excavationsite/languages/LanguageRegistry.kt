@@ -9,6 +9,7 @@ import de.maibornwolff.treesitter.excavationsite.languages.go.GoDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.java.JavaDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.JavascriptDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.TypescriptDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.tsx.TsxDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.kotlin.KotlinDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.objectivec.ObjectiveCDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.php.PhpDefinition
@@ -50,9 +51,9 @@ object LanguageRegistry {
         Language.KOTLIN -> TreeSitterKotlin()
         Language.TYPESCRIPT -> TreeSitterTypescript()
         Language.TSX -> TreeSitterTypescript()
-        // TODO: Replace with TreeSitterTsx() once tree-sitter-tsx is available as a dependency.
-        // tree-sitter-tsx exists in bonede/tree-sitter-ng but JitPack builds fail due to Java 8.
-        // Maybe Christian Hühn can add tree-sitter-tsx to his fork (used for tree-sitter-abl).
+        // TreeSitterTypescript() without .typescript IS the TSX parser — no TreeSitterTsx() needed.
+        // TODO: Fix Language.TYPESCRIPT to use TreeSitterTypescript().typescript once the property works.
+        //       Until then, both TYPESCRIPT and TSX use the TSX grammar, which is a superset of TS.
         Language.JAVASCRIPT -> TreeSitterJavascript()
         Language.PYTHON -> TreeSitterPython()
         Language.GO -> TreeSitterGo()
@@ -75,7 +76,7 @@ object LanguageRegistry {
         Language.JAVA -> JavaDefinition
         Language.KOTLIN -> KotlinDefinition
         Language.TYPESCRIPT -> TypescriptDefinition
-        Language.TSX -> TypescriptDefinition // placeholder until TsxDefinition is created
+        Language.TSX -> TsxDefinition
         Language.JAVASCRIPT -> JavascriptDefinition
         Language.PYTHON -> PythonDefinition
         Language.GO -> GoDefinition
