@@ -144,6 +144,33 @@ object TreeTraversal {
     }
 
     /**
+     * Finds all descendants matching any of the given types in a single pass,
+     * returning them bucketed by node type. Stops recursion into subtrees
+     * whose root matches any of the boundary types.
+     */
+    fun findAllDescendantsByTypesExcluding(node: TSNode, types: Set<String>, boundaryTypes: Set<String>): Map<String, List<TSNode>> {
+        val result = mutableMapOf<String, MutableList<TSNode>>()
+        collectDescendantsByTypesExcluding(node, types, boundaryTypes, result)
+        return result
+    }
+
+    private fun collectDescendantsByTypesExcluding(
+        node: TSNode,
+        types: Set<String>,
+        boundaryTypes: Set<String>,
+        result: MutableMap<String, MutableList<TSNode>>
+    ) {
+        for (child in node.children()) {
+            if (child.isNull) continue
+            if (child.type in boundaryTypes) continue
+            if (child.type in types) {
+                result.getOrPut(child.type) { mutableListOf() }.add(child)
+            }
+            collectDescendantsByTypesExcluding(child, types, boundaryTypes, result)
+        }
+    }
+
+    /**
      * Recursively checks if any descendant has the given type.
      */
     fun containsNodeOfType(node: TSNode, type: String): Boolean {

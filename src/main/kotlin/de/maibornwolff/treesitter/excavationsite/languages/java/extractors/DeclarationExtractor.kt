@@ -3,7 +3,6 @@ package de.maibornwolff.treesitter.excavationsite.languages.java.extractors
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
-import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import org.treesitter.TSNode
 
 internal object DeclarationExtractor {
@@ -14,7 +13,7 @@ internal object DeclarationExtractor {
     private const val ANNOTATION_TYPE_DECLARATION = "annotation_type_declaration"
     private const val NAME_FIELD = "name"
 
-    private val DECLARATION_TYPES = setOf(
+    val DECLARATION_TYPES = setOf(
         CLASS_DECLARATION,
         RECORD_DECLARATION,
         INTERFACE_DECLARATION,
@@ -22,9 +21,8 @@ internal object DeclarationExtractor {
         ANNOTATION_TYPE_DECLARATION
     )
 
-    fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> = rootNode
-        .children()
-        .filter { it.type in DECLARATION_TYPES }
+    fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> =
+        TreeTraversal.findAllDescendantsOfType(rootNode, *DECLARATION_TYPES.toTypedArray())
         .map { declarationNode ->
             val name = TreeTraversal.getNodeText(declarationNode.getChildByFieldName(NAME_FIELD), sourceCode)
             val type = declarationType(declarationNode)

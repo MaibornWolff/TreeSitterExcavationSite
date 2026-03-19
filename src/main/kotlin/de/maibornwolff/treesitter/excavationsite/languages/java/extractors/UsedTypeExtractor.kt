@@ -6,19 +6,24 @@ import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.na
 import org.treesitter.TSNode
 
 internal object UsedTypeExtractor {
-    private const val ANNOTATION = "annotation"
-    private const val MARKER_ANNOTATION = "marker_annotation"
+    // Node types for type source extraction
     private const val FIELD_DECLARATION = "field_declaration"
     private const val LOCAL_VARIABLE_DECLARATION = "local_variable_declaration"
+    private const val ANNOTATION = "annotation"
+    private const val MARKER_ANNOTATION = "marker_annotation"
     private const val OBJECT_CREATION_EXPRESSION = "object_creation_expression"
     private const val METHOD_INVOCATION = "method_invocation"
     private const val FIELD_ACCESS = "field_access"
+    private const val METHOD_DECLARATION = "method_declaration"
+    private const val CONSTRUCTOR_DECLARATION = "constructor_declaration"
+
+    // Node types for inheritance and exceptions
     private const val SUPER_INTERFACES = "super_interfaces"
     private const val EXTENDS_INTERFACES = "extends_interfaces"
     private const val SUPERCLASS = "superclass"
     private const val THROWS = "throws"
-    private const val METHOD_DECLARATION = "method_declaration"
-    private const val CONSTRUCTOR_DECLARATION = "constructor_declaration"
+
+    // Field names and type helpers
     private const val GENERIC_TYPE = "generic_type"
     private const val TYPE_FIELD = "type"
     private const val NAME_FIELD = "name"
@@ -36,7 +41,9 @@ internal object UsedTypeExtractor {
     )
 
     fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
-        val buckets = TreeTraversal.findAllDescendantsByTypes(declaration, ALL_NODE_TYPES)
+        val buckets = TreeTraversal.findAllDescendantsByTypesExcluding(
+            declaration, ALL_NODE_TYPES, DeclarationExtractor.DECLARATION_TYPES
+        )
 
         val fieldTypes = buckets[FIELD_DECLARATION].orEmpty().mapNotNull {
             extractType(it.getChildByFieldName(TYPE_FIELD), sourceCode)

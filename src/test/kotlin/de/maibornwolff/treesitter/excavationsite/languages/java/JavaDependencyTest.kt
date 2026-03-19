@@ -522,17 +522,25 @@ class JavaDependencyTest {
         }
 
         @Test
-        fun `should scope used types per declaration`() {
+        fun `should extract nested declaration types and scope their used types`() {
             // Arrange
             val code = """
             package com.example;
 
-            public class A {
-                private B b;
-            }
+            public class Outer {
+                private OuterService service;
 
-            public class B {
-                private A a;
+                enum Status { ACTIVE, INACTIVE }
+
+                interface Callback {
+                    Response handle(Event event);
+                }
+
+                class Inner {
+                    private InnerRepo repo;
+
+                    @interface InnerMarker {}
+                }
             }
             """.trimIndent()
 
@@ -540,9 +548,54 @@ class JavaDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.JAVA)
 
             // Assert
+            assertThat(result.declarations).hasSize(5)
             val byName = result.declarations.associateBy { it.name }
-            assertThat(byName["A"]?.usedTypes).containsExactlyInAnyOrder(UsedType("B"))
-            assertThat(byName["B"]?.usedTypes).containsExactlyInAnyOrder(UsedType("A"))
+            assertThat(byName["Outer"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["Status"]?.type).isEqualTo(DeclarationType.ENUM)
+            assertThat(byName["Callback"]?.type).isEqualTo(DeclarationType.INTERFACE)
+            assertThat(byName["Inner"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["InnerMarker"]?.type).isEqualTo(DeclarationType.ANNOTATION)
+
+            assertThat(byName["Outer"]?.usedTypes).containsExactlyInAnyOrder(UsedType("OuterService"))
+            assertThat(byName["Callback"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("Response"), UsedType("Event")
+            )
+            assertThat(byName["Inner"]?.usedTypes).containsExactlyInAnyOrder(UsedType("InnerRepo"))
+        }
+
+        @Test
+        fun `should scope types at arbitrary nesting depth`() {
+            // Arrange
+            val code = """
+            package com.example;
+
+            public class Root {
+                private RootType rootField;
+
+                class Level1 {
+                    private Level1Type level1Field;
+
+                    class Level2 {
+                        private Level2Type level2Field;
+
+                        class Level3 {
+                            private Level3Type level3Field;
+                        }
+                    }
+                }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVA)
+
+            // Assert
+            assertThat(result.declarations).hasSize(4)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName["Root"]?.usedTypes).containsExactlyInAnyOrder(UsedType("RootType"))
+            assertThat(byName["Level1"]?.usedTypes).containsExactlyInAnyOrder(UsedType("Level1Type"))
+            assertThat(byName["Level2"]?.usedTypes).containsExactlyInAnyOrder(UsedType("Level2Type"))
+            assertThat(byName["Level3"]?.usedTypes).containsExactlyInAnyOrder(UsedType("Level3Type"))
         }
     }
 
