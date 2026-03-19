@@ -522,7 +522,7 @@ class JavaDependencyTest {
         }
 
         @Test
-        fun `should extract nested declaration types and scope their used types`() {
+        fun `should extract nested declarations and include inner class types in outer class`() {
             // Arrange
             val code = """
             package com.example;
@@ -556,7 +556,12 @@ class JavaDependencyTest {
             assertThat(byName["Inner"]?.type).isEqualTo(DeclarationType.CLASS)
             assertThat(byName["InnerMarker"]?.type).isEqualTo(DeclarationType.ANNOTATION)
 
-            assertThat(byName["Outer"]?.usedTypes).containsExactlyInAnyOrder(UsedType("OuterService"))
+            // Outer includes its own types AND all nested declarations' types
+            assertThat(byName["Outer"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("OuterService"),
+                UsedType("Response"), UsedType("Event"),
+                UsedType("InnerRepo")
+            )
             assertThat(byName["Callback"]?.usedTypes).containsExactlyInAnyOrder(
                 UsedType("Response"), UsedType("Event")
             )
@@ -564,7 +569,7 @@ class JavaDependencyTest {
         }
 
         @Test
-        fun `should scope types at arbitrary nesting depth`() {
+        fun `should include all descendant types at each nesting level`() {
             // Arrange
             val code = """
             package com.example;
@@ -592,9 +597,16 @@ class JavaDependencyTest {
             // Assert
             assertThat(result.declarations).hasSize(4)
             val byName = result.declarations.associateBy { it.name }
-            assertThat(byName["Root"]?.usedTypes).containsExactlyInAnyOrder(UsedType("RootType"))
-            assertThat(byName["Level1"]?.usedTypes).containsExactlyInAnyOrder(UsedType("Level1Type"))
-            assertThat(byName["Level2"]?.usedTypes).containsExactlyInAnyOrder(UsedType("Level2Type"))
+            // Each level includes its own types plus all types from deeper levels
+            assertThat(byName["Root"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("RootType"), UsedType("Level1Type"), UsedType("Level2Type"), UsedType("Level3Type")
+            )
+            assertThat(byName["Level1"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("Level1Type"), UsedType("Level2Type"), UsedType("Level3Type")
+            )
+            assertThat(byName["Level2"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("Level2Type"), UsedType("Level3Type")
+            )
             assertThat(byName["Level3"]?.usedTypes).containsExactlyInAnyOrder(UsedType("Level3Type"))
         }
     }

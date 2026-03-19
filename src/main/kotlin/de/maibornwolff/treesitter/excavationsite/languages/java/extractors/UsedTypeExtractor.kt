@@ -41,9 +41,7 @@ internal object UsedTypeExtractor {
     )
 
     fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
-        val buckets = TreeTraversal.findAllDescendantsByTypesExcluding(
-            declaration, ALL_NODE_TYPES, DeclarationExtractor.DECLARATION_TYPES
-        )
+        val buckets = TreeTraversal.findAllDescendantsByTypes(declaration, ALL_NODE_TYPES)
 
         val fieldTypes = buckets[FIELD_DECLARATION].orEmpty().mapNotNull {
             extractType(it.getChildByFieldName(TYPE_FIELD), sourceCode)
