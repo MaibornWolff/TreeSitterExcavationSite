@@ -61,8 +61,8 @@ internal object UsedTypeExtractor {
         val methodTypes = extractMethodAndConstructorTypes(buckets, sourceCode)
 
         return (
-            fieldTypes + variableTypes + annotationTypes + constructorCallTypes +
-                methodInvocationTypes + inheritanceTypes + thrownTypes + methodTypes
+            inheritanceTypes + variableTypes + annotationTypes + methodInvocationTypes +
+                constructorCallTypes + thrownTypes + fieldTypes + methodTypes
         ).toSet()
     }
 
