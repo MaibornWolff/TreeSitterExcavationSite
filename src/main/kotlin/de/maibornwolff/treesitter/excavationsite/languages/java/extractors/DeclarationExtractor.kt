@@ -21,8 +21,8 @@ internal object DeclarationExtractor {
         ANNOTATION_TYPE_DECLARATION
     )
 
-    fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> =
-        TreeTraversal.findAllDescendantsOfType(rootNode, *DECLARATION_TYPES.toTypedArray())
+    fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> = TreeTraversal
+        .findAllDescendantsOfType(rootNode, *DECLARATION_TYPES.toTypedArray())
         .map { declarationNode ->
             val name = TreeTraversal.getNodeText(declarationNode.getChildByFieldName(NAME_FIELD), sourceCode)
             val type = declarationType(declarationNode)

@@ -559,11 +559,13 @@ class JavaDependencyTest {
             // Outer includes its own types AND all nested declarations' types
             assertThat(byName["Outer"]?.usedTypes).containsExactlyInAnyOrder(
                 UsedType("OuterService"),
-                UsedType("Response"), UsedType("Event"),
+                UsedType("Response"),
+                UsedType("Event"),
                 UsedType("InnerRepo")
             )
             assertThat(byName["Callback"]?.usedTypes).containsExactlyInAnyOrder(
-                UsedType("Response"), UsedType("Event")
+                UsedType("Response"),
+                UsedType("Event")
             )
             assertThat(byName["Inner"]?.usedTypes).containsExactlyInAnyOrder(UsedType("InnerRepo"))
         }
@@ -599,13 +601,19 @@ class JavaDependencyTest {
             val byName = result.declarations.associateBy { it.name }
             // Each level includes its own types plus all types from deeper levels
             assertThat(byName["Root"]?.usedTypes).containsExactlyInAnyOrder(
-                UsedType("RootType"), UsedType("Level1Type"), UsedType("Level2Type"), UsedType("Level3Type")
+                UsedType("RootType"),
+                UsedType("Level1Type"),
+                UsedType("Level2Type"),
+                UsedType("Level3Type")
             )
             assertThat(byName["Level1"]?.usedTypes).containsExactlyInAnyOrder(
-                UsedType("Level1Type"), UsedType("Level2Type"), UsedType("Level3Type")
+                UsedType("Level1Type"),
+                UsedType("Level2Type"),
+                UsedType("Level3Type")
             )
             assertThat(byName["Level2"]?.usedTypes).containsExactlyInAnyOrder(
-                UsedType("Level2Type"), UsedType("Level3Type")
+                UsedType("Level2Type"),
+                UsedType("Level3Type")
             )
             assertThat(byName["Level3"]?.usedTypes).containsExactlyInAnyOrder(UsedType("Level3Type"))
         }
