@@ -161,9 +161,11 @@ object TreeTraversal {
         result: MutableMap<String, MutableList<TSNode>>
     ) {
         for (child in node.children()) {
-            if (child.isNull) continue
-            if (child.type in boundaryTypes) continue
-            if (child.type in types) {
+            val isSkippable = child.isNull || child.type in boundaryTypes
+            if (isSkippable) continue
+
+            val isMatchingType = child.type in types
+            if (isMatchingType) {
                 result.getOrPut(child.type) { mutableListOf() }.add(child)
             }
             collectDescendantsByTypesExcluding(child, types, boundaryTypes, result)
