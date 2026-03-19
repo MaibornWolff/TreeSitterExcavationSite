@@ -9,13 +9,13 @@ import de.maibornwolff.treesitter.excavationsite.languages.go.GoDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.java.JavaDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.JavascriptDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.TypescriptDefinition
-import de.maibornwolff.treesitter.excavationsite.languages.tsx.TsxDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.kotlin.KotlinDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.objectivec.ObjectiveCDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.php.PhpDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.python.PythonDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.ruby.RubyDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.swift.SwiftDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.tsx.TsxDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.vue.VueDefinition
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Language
 import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDefinition
@@ -34,6 +34,7 @@ import org.treesitter.TreeSitterPhp
 import org.treesitter.TreeSitterPython
 import org.treesitter.TreeSitterRuby
 import org.treesitter.TreeSitterSwift
+import org.treesitter.TreeSitterTsx
 import org.treesitter.TreeSitterTypescript
 
 /**
@@ -50,10 +51,7 @@ object LanguageRegistry {
         Language.JAVA -> TreeSitterJava()
         Language.KOTLIN -> TreeSitterKotlin()
         Language.TYPESCRIPT -> TreeSitterTypescript()
-        Language.TSX -> TreeSitterTypescript()
-        // TreeSitterTypescript() without .typescript IS the TSX parser — no TreeSitterTsx() needed.
-        // TODO: Fix Language.TYPESCRIPT to use TreeSitterTypescript().typescript once the property works.
-        //       Until then, both TYPESCRIPT and TSX use the TSX grammar, which is a superset of TS.
+        Language.TSX -> TreeSitterTsx()
         Language.JAVASCRIPT -> TreeSitterJavascript()
         Language.PYTHON -> TreeSitterPython()
         Language.GO -> TreeSitterGo()

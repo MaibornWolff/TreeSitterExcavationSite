@@ -13,7 +13,6 @@ import org.treesitter.TSNode
  * Disabled by default — enable locally when investigating AST behaviour.
  */
 class TsxAstExplorationTest {
-
     @Test
     @Disabled("Exploration test - enable when needed to examine AST")
     fun `explore arrow function in variable declarator`() {

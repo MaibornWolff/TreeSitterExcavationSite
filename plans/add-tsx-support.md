@@ -1,13 +1,13 @@
 ---
 name: TSX Language Definition with JSX Support
 issue:
-state: todo
+state: progress
 version:
 ---
 
 ## Goal
 
-Create a dedicated `TsxDefinition` with its own metric and extraction mappings that fully covers JSX-specific node types. The parser stays as `TreeSitterTypescript()` — it already IS the TSX variant (without `.typescript`).
+Create a dedicated `TsxDefinition` with its own metric and extraction mappings that fully covers JSX-specific node types. Uses `TreeSitterTsx()` from `libs/tree-sitter-tsx-0.23.2.jar`.
 
 ## Tasks
 
@@ -35,18 +35,13 @@ jsx_attribute            → Identifier, FirstChildByType("property_identifier")
 **`TsxDefinition.kt`** — combines TsxMetricMapping + TsxExtractionMapping
 
 ### 4. Update `LanguageRegistry.kt`
-- Replace `Language.TSX -> TypescriptDefinition` with `Language.TSX -> TsxDefinition` (line 78), remove `// placeholder until TsxDefinition is created`
-- Replace the existing TODO block (lines 52–54) with:
-```kotlin
-// TreeSitterTypescript() without .typescript IS the TSX parser — no TreeSitterTsx() needed.
-// TODO: Fix Language.TYPESCRIPT to use TreeSitterTypescript().typescript once the property works.
-//       Until then, both TYPESCRIPT and TSX use the TSX grammar, which is a superset of TS.
-```
+- Replace `Language.TSX -> TypescriptDefinition` with `Language.TSX -> TsxDefinition`
+- Replace `Language.TSX -> TreeSitterTypescript()` with `Language.TSX -> TreeSitterTsx()`
 
 ## Steps
 
 - [x] `./gradlew test --tests "*Tsx*"` — baseline
-- [x] Create `TsxMetricMapping.kt`, `TsxExtractionMapping.kt` (ohne JSX-Nodes), `TsxDefinition.kt`
+- [x] Create `TsxMetricMapping.kt`, `TsxExtractionMapping.kt` (without JSX nodes), `TsxDefinition.kt`
 - [x] Update `LanguageRegistry.kt`
 
 ### 5. Fix failing contract/API tests (caused by LanguageRegistry change)
@@ -76,27 +71,27 @@ jsx_attribute            → Identifier, FirstChildByType("property_identifier")
 
 - [x] `./gradlew test` — full suite green
 
-TDD-Zyklus Metrics: Grundfunktionalität
+TDD Cycle Metrics: basic functionality
 - [x] Write JSX-specific test: `should parse JSX element without corrupting function count` → run (red)
 - [x] Copy all tests from `TypescriptMetricsTest`, change `Language.TYPESCRIPT` → `Language.TSX`
 - [x] `./gradlew test --tests "*TsxMetricsTest*"` — green
 
-TDD Cycle 1: `jsx_opening_element`
-- [ ] Write test: `should extract component name from jsx opening element` → run (red)
-- [ ] Add `jsx_opening_element` mapping to `TsxExtractionMapping.kt`
-- [ ] `./gradlew test --tests "*Tsx*"` — green
+TDD-Cycle 1: `jsx_opening_element`
+- [x] Write test: `should extract component name from jsx opening element` → run (red)
+- [x] Add `jsx_opening_element` mapping to `TsxExtractionMapping.kt`
+- [x] `./gradlew test --tests "*Tsx*"` — green
 
-TDD Cycle 2: `jsx_self_closing_element`
-- [ ] Write test: `should extract component name from jsx self-closing element` → run (red)
-- [ ] Add `jsx_self_closing_element` mapping
-- [ ] `./gradlew test --tests "*Tsx*"` — green
+TDD-Cycle 2: `jsx_self_closing_element`
+- [x] Write test: `should extract component name from jsx self-closing element` → run (red)
+- [x] Add `jsx_self_closing_element` mapping
+- [x] `./gradlew test --tests "*Tsx*"` — green
 
-TDD Cycle 3: `jsx_attribute`
+TDD-Cycle 3: `jsx_attribute`
 - [ ] Write test: `should extract attribute name from jsx attribute` → run (red)
 - [ ] Add `jsx_attribute` mapping
 - [ ] `./gradlew test --tests "*Tsx*"` — green
 
-TDD Cycle 4: destructured arrow function params
+TDD-Cycle 4: destructured arrow function params
 - [ ] Write test: `should extract parameter names from typed props` → run (red)
 - [ ] Implement support for `({ name, age }: Props) =>` pattern
 - [ ] `./gradlew test --tests "*Tsx*"` — green
@@ -135,7 +130,12 @@ TDD Cycle 4: destructured arrow function params
 
 ## Notes
 
-- `TreeSitterTypescript()` without `.typescript` IS the TSX parser. `TreeSitterTsx()` will never be needed.
-- The old TODO ("Replace with TreeSitterTsx()") was incorrect — replaced with a precise comment (see Task 4)
-- Member-expression components like `<React.Fragment>` are not extracted for now (no custom extractor needed for basic support)
-- `property_identifier` instead of `identifier` for JSX attribute names (tree-sitter distinguishes these)
+- `TreeSitterTypescript()` is the **TypeScript parser only** — NOT TSX. `<MyComponent>` would be parsed as TypeScript generics. `TreeSitterTsx()` is required for JSX nodes.
+- `TreeSitterTsx` comes from `libs/tree-sitter-tsx-0.23.2.jar` (checked into the repo directly).
+  - Built from `bonede/tree-sitter-ng`: `git clone https://github.com/bonede/tree-sitter-ng && ./gradlew :tree-sitter-tsx:publishToMavenLocal`
+  - `TreeSitterTsx.class` was recompiled with Java 17 (original was Java 21), native DLLs unchanged.
+  - Not on Maven Central; JitPack fails (bonede requires Java 11+, JitPack uses Java 8).
+- JSX extraction extracts **all** element names including HTML primitives (`button`, `div`, `span`) — correct behaviour with the real TSX parser.
+- Bare JSX (`<MyComponent>`) without context is parsed as TypeScript generics (ERROR node) — JSX always needs an expression context (assignment, return, etc.).
+- Member-expression components like `<React.Fragment>` are not extracted (no custom extractor needed for basic support).
+- `property_identifier` instead of `identifier` for JSX attribute names (tree-sitter distinguishes these).

@@ -80,6 +80,10 @@ object TsxExtractionMapping : ExtractionMapping {
         put("catch_clause", Extract.Identifier(customMulti = ::extractFirstBindingIdentifiers))
         put("enum_declaration", Extract.Identifier(customMulti = ::extractIdentifiersFromEnumDeclaration))
 
+        // JSX element identifiers
+        put("jsx_opening_element", Extract.Identifier(single = ExtractionStrategy.FirstChildByType(IDENTIFIER)))
+        put("jsx_self_closing_element", Extract.Identifier(single = ExtractionStrategy.FirstChildByType(IDENTIFIER)))
+
         // Comments (auto-detect format)
         put("comment", Extract.Comment(CommentFormats.AutoDetect))
         put("html_comment", Extract.Comment(CommentFormats.AutoDetect))
