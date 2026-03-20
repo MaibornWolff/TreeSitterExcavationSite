@@ -8,7 +8,7 @@ Currently only Java is implemented. Other languages will be migrated from DC's l
 
 ## Architecture
 
-Follows the same hexagonal pattern as metrics and extraction:
+Follows the vertical slice pattern used by metrics and extraction, but without a port/adapter layer since no transformation is needed between the domain mapping and the collector:
 
 ```text
 API                          Integration                    Languages
@@ -16,13 +16,11 @@ API                          Integration                    Languages
 │ TreeSitterDependencies│────>│ DependenciesFacade     │     │ languages/java/          │
 │   .analyze()         │     │   ↓                    │     │   JavaDependencyMapping   │
 │                      │     │ DependencyCollector     │     │   extractors/            │
-│ Validates language   │     │   ↓                    │     │     PackageExtractor      │
-│ support, delegates   │     │ DependencyExtractor    │<────│     ImportExtractor       │
-│ to facade            │     │   (port interface)     │     │     DeclarationExtractor  │
-└──────────────────────┘     │   ↓                    │     │     UsedTypeExtractor     │
-                             │ LanguageDefinition-    │     └──────────────────────────┘
-                             │   DependencyAdapter    │
-                             └────────────────────────┘
+│ Validates language   │     │   calls lambdas from   │     │     PackageExtractor      │
+│ support, delegates   │     │   LanguageDependency-  │<────│     ImportExtractor       │
+│ to facade            │     │   Mapping directly     │     │     DeclarationExtractor  │
+└──────────────────────┘     └────────────────────────┘     │     UsedTypeExtractor     │
+                                                            └──────────────────────────┘
 ```
 
 ### Data flow
@@ -30,9 +28,9 @@ API                          Integration                    Languages
 ```text
 Source code string
   → TreeSitterDependencies.analyze(code, Language.JAVA)
-    → DependenciesFacade applies preprocessor, creates adapter + collector
+    → DependenciesFacade applies preprocessor, passes mapping to collector
       → DependencyCollector parses AST via TreeSitterParser
-        → DependencyExtractor port methods called:
+        → LanguageDependencyMapping lambdas called:
           1. extractPackagePath()  → ["com", "example", "service"]
           2. extractImports()      → [ImportDeclaration(path, isWildcard)]
           3. extractDeclarations() → [Declaration(name, type, usedTypes)]
@@ -44,11 +42,9 @@ Source code string
 | File | Purpose |
 |---|---|
 | `api/TreeSitterDependencies.kt` | Public API — validates language support, delegates to facade |
-| `integration/dependencies/DependenciesFacade.kt` | Entry point — applies preprocessor, wires adapter + collector |
-| `integration/dependencies/DependencyCollector.kt` | Parses AST, calls extractor port methods, assembles result |
-| `integration/dependencies/ports/DependencyExtractor.kt` | Port interface — 3 methods: packagePath, imports, declarations |
-| `integration/dependencies/adapters/LanguageDefinitionDependencyAdapter.kt` | Adapts `LanguageDefinition` to `DependencyExtractor` port |
-| `shared/domain/DependencyMapping.kt` | `LanguageDependencyMapping` interface + `DependencyMapping` wrapper |
+| `integration/dependencies/DependenciesFacade.kt` | Entry point — applies preprocessor, passes mapping to collector |
+| `integration/dependencies/DependencyCollector.kt` | Parses AST, calls mapping lambdas, assembles result |
+| `shared/domain/DependencyMapping.kt` | `LanguageDependencyMapping` data class + `DependencyMapping` wrapper |
 | `shared/domain/DependencyResult.kt` | Result types: `DependencyResult`, `Declaration`, `ImportDeclaration`, `UsedType` |
 
 ## Domain model
@@ -83,21 +79,18 @@ data class UsedType(
 
 ```kotlin
 // languages/newlang/NewLangDependencyMapping.kt
-object NewLangDependencyMapping : LanguageDependencyMapping {
-    override fun extractPackagePath(rootNode: TSNode, sourceCode: String): List<String> =
-        PackageExtractor.extract(rootNode, sourceCode)
-
-    override fun extractImports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> =
-        ImportExtractor.extract(rootNode, sourceCode)
-
-    override fun extractDeclarations(rootNode: TSNode, sourceCode: String): List<Declaration> =
-        DeclarationExtractor.extract(rootNode, sourceCode)
+object NewLangDependencyMapping {
+    val dependencyMapping = LanguageDependencyMapping(
+        extractPackagePath = PackageExtractor::extract,
+        extractImports = ImportExtractor::extract,
+        extractDeclarations = DeclarationExtractor::extract
+    )
 }
 ```
 
 ### 2. Create extractors in `languages/newlang/extractors/`
 
-Each extractor is an `internal object` with an `extract` function. Use direct tree traversal (`TreeTraversal.findAllDescendantsOfType`, `findAllDescendantsByTypes`, etc.) — not TSQuery.
+Each extractor is an `internal object` with an `extract` function. Use direct tree traversal (`TreeTraversal.findAllDescendantsOfType`, `findAllDescendantsGroupedByType`, etc.) — not TSQuery.
 
 Required extractors:
 - **PackageExtractor** — extracts the package/module path as `List<String>`
@@ -114,7 +107,7 @@ See `languages/java/extractors/` for the reference implementation.
 object NewLangDefinition : LanguageDefinition {
     override val nodeMetrics = NewLangMetricMapping.nodeMetrics
     override val nodeExtractions = NewLangExtractionMapping.nodeExtractions
-    override val dependencyMapping: LanguageDependencyMapping = NewLangDependencyMapping
+    override val dependencyMapping = NewLangDependencyMapping.dependencyMapping
 }
 ```
 
