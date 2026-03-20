@@ -91,12 +91,14 @@ TDD-Cycle 3: `jsx_attribute`
 - [x] Add `jsx_attribute` mapping
 - [x] `./gradlew test --tests "*Tsx*"` — green
 
-TDD-Cycle 4: destructured arrow function params
-- [ ] Write test: `should extract parameter names from typed props` → run (red)
-- [ ] Implement support for `({ name, age }: Props) =>` pattern
-- [ ] `./gradlew test --tests "*Tsx*"` — green
+TDD-Cycle 4: destructured params with type annotation
+- [x] Write test: `should extract parameter names from typed props` → run (red)
+- [x] Implement support for `({ name, age }: Props) =>` pattern in `FormalParametersExtractor.kt`
+- [x] `./gradlew test --tests "*Tsx*"` — green
+- **Note**: This is a TypeScript feature (`required_parameter` wrapping `object_pattern`), not JSX-specific.
+  The fix in `FormalParametersExtractor.kt` benefits both TS and TSX. Test also added to `TypescriptExtractionTest.kt` (`DestructuringTests`).
 
-- [ ] `./gradlew test` — full suite green (final check)
+- [x] `./gradlew test` — full suite green (final check)
 
 ### 6. Update sample file and regenerate golden files
 - [ ] Add `jsx_opening_element` example to `tsx_sample.tsx` (e.g. `<MyComponent>...</MyComponent>`)

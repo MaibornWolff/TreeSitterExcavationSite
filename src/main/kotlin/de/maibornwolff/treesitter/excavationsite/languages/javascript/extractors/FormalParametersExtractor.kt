@@ -29,18 +29,17 @@ internal fun extractIdentifiersFromFormalParameters(node: TSNode, sourceCode: St
             OBJECT_PATTERN,
             ARRAY_PATTERN -> extractIdentifiersFromPattern(child, sourceCode)
             REQUIRED_PARAMETER -> {
-                val restPattern = child.children().firstOrNull {
-                    it.type == REST_PATTERN
+                val patternChild = child.children().firstOrNull {
+                    it.type == OBJECT_PATTERN || it.type == ARRAY_PATTERN
                 }
-                listOfNotNull(
-                    restPattern?.let {
-                        TreeTraversal.findFirstChildTextByType(
-                            it,
-                            sourceCode,
-                            IDENTIFIER
-                        )
-                    }
-                )
+                val restPattern = child.children().firstOrNull { it.type == REST_PATTERN }
+                when {
+                    patternChild != null -> extractIdentifiersFromPattern(patternChild, sourceCode)
+                    restPattern != null -> listOfNotNull(
+                        TreeTraversal.findFirstChildTextByType(restPattern, sourceCode, IDENTIFIER)
+                    )
+                    else -> emptyList()
+                }
             }
             else -> emptyList()
         }

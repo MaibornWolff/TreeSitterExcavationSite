@@ -1448,6 +1448,18 @@ class TypescriptExtractionTest {
         }
 
         @Test
+        fun `should extract destructured parameter names with type annotation`() {
+            // Arrange
+            val code = "const Button = ({ label, onClick }: ButtonProps) => label;"
+
+            // Act
+            val result = TreeSitterExtraction.extract(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.identifiers).containsExactlyInAnyOrder("Button", "label", "onClick")
+        }
+
+        @Test
         fun `should extract typed catch clause`() {
             // Arrange
             val code = "try { } catch (error: unknown) { }"

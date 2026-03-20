@@ -143,6 +143,20 @@ class TsxExtractionTest {
     }
 
     @Test
+    fun `should extract parameter names from typed props`() {
+        // Arrange
+        val code = """
+            const Button = ({ label, onClick }: ButtonProps) => <button />;
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.TSX)
+
+        // Assert
+        assertThat(result.identifiers).containsExactlyInAnyOrder("Button", "label", "onClick", "button")
+    }
+
+    @Test
     fun `should not extract JSX text content as string`() {
         // Arrange - "Hello World" is JSX text, not a string literal
         val code = """
