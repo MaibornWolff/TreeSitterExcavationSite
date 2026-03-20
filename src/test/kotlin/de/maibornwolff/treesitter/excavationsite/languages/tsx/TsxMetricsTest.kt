@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test
 class TsxMetricsTest {
     @Test
     fun `should parse JSX element without corrupting function count`() {
-        // Arrange - arrow function with JSX return; ERROR nodes for JSX must not be counted
+        // Arrange - arrow function with JSX return; JSX nodes must not corrupt the function count
         val code = """
             const App = () => {
                 return (

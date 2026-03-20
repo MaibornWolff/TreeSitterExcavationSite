@@ -50,6 +50,7 @@ class TsxAstExplorationTest {
     }
 
     @Test
+    @Disabled("Exploration test - enable when needed to examine AST")
     fun `find all variable declarators in tsx sample`() {
         val code = java.io.File("src/test/resources/contract/tsx_sample.tsx").readText()
         val language = LanguageRegistry.getTreeSitterLanguage(Language.TSX)

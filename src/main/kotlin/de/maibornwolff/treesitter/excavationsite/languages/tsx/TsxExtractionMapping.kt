@@ -15,6 +15,9 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.Extract
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionMapping
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionStrategy
 
+// Based on JavascriptExtractionMapping with added JSX node mappings (jsx_opening_element,
+// jsx_self_closing_element, jsx_attribute). Intentionally a separate instance for TsxDefinition.
+// Keep in sync with JavascriptExtractionMapping when making changes there.
 object TsxExtractionMapping : ExtractionMapping {
     private const val IDENTIFIER = "identifier"
     private const val TYPE_IDENTIFIER = "type_identifier"

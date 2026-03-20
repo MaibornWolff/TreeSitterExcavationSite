@@ -52,7 +52,7 @@ class TsxExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.TSX)
 
         // Assert
-        assertThat(result.comments).containsExactly("renders a loading spinner")
+        assertThat(result.comments).containsExactlyInAnyOrder("renders a loading spinner")
     }
 
     @Test
@@ -67,7 +67,7 @@ class TsxExtractionTest {
         val result = TreeSitterExtraction.extract(code, Language.TSX)
 
         // Assert
-        assertThat(result.comments).containsExactly("accessible icon button")
+        assertThat(result.comments).containsExactlyInAnyOrder("accessible icon button")
     }
 
     @Test

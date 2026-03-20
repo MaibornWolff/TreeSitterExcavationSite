@@ -4,6 +4,8 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.Metric
 import de.maibornwolff.treesitter.excavationsite.shared.domain.MetricCondition
 import de.maibornwolff.treesitter.excavationsite.shared.domain.MetricMapping
 
+// Intentional copy of TypescriptMetricMapping — TSX requires a separate mapping instance for TsxDefinition.
+// Keep in sync with TypescriptMetricMapping when making changes there.
 object TsxMetricMapping : MetricMapping {
     override val nodeMetrics: Map<String, Set<Metric>> = buildMap {
         // Logic complexity - simple nodes
