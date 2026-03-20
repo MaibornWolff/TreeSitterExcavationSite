@@ -46,15 +46,8 @@ object TreeTraversal {
     /**
      * Finds a single child by type and returns its text.
      */
-    fun findChildByType(node: TSNode, childType: String, sourceCode: String): String? {
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
-            if (child.type == childType) {
-                return getNodeText(child, sourceCode)
-            }
-        }
-        return null
-    }
+    fun findChildByType(node: TSNode, childType: String, sourceCode: String): String? =
+        node.children().firstOrNull { it.type == childType }?.let { getNodeText(it, sourceCode) }
 
     /**
      * Checks if the node has an ancestor of the given type.
@@ -127,7 +120,7 @@ object TreeTraversal {
      * Finds all descendants matching any of the given types in a single pass,
      * returning them bucketed by node type.
      */
-    fun findAllDescendantsByTypes(node: TSNode, types: Set<String>): Map<String, List<TSNode>> {
+    fun findAllDescendantsGroupedByType(node: TSNode, types: Set<String>): Map<String, List<TSNode>> {
         val result = mutableMapOf<String, MutableList<TSNode>>()
         collectDescendantsByTypes(node, types, result)
         return result

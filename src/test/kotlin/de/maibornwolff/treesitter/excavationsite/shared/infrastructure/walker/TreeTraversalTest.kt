@@ -98,7 +98,7 @@ class TreeTraversalTest {
             val rootNode = TreeSitterParser.parse(code, java)
 
             // Act
-            val buckets = TreeTraversal.findAllDescendantsByTypes(
+            val buckets = TreeTraversal.findAllDescendantsGroupedByType(
                 rootNode,
                 setOf("field_declaration", "method_declaration")
             )
@@ -118,7 +118,7 @@ class TreeTraversalTest {
             val rootNode = TreeSitterParser.parse(code, java)
 
             // Act
-            val buckets = TreeTraversal.findAllDescendantsByTypes(
+            val buckets = TreeTraversal.findAllDescendantsGroupedByType(
                 rootNode,
                 setOf("field_declaration")
             )
@@ -139,7 +139,7 @@ class TreeTraversalTest {
             val rootNode = TreeSitterParser.parse(code, java)
 
             // Act
-            val buckets = TreeTraversal.findAllDescendantsByTypes(
+            val buckets = TreeTraversal.findAllDescendantsGroupedByType(
                 rootNode,
                 setOf("field_declaration")
             )
