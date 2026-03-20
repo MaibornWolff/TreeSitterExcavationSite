@@ -13,5 +13,5 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.Metric
 object JavaDefinition : LanguageDefinition {
     override val nodeMetrics: Map<String, Set<Metric>> = JavaMetricMapping.nodeMetrics
     override val nodeExtractions: Map<String, Extract> = JavaExtractionMapping.nodeExtractions
-    override val dependencyMapping: LanguageDependencyMapping = JavaDependencyMapping
+    override val dependencyMapping: LanguageDependencyMapping = JavaDependencyMapping.dependencyMapping
 }

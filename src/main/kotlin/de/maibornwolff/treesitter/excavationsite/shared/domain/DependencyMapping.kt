@@ -3,18 +3,18 @@ package de.maibornwolff.treesitter.excavationsite.shared.domain
 import org.treesitter.TSNode
 
 /**
- * Defines language-specific dependency extraction behavior.
+ * Holds language-specific dependency extraction functions.
  *
- * Each language provides its own implementation with language-specific
+ * Each language provides its own instance with language-specific
  * extractors for package, import, and type extraction.
+ * Functions are stored as data (lambdas), consistent with how
+ * [Extract] stores custom extraction functions.
  */
-interface LanguageDependencyMapping {
-    fun extractPackagePath(rootNode: TSNode, sourceCode: String): List<String>
-
-    fun extractImports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration>
-
-    fun extractDeclarations(rootNode: TSNode, sourceCode: String): List<Declaration>
-}
+data class LanguageDependencyMapping(
+    val extractPackagePath: (TSNode, String) -> List<String>,
+    val extractImports: (TSNode, String) -> List<ImportDeclaration>,
+    val extractDeclarations: (TSNode, String) -> List<Declaration>,
+)
 
 /**
  * Interface for language-specific dependency mapping definitions.
