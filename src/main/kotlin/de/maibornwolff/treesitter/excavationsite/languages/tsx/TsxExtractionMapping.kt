@@ -83,6 +83,7 @@ object TsxExtractionMapping : ExtractionMapping {
         // JSX element identifiers
         put("jsx_opening_element", Extract.Identifier(single = ExtractionStrategy.FirstChildByType(IDENTIFIER)))
         put("jsx_self_closing_element", Extract.Identifier(single = ExtractionStrategy.FirstChildByType(IDENTIFIER)))
+        put("jsx_attribute", Extract.Identifier(single = ExtractionStrategy.FirstChildByType("property_identifier")))
 
         // Comments (auto-detect format)
         put("comment", Extract.Comment(CommentFormats.AutoDetect))

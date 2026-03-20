@@ -129,6 +129,20 @@ class TsxExtractionTest {
     }
 
     @Test
+    fun `should extract attribute name from jsx attribute`() {
+        // Arrange
+        val code = """
+            const App = () => <button onClick={fn} />;
+        """.trimIndent()
+
+        // Act
+        val result = TreeSitterExtraction.extract(code, Language.TSX)
+
+        // Assert
+        assertThat(result.identifiers).containsExactlyInAnyOrder("App", "button", "onClick")
+    }
+
+    @Test
     fun `should not extract JSX text content as string`() {
         // Arrange - "Hello World" is JSX text, not a string literal
         val code = """

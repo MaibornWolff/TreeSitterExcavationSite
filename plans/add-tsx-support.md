@@ -87,9 +87,9 @@ TDD-Cycle 2: `jsx_self_closing_element`
 - [x] `./gradlew test --tests "*Tsx*"` — green
 
 TDD-Cycle 3: `jsx_attribute`
-- [ ] Write test: `should extract attribute name from jsx attribute` → run (red)
-- [ ] Add `jsx_attribute` mapping
-- [ ] `./gradlew test --tests "*Tsx*"` — green
+- [x] Write test: `should extract attribute name from jsx attribute` → run (red)
+- [x] Add `jsx_attribute` mapping
+- [x] `./gradlew test --tests "*Tsx*"` — green
 
 TDD-Cycle 4: destructured arrow function params
 - [ ] Write test: `should extract parameter names from typed props` → run (red)
