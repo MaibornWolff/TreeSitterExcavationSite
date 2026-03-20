@@ -1,7 +1,11 @@
 # Identifiers
+App
+Button
 Button
 ButtonProps
 Card
+Card
+Icon
 Status
 StatusBadge
 button
@@ -21,13 +25,18 @@ formatLabel
 h2
 label
 label
+label
 onClick
 onClick
 onClick
+onClick
+onClose
+onClose
 span
 status
 status
 text
+title
 title
 title
 value
@@ -37,16 +46,19 @@ A sample TSX file demonstrating React component patterns.
 Used for golden file contract testing.
 Arrow function with chained calls
 Card component combining multiple elements
+Component using custom JSX elements (covers jsx_opening_element, jsx_self_closing_element, jsx_attribute)
 Component with conditional rendering and state-like logic
 Interface for component props
 Simple functional component with props
 Type alias for status
 
 # Strings
+Close
 Error
 Loading...
 Ready
 Unknown
+Welcome
 badge badge-
 btn
 card

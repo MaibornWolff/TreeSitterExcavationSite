@@ -101,11 +101,11 @@ TDD-Cycle 4: destructured params with type annotation
 - [x] `./gradlew test` — full suite green (final check)
 
 ### 6. Update sample file and regenerate golden files
-- [ ] Add `jsx_opening_element` example to `tsx_sample.tsx` (e.g. `<MyComponent>...</MyComponent>`)
-- [ ] Add `jsx_self_closing_element` example to `tsx_sample.tsx` (e.g. `<Icon />`)
-- [ ] Add `jsx_attribute` example to `tsx_sample.tsx` (e.g. `onClick={handler}`)
-- [ ] Regenerate golden files (`UPDATE_GOLDEN_FILES=true`, run, set back to `false`)
-- [ ] `./gradlew test` — full suite green
+- [x] Add `jsx_opening_element` example to `tsx_sample.tsx` (e.g. `<MyComponent>...</MyComponent>`)
+- [x] Add `jsx_self_closing_element` example to `tsx_sample.tsx` (e.g. `<Icon />`)
+- [x] Add `jsx_attribute` example to `tsx_sample.tsx` (e.g. `onClick={handler}`)
+- [x] Regenerate golden files (`UPDATE_GOLDEN_FILES=true`, run, set back to `false`)
+- [x] `./gradlew test` — full suite green
 
 ## JSX Node Types (from tsx/src/node-types.json)
 

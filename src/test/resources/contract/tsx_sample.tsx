@@ -55,5 +55,15 @@ const formatLabel = (value: string | null): string | undefined => {
     return value?.trim().toLowerCase();
 };
 
-export { Button, StatusBadge, Card, formatLabel };
+// Component using custom JSX elements (covers jsx_opening_element, jsx_self_closing_element, jsx_attribute)
+const App = ({ onClose }: { onClose: () => void }) => {
+    return (
+        <Card title="Welcome">
+            <Icon />
+            <Button label="Close" onClick={onClose} />
+        </Card>
+    );
+};
+
+export { Button, StatusBadge, Card, formatLabel, App };
 export type { ButtonProps, Status };
