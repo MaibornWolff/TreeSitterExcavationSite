@@ -18,7 +18,7 @@ object TreeSitterDependencies {
             content = content,
             treeSitterLanguage = treeSitterLanguage,
             mapping = mapping,
-            preprocessor = definition.preprocessor,
+            preprocessor = definition.preprocessor
         )
     }
 

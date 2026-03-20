@@ -9,7 +9,7 @@ object DependenciesFacade {
         content: String,
         treeSitterLanguage: TSLanguage,
         mapping: LanguageDependencyMapping,
-        preprocessor: ((String) -> String)? = null,
+        preprocessor: ((String) -> String)? = null
     ): DependencyResult {
         val processedContent = preprocessor?.invoke(content) ?: content
         val collector = DependencyCollector(treeSitterLanguage, mapping)

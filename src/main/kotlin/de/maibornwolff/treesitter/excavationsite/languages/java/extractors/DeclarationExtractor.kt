@@ -13,7 +13,7 @@ internal object DeclarationExtractor {
     private const val ANNOTATION_TYPE_DECLARATION = "annotation_type_declaration"
     private const val NAME_FIELD = "name"
 
-    val DECLARATION_TYPES = setOf(
+    private val DECLARATION_TYPES = setOf(
         CLASS_DECLARATION,
         RECORD_DECLARATION,
         INTERFACE_DECLARATION,

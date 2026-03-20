@@ -9,6 +9,6 @@ object JavaDependencyMapping {
     val dependencyMapping = LanguageDependencyMapping(
         extractPackagePath = PackageExtractor::extract,
         extractImports = ImportExtractor::extract,
-        extractDeclarations = DeclarationExtractor::extract,
+        extractDeclarations = DeclarationExtractor::extract
     )
 }

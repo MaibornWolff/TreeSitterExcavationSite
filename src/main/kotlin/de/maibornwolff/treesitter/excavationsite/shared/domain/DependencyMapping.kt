@@ -13,7 +13,7 @@ import org.treesitter.TSNode
 data class LanguageDependencyMapping(
     val extractPackagePath: (TSNode, String) -> List<String>,
     val extractImports: (TSNode, String) -> List<ImportDeclaration>,
-    val extractDeclarations: (TSNode, String) -> List<Declaration>,
+    val extractDeclarations: (TSNode, String) -> List<Declaration>
 )
 
 /**
