@@ -10,7 +10,7 @@ Currently only Java is implemented. Other languages will be migrated from DC's l
 
 Follows the same hexagonal pattern as metrics and extraction:
 
-```
+```text
 API                          Integration                    Languages
 ┌──────────────────────┐     ┌────────────────────────┐     ┌──────────────────────────┐
 │ TreeSitterDependencies│────>│ DependenciesFacade     │     │ languages/java/          │
@@ -27,7 +27,7 @@ API                          Integration                    Languages
 
 ### Data flow
 
-```
+```text
 Source code string
   → TreeSitterDependencies.analyze(code, Language.JAVA)
     → DependenciesFacade applies preprocessor, creates adapter + collector
