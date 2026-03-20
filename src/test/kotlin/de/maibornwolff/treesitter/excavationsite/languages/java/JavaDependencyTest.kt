@@ -1,9 +1,9 @@
 package de.maibornwolff.treesitter.excavationsite.languages.java
 
+import de.maibornwolff.treesitter.excavationsite.api.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
-import de.maibornwolff.treesitter.excavationsite.shared.domain.DeclarationType
-import de.maibornwolff.treesitter.excavationsite.shared.domain.UsedType
+import de.maibornwolff.treesitter.excavationsite.api.UsedType
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
