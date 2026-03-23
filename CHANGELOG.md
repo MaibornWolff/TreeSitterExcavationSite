@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 - Dependencies API: `TreeSitterDependencies.analyze(code, language) -> DependencyResult`
 - Java dependency analysis including package path, imports, declarations, and used types
+- TSX language support with JSX element and attribute extraction
 
 ## [0.3.1] - 2026-01-30
 
