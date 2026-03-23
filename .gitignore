@@ -18,6 +18,7 @@ gradle.properties
 .kotlin
 
 !gradle/wrapper/*.jar
+!libs/*.jar
 
 # OS
 .DS_Store

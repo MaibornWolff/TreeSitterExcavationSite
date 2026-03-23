@@ -95,9 +95,9 @@ class TreeSitterExtractionTest {
             Language.JAVA, Language.KOTLIN, Language.TYPESCRIPT, Language.JAVASCRIPT,
             Language.PYTHON, Language.GO, Language.PHP, Language.RUBY, Language.SWIFT,
             Language.BASH, Language.CSHARP, Language.CPP, Language.C, Language.OBJECTIVE_C,
-            Language.VUE, Language.ABL
+            Language.VUE, Language.ABL, Language.TSX
         )
-        assertThat(languages).hasSize(16)
+        assertThat(languages).hasSize(17)
     }
 
     @Test

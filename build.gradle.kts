@@ -37,6 +37,7 @@ dependencies {
     implementation(libs.treesitter.objc)
     implementation(libs.treesitter.vue)
     implementation(libs.treesitter.abl)
+    implementation(files("libs/tree-sitter-tsx-0.23.2.jar"))
 
     // Testing
     testImplementation(libs.junit.jupiter.api)

@@ -606,6 +606,13 @@ class RobustnessContractTest {
                         if (true) {}
                     }
             """.trimIndent()
+            Language.TSX -> """
+                    // Comment
+                    const Foo = () => {
+                        const s = "hello";
+                        return <div>{s}</div>;
+                    };
+            """.trimIndent()
             Language.PYTHON -> """
                     # Comment
                     def foo():

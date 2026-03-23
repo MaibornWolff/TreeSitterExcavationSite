@@ -27,6 +27,10 @@ tree-sitter-bash = "0.23.3"
 tree-sitter-vue = "0.2.1a"
 # tree-sitter-ng is an experimental fork with ABL support (JitPack)
 tree-sitter-abl = "de274a6"
+# tree-sitter-tsx not yet published to Maven Central, using JitPack
+# tree-sitter-tsx is bundled as libs/tree-sitter-tsx-0.23.2.jar (not yet on Maven Central)
+# Built from: git clone https://github.com/bonede/tree-sitter-ng && ./gradlew :tree-sitter-tsx:publishToMavenLocal
+# tree-sitter-tsx = "0.23.2"
 
 [libraries]
 kotlin-test = { group = "org.jetbrains.kotlin", name = "kotlin-test", version.ref = "kotlin" }
@@ -55,6 +59,7 @@ treesitter-bash = { group = "io.github.bonede", name = "tree-sitter-bash", versi
 treesitter-vue = { group = "io.github.bonede", name = "tree-sitter-vue", version.ref = "tree-sitter-vue" }
 # ABL from experimental fork (tree-sitter-ng via JitPack)
 treesitter-abl = { group = "com.github.ChristianHuehn.tree-sitter-ng", name = "tree-sitter-abl", version.ref = "tree-sitter-abl" }
+# treesitter-tsx: bundled as libs/tree-sitter-tsx-0.23.2.jar — see comment above
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

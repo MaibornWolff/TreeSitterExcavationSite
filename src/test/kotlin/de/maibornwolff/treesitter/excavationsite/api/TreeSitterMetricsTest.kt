@@ -93,7 +93,7 @@ class TreeSitterMetricsTest {
         assertThat(Language.fromExtension(".kt")).isEqualTo(Language.KOTLIN)
         assertThat(Language.fromExtension(".kts")).isEqualTo(Language.KOTLIN)
         assertThat(Language.fromExtension(".ts")).isEqualTo(Language.TYPESCRIPT)
-        assertThat(Language.fromExtension(".tsx")).isEqualTo(Language.TYPESCRIPT)
+        assertThat(Language.fromExtension(".tsx")).isEqualTo(Language.TSX)
         assertThat(Language.fromExtension(".py")).isEqualTo(Language.PYTHON)
         assertThat(Language.fromExtension(".go")).isEqualTo(Language.GO)
         assertThat(Language.fromExtension(".unknown")).isNull()

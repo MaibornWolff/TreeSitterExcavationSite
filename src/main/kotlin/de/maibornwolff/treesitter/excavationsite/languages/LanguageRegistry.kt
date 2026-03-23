@@ -15,6 +15,7 @@ import de.maibornwolff.treesitter.excavationsite.languages.php.PhpDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.python.PythonDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.ruby.RubyDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.swift.SwiftDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.tsx.TsxDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.vue.VueDefinition
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Language
 import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDefinition
@@ -33,6 +34,7 @@ import org.treesitter.TreeSitterPhp
 import org.treesitter.TreeSitterPython
 import org.treesitter.TreeSitterRuby
 import org.treesitter.TreeSitterSwift
+import org.treesitter.TreeSitterTsx
 import org.treesitter.TreeSitterTypescript
 
 /**
@@ -49,6 +51,7 @@ object LanguageRegistry {
         Language.JAVA -> TreeSitterJava()
         Language.KOTLIN -> TreeSitterKotlin()
         Language.TYPESCRIPT -> TreeSitterTypescript()
+        Language.TSX -> TreeSitterTsx()
         Language.JAVASCRIPT -> TreeSitterJavascript()
         Language.PYTHON -> TreeSitterPython()
         Language.GO -> TreeSitterGo()
@@ -71,6 +74,7 @@ object LanguageRegistry {
         Language.JAVA -> JavaDefinition
         Language.KOTLIN -> KotlinDefinition
         Language.TYPESCRIPT -> TypescriptDefinition
+        Language.TSX -> TsxDefinition
         Language.JAVASCRIPT -> JavascriptDefinition
         Language.PYTHON -> PythonDefinition
         Language.GO -> GoDefinition

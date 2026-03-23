@@ -6,7 +6,8 @@ package de.maibornwolff.treesitter.excavationsite.shared.domain
 enum class Language(val primaryExtension: String, val otherExtensions: Set<String> = emptySet()) {
     JAVA(primaryExtension = ".java"),
     KOTLIN(primaryExtension = ".kt", otherExtensions = setOf(".kts")),
-    TYPESCRIPT(primaryExtension = ".ts", otherExtensions = setOf(".tsx")),
+    TYPESCRIPT(primaryExtension = ".ts"),
+    TSX(primaryExtension = ".tsx"),
     JAVASCRIPT(primaryExtension = ".js", otherExtensions = setOf(".jsx", ".mjs", ".cjs")),
     PYTHON(primaryExtension = ".py"),
     GO(primaryExtension = ".go"),
