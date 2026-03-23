@@ -18,18 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ### Added
 - ABL support for `.i` include files
 
-## [0.3.0]
+## [0.3.0] - 2026-01-29
 
 ### Added
 - ABL/OpenEdge language support
 - Detekt static analysis
 
-## [0.2.0]
+## [0.2.0] - 2025-12-18
 
 ### Added
 - Extraction API: `TreeSitterExtraction.extract(code, language) -> ExtractionResult`
 
-## [0.1.0]
+## [0.1.0] - 2025-12-16
 
 ### Added
 - Initial release
