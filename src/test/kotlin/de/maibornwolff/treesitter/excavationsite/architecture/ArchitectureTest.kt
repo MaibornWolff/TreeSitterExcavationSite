@@ -71,6 +71,58 @@ class ArchitectureTest {
         }
 
         @Test
+        fun `should prevent dependencies from depending on metrics`() {
+            // Arrange & Act & Assert
+            noClasses()
+                .that()
+                .resideInAPackage("$BASE_PACKAGE.integration.dependencies..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage("$BASE_PACKAGE.integration.metrics..")
+                .because("Dependencies feature should be independent from metrics feature")
+                .check(classes)
+        }
+
+        @Test
+        fun `should prevent dependencies from depending on extraction`() {
+            // Arrange & Act & Assert
+            noClasses()
+                .that()
+                .resideInAPackage("$BASE_PACKAGE.integration.dependencies..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage("$BASE_PACKAGE.integration.extraction..")
+                .because("Dependencies feature should be independent from extraction feature")
+                .check(classes)
+        }
+
+        @Test
+        fun `should prevent metrics from depending on dependencies`() {
+            // Arrange & Act & Assert
+            noClasses()
+                .that()
+                .resideInAPackage("$BASE_PACKAGE.integration.metrics..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage("$BASE_PACKAGE.integration.dependencies..")
+                .because("Metrics feature should be independent from dependencies feature")
+                .check(classes)
+        }
+
+        @Test
+        fun `should prevent extraction from depending on dependencies`() {
+            // Arrange & Act & Assert
+            noClasses()
+                .that()
+                .resideInAPackage("$BASE_PACKAGE.integration.extraction..")
+                .should()
+                .dependOnClassesThat()
+                .resideInAPackage("$BASE_PACKAGE.integration.dependencies..")
+                .because("Extraction feature should be independent from dependencies feature")
+                .check(classes)
+        }
+
+        @Test
         fun `should prevent shared walker from depending on features`() {
             // Arrange & Act & Assert
             // Shared walker infrastructure should not depend on features

@@ -85,26 +85,53 @@ result.extractedTexts.forEach { item ->
 }
 ```
 
+### Dependency Analysis
+
+```kotlin
+import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
+import de.maibornwolff.treesitter.excavationsite.api.Language
+
+val code = """
+    package com.example;
+
+    import java.util.List;
+
+    public class UserService {
+        private List<String> names;
+    }
+""".trimIndent()
+
+val result = TreeSitterDependencies.analyze(code, Language.JAVA)
+
+println(result.packagePath)   // [com, example]
+println(result.imports)       // [ImportDeclaration(path=[java, util, List], isWildcard=false)]
+println(result.declarations)  // [Declaration(name=UserService, type=CLASS, usedTypes=[...])]
+
+// Check language support
+println(TreeSitterDependencies.isDependencyAnalysisSupported(Language.JAVA))   // true
+println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA]
+```
+
 ## Supported Languages and Frameworks
 
-| Language | Extension(s) | Metrics | Extraction | Status |
-|----------|-------------|---------|------------|--------|
-| Java | `.java` | Yes | Yes | Stable |
-| Kotlin | `.kt`, `.kts` | Yes | Yes | Stable |
-| TypeScript | `.ts`, `.tsx` | Yes | Yes | Stable |
-| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | Yes | Yes | Stable |
-| Python | `.py` | Yes | Yes | Stable |
-| Go | `.go` | Yes | Yes | Stable |
-| PHP | `.php` | Yes | Yes | Stable |
-| Ruby | `.rb` | Yes | Yes | Stable |
-| Swift | `.swift` | Yes | Yes | Stable |
-| Bash | `.sh`, `.bash` | Yes | Yes | Stable |
-| C# | `.cs` | Yes | Yes | Stable |
-| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.h` | Yes | Yes | Stable |
-| C | `.c` | Yes | Yes | Stable |
-| Objective-C | `.m`, `.mm` | Yes | Yes | Stable |
-| Vue | `.vue` | Yes | Yes | Stable |
-| ABL | `.p`, `.cls`, `.w`, `.i` | Yes | Yes | Experimental |
+| Language | Extension(s) | Metrics | Extraction | Dependencies |
+|----------|-------------|---------|------------|--------------|
+| Java | `.java` | Stable | Stable | Experimental |
+| Kotlin | `.kt`, `.kts` | Stable | Stable | — |
+| TypeScript | `.ts`, `.tsx` | Stable | Stable | — |
+| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | Stable | Stable | — |
+| Python | `.py` | Stable | Stable | — |
+| Go | `.go` | Stable | Stable | — |
+| PHP | `.php` | Stable | Stable | — |
+| Ruby | `.rb` | Stable | Stable | — |
+| Swift | `.swift` | Stable | Stable | — |
+| Bash | `.sh`, `.bash` | Stable | Stable | — |
+| C# | `.cs` | Stable | Stable | — |
+| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.h` | Stable | Stable | — |
+| C | `.c` | Stable | Stable | — |
+| Objective-C | `.m`, `.mm` | Stable | Stable | — |
+| Vue | `.vue` | Stable | Stable | — |
+| ABL | `.p`, `.cls`, `.w`, `.i` | Experimental | Experimental | — |
 
 ## Available Metrics
 
@@ -163,10 +190,13 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 │   │   ├── ports/                 # Interfaces (MetricNodeTypes)
 │   │   ├── adapters/              # Language definition adapters
 │   │   └── calculators/           # Individual metric calculators
-│   └── extraction/                # Extraction feature
-│       ├── ports/                 # Interfaces (ExtractionNodeTypes)
-│       ├── adapters/              # Language definition adapters
-│       └── extractors/common/     # Shared extractors
+│   ├── extraction/                # Extraction feature
+│   │   ├── ports/                 # Interfaces (ExtractionNodeTypes)
+│   │   ├── adapters/              # Language definition adapters
+│   │   └── extractors/common/     # Shared extractors
+│   └── dependencies/              # Dependencies feature
+│       ├── ports/                 # Interfaces (DependencyExtractor)
+│       └── adapters/              # Language definition adapters
 ├── languages/                     # Language definitions (16 languages and frameworks)
 │   └── <lang>/                    # Per-language directory
 │       ├── *Definition.kt         # Combines metric and extraction mappings

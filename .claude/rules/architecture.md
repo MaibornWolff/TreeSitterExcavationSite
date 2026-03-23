@@ -2,7 +2,7 @@
 
 ## Vertical Slice + Hexagonal Architecture
 
-The codebase follows a vertical slice architecture where each feature (metrics, extraction) is self-contained with its own hexagonal structure (ports/adapters pattern).
+The codebase follows a vertical slice architecture where each feature (metrics, extraction, dependencies) is self-contained with its own hexagonal structure (ports/adapters pattern).
 
 ## Core Components
 
@@ -12,6 +12,7 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 │   ├── Language.kt                # Public enum of supported languages
 │   ├── TreeSitterMetrics.kt       # Delegates to integration/metrics/
 │   ├── TreeSitterExtraction.kt    # Delegates to integration/extraction/
+│   ├── TreeSitterDependencies.kt  # Delegates to integration/dependencies/
 │   ├── AvailableMetrics.kt        # Public metric enums
 │   └── ExtractionTypes.kt         # Public extraction types (re-exports)
 ├── integration/                   # Feature integration (vertical slices)
@@ -23,20 +24,26 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 │   │   ├── MetricsFacade.kt       # Feature entry point
 │   │   ├── MetricCollector.kt     # Orchestrates metric calculations
 │   │   └── MetricsToCalculatorsMap.kt  # Calculator registry
-│   └── extraction/                # Extraction feature
-│       ├── ports/                 # Interfaces (ExtractionNodeTypes)
-│       ├── adapters/              # Adapters (LanguageDefinitionExtractionAdapter)
-│       ├── extractors/common/     # Common extractors (CommentExtractor, StringExtractor)
-│       ├── ExtractionFacade.kt    # Feature entry point
-│       ├── ExtractionExecutor.kt  # Orchestrates extraction
-│       └── DirectTextExtractor.kt # AST walker
+│   ├── extraction/                # Extraction feature
+│   │   ├── ports/                 # Interfaces (ExtractionNodeTypes)
+│   │   ├── adapters/              # Adapters (LanguageDefinitionExtractionAdapter)
+│   │   ├── extractors/common/     # Common extractors (CommentExtractor, StringExtractor)
+│   │   ├── ExtractionFacade.kt    # Feature entry point
+│   │   ├── ExtractionExecutor.kt  # Orchestrates extraction
+│   │   └── DirectTextExtractor.kt # AST walker
+│   └── dependencies/              # Dependencies feature
+│       ├── ports/                 # Interfaces (DependencyExtractor)
+│       ├── adapters/              # Adapters (LanguageDefinitionDependencyAdapter)
+│       ├── DependenciesFacade.kt  # Feature entry point
+│       └── DependencyCollector.kt # Orchestrates dependency extraction
 ├── languages/                     # Language definitions
 │   ├── Language.kt                # Internal language enum with definitions
 │   ├── LanguageRegistry.kt        # Language lookup
 │   └── <lang>/                    # Per-language directory (16 languages and frameworks)
-│       ├── *Definition.kt         # Combines metric and extraction mappings
+│       ├── *Definition.kt         # Combines metric, extraction, and dependency mappings
 │       ├── *MetricMapping.kt      # Metric node type mappings
 │       ├── *ExtractionMapping.kt  # Extraction node type mappings
+│       ├── *DependencyMapping.kt  # Dependency extraction mappings (optional)
 │       └── extractors/            # Language-specific extractors
 └── shared/                        # Cross-cutting concerns
     ├── domain/                    # Domain core (innermost layer - no dependencies)
@@ -51,6 +58,7 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
     │   ├── LanguageDefinition.kt  # Interface for language definitions
     │   ├── MetricMapping.kt       # Metric mapping interface
     │   ├── ExtractionMapping.kt   # Extraction mapping interface
+    │   ├── DependencyMapping.kt   # Dependency mapping interfaces
     │   ├── CommentFormats.kt      # Comment format definitions
     │   ├── StringFormats.kt       # String format definitions
     │   ├── CommentParser.kt       # Comment parsing utilities
@@ -92,7 +100,7 @@ The architecture follows concentric layers with `shared/domain/` at the center:
 - `languages/` → `shared/domain/`
 - `shared/domain/` → nothing (no internal dependencies)
 
-- **Domain Core** (`shared/domain/`): Core types like `Metric`, `Extract`, `CommentFormats`, `ExtractionResult` with no dependencies
+- **Domain Core** (`shared/domain/`): Core types like `Metric`, `Extract`, `CommentFormats`, `ExtractionResult`, `DependencyResult` with no dependencies
 - **Ports** (`languages/`): `LanguageDefinition` interface implementations that define language behavior
 - **Adapters** (`integration/`): Convert language definitions to feature-specific interfaces
 - **API** (`api/`): Public entry points for external consumers
@@ -115,6 +123,24 @@ Delegate to calculators via MetricsToCalculatorsMap
 Aggregate results (complexity = logic + function complexity)
        ↓
 MetricsResult (metrics map + per-function metrics map)
+```
+
+### Dependencies Data Flow
+
+```
+Source Code String
+       ↓
+TreeSitterDependencies.analyze(code, language)
+       ↓
+DependenciesFacade → LanguageDefinitionDependencyAdapter (adapts LanguageDefinition to DependencyExtractor)
+       ↓
+DependencyCollector.collectDependencies()
+       ↓
+Parse AST → Delegate to DependencyExtractor port methods
+       ↓
+Language-specific extractors use direct tree traversal (findAllDescendantsByTypes)
+       ↓
+DependencyResult (packagePath, imports, declarations with usedTypes)
 ```
 
 ## Language Definition Architecture
@@ -147,6 +173,7 @@ object JavaExtractionMapping : ExtractionMapping {
 | **Domain core types** | `shared/domain/` |
 | Metrics integration | `integration/metrics/` |
 | Extraction integration | `integration/extraction/` |
+| Dependencies integration | `integration/dependencies/` |
 | Language definitions | `languages/<lang>/` |
 | Metric calculators | `integration/metrics/calculators/` |
 | Common extractors | `integration/extraction/extractors/common/` |

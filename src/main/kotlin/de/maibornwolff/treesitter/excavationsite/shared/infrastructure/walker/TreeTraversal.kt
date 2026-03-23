@@ -46,15 +46,8 @@ object TreeTraversal {
     /**
      * Finds a single child by type and returns its text.
      */
-    fun findChildByType(node: TSNode, childType: String, sourceCode: String): String? {
-        for (i in 0 until node.childCount) {
-            val child = node.getChild(i)
-            if (child.type == childType) {
-                return getNodeText(child, sourceCode)
-            }
-        }
-        return null
-    }
+    fun findChildByType(node: TSNode, childType: String, sourceCode: String): String? =
+        node.children().firstOrNull { it.type == childType }?.let { getNodeText(it, sourceCode) }
 
     /**
      * Checks if the node has an ancestor of the given type.
@@ -106,6 +99,44 @@ object TreeTraversal {
     }
 
     /**
+     * Finds all descendants matching any of the given types via recursive descent.
+     */
+    fun findAllDescendantsOfType(node: TSNode, vararg types: String): List<TSNode> {
+        val typeSet = types.toSet()
+        val result = mutableListOf<TSNode>()
+        collectDescendantsOfType(node, typeSet, result)
+        return result
+    }
+
+    private fun collectDescendantsOfType(node: TSNode, types: Set<String>, result: MutableList<TSNode>) {
+        for (child in node.children()) {
+            if (child.isNull) continue
+            if (child.type in types) result.add(child)
+            collectDescendantsOfType(child, types, result)
+        }
+    }
+
+    /**
+     * Finds all descendants matching any of the given types in a single pass,
+     * returning them bucketed by node type.
+     */
+    fun findAllDescendantsGroupedByType(node: TSNode, types: Set<String>): Map<String, List<TSNode>> {
+        val result = mutableMapOf<String, MutableList<TSNode>>()
+        collectDescendantsByTypes(node, types, result)
+        return result
+    }
+
+    private fun collectDescendantsByTypes(node: TSNode, types: Set<String>, result: MutableMap<String, MutableList<TSNode>>) {
+        for (child in node.children()) {
+            if (child.isNull) continue
+            if (child.type in types) {
+                result.getOrPut(child.type) { mutableListOf() }.add(child)
+            }
+            collectDescendantsByTypes(child, types, result)
+        }
+    }
+
+    /**
      * Recursively checks if any descendant has the given type.
      */
     fun containsNodeOfType(node: TSNode, type: String): Boolean {
@@ -124,5 +155,14 @@ object TreeTraversal {
 fun TSNode.children(): Sequence<TSNode> = sequence {
     for (i in 0 until childCount) {
         yield(getChild(i))
+    }
+}
+
+/**
+ * Extension function to iterate over all named children of a TSNode.
+ */
+fun TSNode.namedChildren(): Sequence<TSNode> = sequence {
+    for (i in 0 until namedChildCount) {
+        yield(getNamedChild(i))
     }
 }

@@ -10,6 +10,26 @@ Tests are located in `src/test/kotlin/.../languages/<lang>/`:
 - `<Lang>MetricsTest.kt` for metrics
 - `<Lang>ExtractionTest.kt` for extraction
 
+## Test Grouping
+
+Use `@Nested` inner classes to group related tests — never use section comments (`// ===`). This gives better IDE structure and test report readability.
+
+```kotlin
+class JavaDependencyTest {
+    @Nested
+    inner class PackageExtraction {
+        @Test
+        fun `should extract package path`() { ... }
+    }
+
+    @Nested
+    inner class ImportExtraction {
+        @Test
+        fun `should extract single import`() { ... }
+    }
+}
+```
+
 ## Test Structure
 
 Use Arrange-Act-Assert pattern with comments:
