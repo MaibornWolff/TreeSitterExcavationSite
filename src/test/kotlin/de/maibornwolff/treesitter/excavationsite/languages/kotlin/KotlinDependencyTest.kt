@@ -606,4 +606,107 @@ class KotlinDependencyTest {
         }
     }
 
+    @Nested
+    inner class CompletenessCheck {
+        @Test
+        fun `should extract all dependency types from a realistic multi-declaration file`() {
+            // Arrange
+            val code = """
+            package com.example.domain
+
+            import java.util.List
+            import java.util.Map
+            import java.io.*
+
+            @Fightable
+            class Creature(val id: CreatureId, val type: CreatureType) : BaseEntity(), Serializable, Comparable<Creature> {
+                private val speeds: Map<SpeedType, Speed> = emptyMap()
+
+                fun calculateDamage(armor: ArmorClass): List<HitPoints> {
+                    Logger.info("attacking")
+                    return DamageCalculator().compute()
+                }
+            }
+
+            enum class CreatureKind { DRAGON, GOBLIN }
+
+            annotation class Fightable
+
+            interface Movable : Locomotion {
+                fun getSpeed(type: SpeedType): Speed
+            }
+
+            object CreatureRegistry : Registry(), Serializable {
+                val creatures: List<Creature> = emptyList()
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert - Package
+            assertThat(result.packagePath).containsExactly("com", "example", "domain")
+
+            // Assert - Imports
+            assertThat(result.imports).hasSize(3)
+            assertThat(result.imports[0].path).containsExactly("java", "util", "List")
+            assertThat(result.imports[1].path).containsExactly("java", "util", "Map")
+            assertThat(result.imports[2].path).containsExactly("java", "io")
+            assertThat(result.imports[2].isWildcard).isTrue()
+
+            // Assert - All 5 declaration types found
+            assertThat(result.declarations).hasSize(5)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName["Creature"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["CreatureKind"]?.type).isEqualTo(DeclarationType.ENUM)
+            assertThat(byName["Fightable"]?.type).isEqualTo(DeclarationType.ANNOTATION)
+            assertThat(byName["Movable"]?.type).isEqualTo(DeclarationType.INTERFACE)
+            assertThat(byName["CreatureRegistry"]?.type).isEqualTo(DeclarationType.CLASS)
+
+            // Assert - Creature used types (class params, properties, generics, inheritance,
+            //          annotations, function params/returns, constructor calls, call expressions)
+            assertThat(byName["Creature"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("Fightable"),
+                UsedType("BaseEntity"),
+                UsedType("Serializable"),
+                UsedType("Comparable", listOf(UsedType("Creature"))),
+                UsedType("CreatureId"),
+                UsedType("CreatureType"),
+                UsedType("Map", listOf(UsedType("SpeedType"), UsedType("Speed"))),
+                UsedType("ArmorClass"),
+                UsedType("List", listOf(UsedType("HitPoints"))),
+                UsedType("Logger"),
+                UsedType("DamageCalculator")
+            )
+
+            // Assert - Movable scoped separately
+            assertThat(byName["Movable"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("Locomotion"),
+                UsedType("Speed"),
+                UsedType("SpeedType")
+            )
+
+            // Assert - CreatureRegistry (object with inheritance + properties)
+            assertThat(byName["CreatureRegistry"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("Registry"),
+                UsedType("Serializable"),
+                UsedType("List", listOf(UsedType("Creature")))
+            )
+        }
+    }
+
+    @Nested
+    inner class ApiSupportCheck {
+        @Test
+        fun `should report Kotlin as supported for dependency analysis`() {
+            // Act & Assert
+            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.KOTLIN)).isTrue()
+        }
+
+        @Test
+        fun `should include Kotlin in supported languages`() {
+            // Act & Assert
+            assertThat(TreeSitterDependencies.getSupportedLanguages()).containsExactly(Language.JAVA, Language.KOTLIN)
+        }
+    }
 }
