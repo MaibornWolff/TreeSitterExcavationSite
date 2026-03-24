@@ -1,7 +1,9 @@
 package de.maibornwolff.treesitter.excavationsite.languages.kotlin
 
+import de.maibornwolff.treesitter.excavationsite.api.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
+import de.maibornwolff.treesitter.excavationsite.api.UsedType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -147,4 +149,461 @@ class KotlinDependencyTest {
             assertThat(result.imports).isEmpty()
         }
     }
+
+    @Nested
+    inner class DeclarationExtraction {
+        @Test
+        fun `should extract all declaration types`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class RegularClass
+            data class DataClass(val name: String)
+            enum class Color { RED, GREEN, BLUE }
+            interface Drawable { fun draw() }
+            annotation class MyAnnotation
+            object Singleton
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            assertThat(result.declarations).hasSize(6)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName["RegularClass"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["DataClass"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["Color"]?.type).isEqualTo(DeclarationType.ENUM)
+            assertThat(byName["Drawable"]?.type).isEqualTo(DeclarationType.INTERFACE)
+            assertThat(byName["MyAnnotation"]?.type).isEqualTo(DeclarationType.ANNOTATION)
+            assertThat(byName["Singleton"]?.type).isEqualTo(DeclarationType.CLASS)
+        }
+
+        @Test
+        fun `should return empty declarations when no type declarations`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            fun topLevelFunction() {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
+
+        @Test
+        fun `should extract property types`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class MyClass {
+                val name: String = ""
+                var count: Int = 0
+                lateinit var service: MyService
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("String"),
+                UsedType("Int"),
+                UsedType("MyService")
+            )
+        }
+
+        @Test
+        fun `should extract nullable property types`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class MyClass {
+                val name: String? = null
+                var count: Int? = null
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("String"),
+                UsedType("Int")
+            )
+        }
+
+        @Test
+        fun `should extract class parameter types`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            data class Person(val name: String, val age: Int, val address: Address)
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("String"),
+                UsedType("Int"),
+                UsedType("Address")
+            )
+        }
+
+        @Test
+        fun `should extract inheritance types`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Child : Base(), Printable, Serializable
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("Base"),
+                UsedType("Printable"),
+                UsedType("Serializable")
+            )
+        }
+
+        @Test
+        fun `should extract function return and parameter types`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Service {
+                fun process(name: String, count: Int): Boolean { return true }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("String"),
+                UsedType("Int"),
+                UsedType("Boolean")
+            )
+        }
+
+        @Test
+        fun `should extract annotation types`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Annotated {
+                @Inject
+                lateinit var service: MyService
+
+                @Deprecated("use other")
+                fun process() {}
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("Inject"),
+                UsedType("MyService"),
+                UsedType("Deprecated")
+            )
+        }
+
+        @Test
+        fun `should extract constructor call types with uppercase heuristic`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Builder {
+                fun build() {
+                    val obj = MyObject()
+                    val list = ArrayList<String>()
+                }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("MyObject"),
+                UsedType("ArrayList", listOf(UsedType("String")))
+            )
+        }
+
+        @Test
+        fun `should extract call expression types with uppercase heuristic`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Service {
+                fun process() {
+                    ServiceFactory.create()
+                    helper.process()
+                }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(UsedType("ServiceFactory"))
+        }
+
+        @Test
+        fun `should extract generic types`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Container {
+                val items: List<String> = emptyList()
+                val mapping: Map<String, List<Int>> = emptyMap()
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("List", listOf(UsedType("String"))),
+                UsedType("Map", listOf(UsedType("String"), UsedType("List", listOf(UsedType("Int")))))
+            )
+        }
+
+        @Test
+        fun `should handle star projections`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Container {
+                val items: List<*> = emptyList<Any>()
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(UsedType("List"))
+        }
+
+        @Test
+        fun `should find nested declarations recursively`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Outer {
+                val outerField: OuterType = OuterType()
+
+                class Inner {
+                    val innerField: InnerType = InnerType()
+                }
+
+                enum class Status { ACTIVE, INACTIVE }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            assertThat(result.declarations).hasSize(3)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName["Outer"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["Inner"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["Status"]?.type).isEqualTo(DeclarationType.ENUM)
+
+            // Outer includes its own types AND all nested types (leakage is expected)
+            assertThat(byName["Outer"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("OuterType"),
+                UsedType("InnerType")
+            )
+            assertThat(byName["Inner"]?.usedTypes).containsExactlyInAnyOrder(UsedType("InnerType"))
+        }
+
+        @Test
+        fun `should not treat companion objects as declarations`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class MyClass {
+                companion object {
+                    const val DEFAULT = "default"
+                    fun create(): MyClass = MyClass()
+                }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations.first().name).isEqualTo("MyClass")
+        }
+
+        @Test
+        fun `should extract used types from object declarations`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            object AppConfig : Config(), Serializable {
+                val name: String = ""
+                fun initialize(): Result { return Result() }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            val declaration = result.declarations.first()
+            assertThat(declaration.name).isEqualTo("AppConfig")
+            assertThat(declaration.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(declaration.usedTypes).containsExactlyInAnyOrder(
+                UsedType("Config"),
+                UsedType("Serializable"),
+                UsedType("String"),
+                UsedType("Result")
+            )
+        }
+
+        @Test
+        fun `should extract sealed class nested types as separate declarations`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            sealed class Result {
+                data class Success(val value: String) : Result()
+                data class Error(val message: String) : Result()
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            assertThat(result.declarations).hasSize(3)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName["Result"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["Success"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["Error"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["Success"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("String"),
+                UsedType("Result")
+            )
+        }
+
+        @Test
+        fun `should extract empty file with no declarations`() {
+            // Arrange
+            val code = ""
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            assertThat(result.packagePath).isEmpty()
+            assertThat(result.imports).isEmpty()
+            assertThat(result.declarations).isEmpty()
+        }
+
+        @Test
+        fun `should extract class with no used types`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Empty
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations.first().usedTypes).isEmpty()
+        }
+
+        @Test
+        fun `should include all descendant types at each nesting level`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Root {
+                val rootField: RootType = RootType()
+
+                class Level1 {
+                    val level1Field: Level1Type = Level1Type()
+
+                    class Level2 {
+                        val level2Field: Level2Type = Level2Type()
+                    }
+                }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            assertThat(result.declarations).hasSize(3)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName["Root"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("RootType"),
+                UsedType("Level1Type"),
+                UsedType("Level2Type")
+            )
+            assertThat(byName["Level1"]?.usedTypes).containsExactlyInAnyOrder(
+                UsedType("Level1Type"),
+                UsedType("Level2Type")
+            )
+            assertThat(byName["Level2"]?.usedTypes).containsExactlyInAnyOrder(UsedType("Level2Type"))
+        }
+    }
+
 }
