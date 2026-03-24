@@ -64,3 +64,4 @@ Detailed guidelines are in `.claude/rules/`:
 | `metrics.md` | Metric calculator patterns (applies to `integration/metrics/` files) |
 | `extraction.md` | Text extraction patterns (applies to `integration/extraction/` files) |
 | `testing.md` | Testing conventions (applies to test files) |
+| `dependency-migration.md` | Cross-repo context and workflow for migrating DC languages to TSE |
