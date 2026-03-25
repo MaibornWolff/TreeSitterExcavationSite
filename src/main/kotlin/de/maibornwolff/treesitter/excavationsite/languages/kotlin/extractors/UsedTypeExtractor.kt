@@ -37,7 +37,8 @@ internal object UsedTypeExtractor {
         CLASS_PARAMETER,
         FUNCTION_DECLARATION,
         ANNOTATION,
-        CALL_EXPRESSION
+        CALL_EXPRESSION,
+        NAVIGATION_EXPRESSION
     )
 
     fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
@@ -129,12 +130,10 @@ internal object UsedTypeExtractor {
     }
 
     private fun extractCallExpressionTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
-        return buckets[CALL_EXPRESSION].orEmpty().mapNotNull { callExpr ->
-            val firstChild = callExpr.getNamedChild(0)
-            if (firstChild.isNull || firstChild.type != NAVIGATION_EXPRESSION) return@mapNotNull null
-            val navFirstChild = firstChild.getNamedChild(0)
-            if (navFirstChild.isNull || navFirstChild.type != SIMPLE_IDENTIFIER) return@mapNotNull null
-            val name = TreeTraversal.getNodeText(navFirstChild, sourceCode).trim()
+        return buckets[NAVIGATION_EXPRESSION].orEmpty().mapNotNull { navExpr ->
+            val firstChild = navExpr.getNamedChild(0)
+            if (firstChild.isNull || firstChild.type != SIMPLE_IDENTIFIER) return@mapNotNull null
+            val name = TreeTraversal.getNodeText(firstChild, sourceCode).trim()
             if (!name.firstOrNull()?.isUpperCase()!!) return@mapNotNull null
             UsedType(name = name)
         }
