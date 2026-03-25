@@ -378,9 +378,12 @@ class KotlinDependencyTest {
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
 
-            // Assert
+            // Assert — ServiceFactory.create extracted from both call_expression and navigation_expression
             val usedTypes = result.declarations.first().usedTypes
-            assertThat(usedTypes).containsExactlyInAnyOrder(UsedType("ServiceFactory"))
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("ServiceFactory"),
+                UsedType("ServiceFactory.create")
+            )
         }
 
         @Test
@@ -451,6 +454,64 @@ class KotlinDependencyTest {
             // Assert
             val usedTypes = result.declarations.first().usedTypes
             assertThat(usedTypes).containsExactlyInAnyOrder(UsedType("List"))
+        }
+
+        @Test
+        fun `should extract qualified navigation expression types`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Formatter {
+                fun format() {
+                    DateTimeFormatBuilder.WithTime.create()
+                    UnicodeFormat.Directive.DateBased.format()
+                    helper.process()
+                }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert — matches DC behavior: all navigation expression levels + full call text
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("DateTimeFormatBuilder.WithTime.create"),
+                UsedType("DateTimeFormatBuilder.WithTime"),
+                UsedType("DateTimeFormatBuilder"),
+                UsedType("UnicodeFormat.Directive.DateBased.format"),
+                UsedType("UnicodeFormat.Directive.DateBased"),
+                UsedType("UnicodeFormat.Directive"),
+                UsedType("UnicodeFormat")
+            )
+        }
+
+        @Test
+        fun `should extract qualified constructor call types`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Factory {
+                fun create() {
+                    val inner = Outer.Inner()
+                    val simple = MyClass()
+                    val lower = helper.build()
+                }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("Outer.Inner"),
+                UsedType("Outer"),
+                UsedType("MyClass")
+            )
         }
 
         @Test
@@ -715,7 +776,10 @@ class KotlinDependencyTest {
                 UsedType("ArmorClass"),
                 UsedType("List", listOf(UsedType("HitPoints"))),
                 UsedType("Logger"),
-                UsedType("DamageCalculator")
+                UsedType("Logger.info"),
+                UsedType("DamageCalculator"),
+                UsedType("DamageCalculator().compute"),
+                UsedType("DamageCalculator()")
             )
 
             // Assert - Movable scoped separately

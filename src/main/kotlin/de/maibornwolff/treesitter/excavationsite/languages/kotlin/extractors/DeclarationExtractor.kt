@@ -28,21 +28,21 @@ internal object DeclarationExtractor {
         val namesByStartByte = allDeclarations.associate { node ->
             node.startByte to extractName(node, sourceCode)
         }
-        return allDeclarations.map { declarationNode ->
-            val name = namesByStartByte[declarationNode.startByte] ?: ""
-            val type = declarationType(declarationNode)
-            val usedTypes = UsedTypeExtractor.extract(declarationNode, sourceCode)
-            val parentPath = findParentPath(declarationNode, namesByStartByte)
-            Declaration(name = name, type = type, usedTypes = usedTypes, parentPath = parentPath)
-        }.toList()
+        return allDeclarations
+            .map { declarationNode ->
+                val name = namesByStartByte[declarationNode.startByte] ?: ""
+                val type = declarationType(declarationNode)
+                val usedTypes = UsedTypeExtractor.extract(declarationNode, sourceCode)
+                val parentPath = findParentPath(declarationNode, namesByStartByte)
+                Declaration(name = name, type = type, usedTypes = usedTypes, parentPath = parentPath)
+            }.toList()
     }
 
-    private fun extractName(node: TSNode, sourceCode: String): String {
-        return node.children()
-            .firstOrNull { it.type == TYPE_IDENTIFIER }
-            ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-            ?: ""
-    }
+    private fun extractName(node: TSNode, sourceCode: String): String = node
+        .children()
+        .firstOrNull { it.type == TYPE_IDENTIFIER }
+        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+        ?: ""
 
     private fun findParentPath(node: TSNode, namesByStartByte: Map<Int, String>): List<String> {
         val parents = mutableListOf<String>()
