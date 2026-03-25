@@ -11,6 +11,8 @@ plugins {
 group = "de.maibornwolff.treesitter.excavationsite"
 version = "0.4.0"
 
+val treeSitterTsxJar = "libs/tree-sitter-tsx-0.23.2.jar"
+
 repositories {
     mavenCentral()
     maven(url = "https://jitpack.io")
@@ -37,7 +39,7 @@ dependencies {
     implementation(libs.treesitter.objc)
     implementation(libs.treesitter.vue)
     implementation(libs.treesitter.abl)
-    implementation(files("libs/tree-sitter-tsx-0.23.2.jar"))
+    implementation(files(treeSitterTsxJar))
 
     // Testing
     testImplementation(libs.junit.jupiter.api)
@@ -59,6 +61,10 @@ kotlin {
 detekt {
     config.setFrom("$projectDir/config/detekt/detekt.yml")
     buildUponDefaultConfig = true
+}
+
+tasks.jar {
+    from(zipTree(treeSitterTsxJar))
 }
 
 tasks.test {
