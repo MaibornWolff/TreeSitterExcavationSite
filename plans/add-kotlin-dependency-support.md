@@ -164,7 +164,7 @@ Update the DC branch's TSE commit hash after each TSE push.
 - [x] Write DeclarationExtractor tests → implement DeclarationExtractor (finding + classifying declarations)
 - [x] Write UsedTypeExtractor tests (incremental) → implement UsedTypeExtractor (type extraction per category)
 - [x] Create KotlinDependencyMapping and register in KotlinDefinition
-- [ ] Set up DC branch (`feat/tse-kotlin-integration`) pointing to TSE Kotlin branch
+- [x] Set up DC branch (`feat/tse-kotlin-integration`) pointing to TSE commit 7d1f7f2, KotlinAnalyzer rewritten to use TSE
 - [ ] First dc-compare run (after basic extractors work)
 - [x] Write negative/edge case tests + completeness test
 - [x] Write nesting tests (recursive discovery, companion objects, sealed types, object used types)
@@ -181,3 +181,4 @@ Update the DC branch's TSE commit hash after each TSE push.
 - Kotlin AST uses `user_type` and `nullable_type` instead of Java's `type_identifier`
 - Each language owns its own `extractType` — no shared utility (see design decision above)
 - DC follow-up: rewrite DC's `KotlinAnalyzer` to use TSE, delete legacy query classes (separate PR)
+- Keep DC legacy files (KotlinUtils.kt, queries/) until dc-compare confirms the new implementation matches
