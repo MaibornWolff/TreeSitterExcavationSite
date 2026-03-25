@@ -165,11 +165,13 @@ Update the DC branch's TSE commit hash after each TSE push.
 - [x] Write UsedTypeExtractor tests (incremental) → implement UsedTypeExtractor (type extraction per category)
 - [x] Create KotlinDependencyMapping and register in KotlinDefinition
 - [x] Set up DC branch (`feat/tse-kotlin-integration`) pointing to TSE commit 7d1f7f2, KotlinAnalyzer rewritten to use TSE
-- [ ] First dc-compare run (after basic extractors work)
+- [x] First dc-compare run — 17k line diff, identified parentPath + navigation expression issues
 - [x] Write negative/edge case tests + completeness test
 - [x] Write nesting tests (recursive discovery, companion objects, sealed types, object used types)
-- [ ] Second dc-compare run (after UsedTypeExtractor is feature-complete)
-- [ ] Fix any dc-compare mismatches (parent paths, type leakage, used types, declaration counts)
+- [x] Fix parentPath: added `parentPath` field to `Declaration`, Kotlin DeclarationExtractor computes it
+- [x] Fix navigation expressions: extract standalone `navigation_expression` types (Padding.NONE, Formats.ISO pattern)
+- [x] Second dc-compare run — down to ~2.9k line diff
+- [ ] Investigate remaining dc-compare differences (see below)
 - [ ] Final verification: full test suite + ktlintCheck + architecture tests + dc-compare
 
 ## Notes
@@ -182,3 +184,18 @@ Update the DC branch's TSE commit hash after each TSE push.
 - Each language owns its own `extractType` — no shared utility (see design decision above)
 - DC follow-up: rewrite DC's `KotlinAnalyzer` to use TSE, delete legacy query classes (separate PR)
 - Keep DC legacy files (KotlinUtils.kt, queries/) until dc-compare confirms the new implementation matches
+
+## Remaining dc-compare differences (~2.9k lines)
+
+Three root cause categories remain after parentPath + navigation expression fixes:
+
+### 1. Missing resolved dependency references (main issue)
+DC main resolves used types to nested node paths like `DateTimeFormatBuilder.WithTime`, `UnicodeFormat.Directive.DateBased`, `OffsetInfo.Gap`. TSE extracts the simple type name (`WithTime`, `DateBased`, `Gap`) correctly, but DC's dependency resolver matches them to nested nodes using the full qualified path. This is a **DC resolver behavior** difference, not a TSE extraction gap — needs investigation into whether DC's resolver uses different matching logic for the TSE-based output vs legacy.
+
+Affected types include: `DateTimeFormatBuilder.WithTime/WithDate/WithUtcOffset/WithYearMonth/WithDateTime/WithDateTimeComponents`, `UnicodeFormat.Directive.*`, `OffsetInfo.Gap/Overlap/Regular`, `NumberConsumptionError.TooFewDigits/TooManyDigits/WrongConstant`, `DateTimeUnit.DateBased/DayBased/MonthBased/TimeBased`, `Formats`, `UtcOffset.Formats`.
+
+### 2. Annotation misclassification (5 declarations, ~10 lines)
+TSE correctly identifies `annotation class` as `DeclarationType.ANNOTATION`. DC legacy classifies them as `CLASS` (it only checks `interface` and `enum` keywords). **TSE is more correct** — decide whether to match DC or accept this improvement.
+
+### 3. Downstream effects (~2k lines)
+isCyclic flips, weight changes, level shifts, tree reordering — all caused by #1 and #2 above. Will resolve automatically when root causes are fixed.
