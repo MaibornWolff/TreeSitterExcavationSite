@@ -22,18 +22,42 @@ internal object DeclarationExtractor {
 
     private val DECLARATION_TYPES = setOf(CLASS_DECLARATION, OBJECT_DECLARATION)
 
-    fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> = TreeTraversal
-        .findAllDescendantsOfType(rootNode, *DECLARATION_TYPES.toTypedArray())
-        .map { declarationNode ->
-            val name = declarationNode
-                .children()
-                .firstOrNull { it.type == TYPE_IDENTIFIER }
-                ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                ?: ""
+    fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> {
+        val allDeclarations = TreeTraversal
+            .findAllDescendantsOfType(rootNode, *DECLARATION_TYPES.toTypedArray())
+        val namesByStartByte = allDeclarations.associate { node ->
+            node.startByte to extractName(node, sourceCode)
+        }
+        return allDeclarations.map { declarationNode ->
+            val name = namesByStartByte[declarationNode.startByte] ?: ""
             val type = declarationType(declarationNode)
             val usedTypes = UsedTypeExtractor.extract(declarationNode, sourceCode)
-            Declaration(name = name, type = type, usedTypes = usedTypes)
+            val parentPath = findParentPath(declarationNode, namesByStartByte)
+            Declaration(name = name, type = type, usedTypes = usedTypes, parentPath = parentPath)
         }.toList()
+    }
+
+    private fun extractName(node: TSNode, sourceCode: String): String {
+        return node.children()
+            .firstOrNull { it.type == TYPE_IDENTIFIER }
+            ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+            ?: ""
+    }
+
+    private fun findParentPath(node: TSNode, namesByStartByte: Map<Int, String>): List<String> {
+        val parents = mutableListOf<String>()
+        var current = node.parent
+        while (!current.isNull) {
+            if (current.type in DECLARATION_TYPES) {
+                val parentName = namesByStartByte[current.startByte]
+                if (parentName != null) {
+                    parents.add(0, parentName)
+                }
+            }
+            current = current.parent
+        }
+        return parents
+    }
 
     private fun declarationType(node: TSNode): DeclarationType {
         if (node.type == OBJECT_DECLARATION) return DeclarationType.CLASS
