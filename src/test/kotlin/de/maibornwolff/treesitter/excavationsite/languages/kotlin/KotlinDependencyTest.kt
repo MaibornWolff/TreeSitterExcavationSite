@@ -384,6 +384,34 @@ class KotlinDependencyTest {
         }
 
         @Test
+        fun `should extract navigation expression types without call suffix`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Formatter {
+                fun format() {
+                    val pad = Padding.NONE
+                    val names = DayOfWeekNames.ENGLISH
+                    val fmt = Formats.ISO
+                    val lower = helper.value
+                }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("Padding"),
+                UsedType("DayOfWeekNames"),
+                UsedType("Formats")
+            )
+        }
+
+        @Test
         fun `should extract generic types`() {
             // Arrange
             val code = """
@@ -451,6 +479,11 @@ class KotlinDependencyTest {
             assertThat(byName["Outer"]?.type).isEqualTo(DeclarationType.CLASS)
             assertThat(byName["Inner"]?.type).isEqualTo(DeclarationType.CLASS)
             assertThat(byName["Status"]?.type).isEqualTo(DeclarationType.ENUM)
+
+            // Parent paths for nested declarations
+            assertThat(byName["Outer"]?.parentPath).isEmpty()
+            assertThat(byName["Inner"]?.parentPath).containsExactly("Outer")
+            assertThat(byName["Status"]?.parentPath).containsExactly("Outer")
 
             // Outer includes its own types AND all nested types (leakage is expected)
             assertThat(byName["Outer"]?.usedTypes).containsExactlyInAnyOrder(
@@ -531,6 +564,9 @@ class KotlinDependencyTest {
             assertThat(byName["Result"]?.type).isEqualTo(DeclarationType.CLASS)
             assertThat(byName["Success"]?.type).isEqualTo(DeclarationType.CLASS)
             assertThat(byName["Error"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["Result"]?.parentPath).isEmpty()
+            assertThat(byName["Success"]?.parentPath).containsExactly("Result")
+            assertThat(byName["Error"]?.parentPath).containsExactly("Result")
             assertThat(byName["Success"]?.usedTypes).containsExactlyInAnyOrder(
                 UsedType("String"),
                 UsedType("Result")
@@ -593,6 +629,9 @@ class KotlinDependencyTest {
             // Assert
             assertThat(result.declarations).hasSize(3)
             val byName = result.declarations.associateBy { it.name }
+            assertThat(byName["Root"]?.parentPath).isEmpty()
+            assertThat(byName["Level1"]?.parentPath).containsExactly("Root")
+            assertThat(byName["Level2"]?.parentPath).containsExactly("Root", "Level1")
             assertThat(byName["Root"]?.usedTypes).containsExactlyInAnyOrder(
                 UsedType("RootType"),
                 UsedType("Level1Type"),
