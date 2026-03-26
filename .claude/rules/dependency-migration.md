@@ -43,19 +43,33 @@ After migration, the DC analyzer becomes a thin adapter:
 3. Adds implicit wildcard import for own package (language-specific)
 4. Maps `DeclarationType` → DC's `NodeType`
 
+## Key Principles
+
+1. **Match DC main's output — fix bugs where possible.** The goal is to produce the same results as DC main. DC's legacy behavior is the baseline — even when it seems wrong (type leakage, quirky concatenation order, positional extraction). However, if DC has a genuine bug (e.g., wrong classification, broken positional extraction for dotted types), TSE should fix it. Document accepted improvements explicitly and verify the differences are real improvements, not extraction errors.
+
+2. **Set up dc-compare before you think you're ready.** Run it as soon as basic extractors work, not after you think you're done. The Kotlin migration went through 4 rounds (17k → 2.9k → 1.7k → 74 lines), each revealing issues that unit tests couldn't catch. Iterate: fix, rebuild, re-compare.
+
+3. **Don't copy the previous language's pattern.** Every language has different AST structures, node types, and DC legacy quirks. Java has distinct node types for class/enum/interface; Kotlin uses modifiers on a single node. Java needed boundary exclusion; Kotlin didn't. parentPath was needed for Kotlin but not Java. Start each migration by dumping the AST and reading DC's legacy analyzer for that specific language.
+
 ## Migration Workflow
 
-### Phase 1: Implement in TSE
+### Phase 1: Understand the language
 
-1. **Read DC's legacy analyzer** for the target language (see paths above)
-2. **Create extractors** in `languages/<lang>/extractors/`:
+1. **Read DC's legacy analyzer** for the target language (see paths above) — understand how it extracts packages, imports, declarations, and used types
+2. **Dump the AST** for sample code covering all declaration types, imports, generics, inheritance, and language-specific features. Verify node type assumptions before writing any extractor code.
+3. **Identify language-specific quirks** — how does DC handle nested types, type leakage, boundary exclusion, dotted types? Don't assume it works the same as Java or Kotlin.
+
+### Phase 2: Implement in TSE
+
+1. **Create extractors** in `languages/<lang>/extractors/`:
   - `PackageExtractor` — package/module path as `List<String>`
   - `ImportExtractor` — imports as `List<ImportDeclaration>`
   - `DeclarationExtractor` — type declarations, delegates to UsedTypeExtractor
   - `UsedTypeExtractor` — all types used within a declaration
-3. **Create `<Lang>DependencyMapping`** composing the extractors
-4. **Register** in `<Lang>Definition` by overriding `dependencyMapping`
-5. **Write tests** in `<Lang>DependencyTest` with `@Nested` groups
+2. **Create `<Lang>DependencyMapping`** composing the extractors
+3. **Register** in `<Lang>Definition` by overriding `dependencyMapping`
+4. **Write tests** in `<Lang>DependencyTest` with `@Nested` groups
+5. **Run dc-compare early** — don't wait until all extractors are feature-complete
 
 Rules:
 
@@ -64,20 +78,21 @@ Rules:
 - Boundary exclusion in UsedTypeExtractor is language- and analyzer-specific: apply it only when the language's DC legacy analyzer does not leak nested types upward. Kotlin intentionally omits boundary exclusion because DC's legacy re-parsing leaks nested types upward and TSE's traversal mirrors that behavior (see `plans/add-kotlin-dependency-support.md`). For languages where the analyzer scopes types per declaration (e.g., Java), add boundary exclusion to prevent type leakage across nested declarations.
 - Match DC's concatenation order for used type categories (documented in `integration/dependencies/README.md`)
 
-### Phase 2: Verify with dc-compare
+### Phase 3: Verify with dc-compare
 
 1. Find/clone a medium-sized open-source repo in the target language
 2. Run `/dc-compare <repo-path>` — DC main is the golden standard
-3. Fix any differences in TSE until output matches
+3. Fix any differences in TSE, rebuild, re-compare — repeat until output matches
+4. Differences that are genuine improvements (e.g., better annotation classification) should be explicitly accepted and documented
 
-### Phase 3: Integrate in DC
+### Phase 4: Integrate in DC
 
 1. Create DC feature branch
 2. Rewrite `<Lang>Analyzer` to call `TreeSitterDependencies.analyze()`
 3. Delete legacy extraction code (queries, helper extractors)
 4. Re-verify with `/dc-compare`
 
-### Phase 4: Release
+### Phase 5: Release
 
 1. Merge TSE, tag release
 2. Update DC's JitPack dependency to new TSE tag
