@@ -18,11 +18,11 @@ internal object ImportExtractor {
         return importList
             .children()
             .filter { it.type == IMPORT_HEADER }
-            .map { importNode ->
-                val isWildcard = importNode.children().any { it.type == WILDCARD_IMPORT }
+            .mapNotNull { importNode ->
                 val identifierText = TreeTraversal.findFirstChildTextByType(importNode, sourceCode, IDENTIFIER)
-                val path = identifierText?.split(IMPORT_SEPARATOR) ?: emptyList()
-                ImportDeclaration(path = path, isWildcard = isWildcard)
+                if (identifierText.isNullOrBlank()) return@mapNotNull null
+                val isWildcard = importNode.children().any { it.type == WILDCARD_IMPORT }
+                ImportDeclaration(path = identifierText.split(IMPORT_SEPARATOR), isWildcard = isWildcard)
             }.toList()
     }
 }
