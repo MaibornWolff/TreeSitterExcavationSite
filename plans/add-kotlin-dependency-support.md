@@ -1,7 +1,7 @@
 ---
 name: add-kotlin-dependency-support
 issue:
-state: progress
+state: complete
 version: 6
 ---
 
@@ -174,8 +174,11 @@ Update the DC branch's TSE commit hash after each TSE push.
 - [x] Fix qualified navigation expressions and constructor calls (root cause: TSE skipped nested navigation_expression first children)
 - [x] Fix unsafe `!!` operators in UsedTypeExtractor (replaced with `!= true` pattern)
 - [x] Annotation classification decided: keep ANNOTATION (correct), DC integration already maps correctly
-- [ ] Third dc-compare run — verify fixes resolve the ~2.9k line diff
-- [ ] Final verification: full test suite + ktlintCheck + architecture tests
+- [x] Third dc-compare run — diff down from ~2.9k to ~1.7k lines. Navigation expression fix helped but new issue found.
+- [x] Dotted `user_type` extraction investigated — first-segment-only is correct (matches DC), resolver handles path matching
+- [x] Fix nested inheritance leakage: `extractInheritanceTypes` now uses buckets (all descendants) instead of direct children
+- [x] Fourth dc-compare run — diff down to 74 lines (5 annotation improvements + 6 MonthDayTime improvements + 3 weight effects)
+- [x] Final verification: full test suite + ktlintCheck + architecture tests — all pass
 
 ## Notes
 
@@ -198,5 +201,16 @@ Update the DC branch's TSE commit hash after each TSE push.
 ### 2. Annotation classification (ACCEPTED as improvement)
 TSE correctly identifies `annotation class` as `DeclarationType.ANNOTATION`. DC legacy classifies as `CLASS`. DC's `NodeType.ANNOTATION` enum already exists, and the rewritten `KotlinAnalyzer` on `feat/tse-kotlin-integration` already maps `DeclarationType.ANNOTATION → NodeType.ANNOTATION`. This is a genuine improvement (~10 diff lines in dc-compare).
 
-### 3. Downstream effects (EXPECTED to resolve)
-isCyclic, weight, level changes were caused by #1. Should resolve with the qualified type extraction fix. The ~10 annotation lines remain as an intentional improvement.
+### 3. Downstream effects (RESOLVED)
+isCyclic, weight, level changes all resolved after fixing root causes.
+
+### 4. Missing nested inheritance types (FIXED)
+**Root cause:** TSE's `extractInheritanceTypes` used `declaration.children()` (direct children only), while DC's TSQuery-based inheritance extraction runs on the entire re-parsed body (all descendants). Nested types' inheritance (e.g., `WithDate : DateTimeFormatBuilder`) leaked to the outer class in DC but not TSE.
+
+**Fix:** Changed `extractInheritanceTypes` to use `buckets[DELEGATION_SPECIFIER]` from `findAllDescendantsGroupedByType`, matching DC's recursive behavior.
+
+### 5. Dotted user_type extraction (RESOLVED — no fix needed)
+**Investigation result:** DC's `extractUserType` also extracts only the first `type_identifier` segment via `getNamedChild(0)`. The missing dependencies to nested types (`DateTimeFormatBuilder.WithDate`, etc.) came from the RESOLVER matching simple names (e.g., `WithDate`) against declarations with parent paths, NOT from the raw extraction. TSE correctly matches DC by extracting only the first segment.
+
+### 6. MonthDayTime (ACCEPTED as improvement)
+TSE correctly extracts generic type arguments from dotted `user_type` nodes (finds `type_arguments` by type name). DC's `getNamedChild(1)` positional approach breaks for dotted types like `RecurringZoneRules.Rule<MonthDayTime>` — gets the second `type_identifier` instead of `type_arguments`. Result: 3 extra correct dependencies in TSE output.
