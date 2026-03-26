@@ -190,7 +190,7 @@ class KotlinAstExplorationTest {
         sb.appendLine("=== Kotlin AST: $label ===")
         buildAst(root, code, 0, sb)
         val file = java.io.File("build/kotlin-ast-exploration.txt")
-        file.appendText(sb.toString() + "\n")
+        file.writeText(sb.toString() + "\n")
         println(sb.toString())
     }
 

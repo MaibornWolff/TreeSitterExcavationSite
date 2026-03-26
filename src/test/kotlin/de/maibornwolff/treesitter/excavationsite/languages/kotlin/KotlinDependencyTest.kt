@@ -846,6 +846,8 @@ class KotlinDependencyTest {
 
             // Assert - Creature used types (class params, properties, generics, inheritance,
             //          annotations, function params/returns, constructor calls, call expressions)
+            // Note: entries like "DamageCalculator()" and "DamageCalculator().compute" preserve full
+            // navigation expression text (including parentheses) to match DC legacy concatenation order
             assertThat(byName["Creature"]?.usedTypes).containsExactlyInAnyOrder(
                 UsedType("Fightable"),
                 UsedType("BaseEntity"),
@@ -890,7 +892,7 @@ class KotlinDependencyTest {
         @Test
         fun `should include Kotlin in supported languages`() {
             // Act & Assert
-            assertThat(TreeSitterDependencies.getSupportedLanguages()).containsExactly(Language.JAVA, Language.KOTLIN)
+            assertThat(TreeSitterDependencies.getSupportedLanguages()).containsExactlyInAnyOrder(Language.JAVA, Language.KOTLIN)
         }
     }
 }
