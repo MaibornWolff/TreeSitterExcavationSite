@@ -30,6 +30,7 @@ internal object UsedTypeExtractor {
     private const val TYPE_IDENTIFIER = "type_identifier"
     private const val TYPE_ARGUMENTS = "type_arguments"
     private const val TYPE_PROJECTION = "type_projection"
+    private const val COLON = ":"
 
     private val ALL_NODE_TYPES = setOf(
         DELEGATION_SPECIFIER,
@@ -45,7 +46,7 @@ internal object UsedTypeExtractor {
         val buckets = TreeTraversal.findAllDescendantsGroupedByType(declaration, ALL_NODE_TYPES)
 
         // DC concatenation order: inheritance, properties, parameters, returnTypes, annotations, constructorCalls, callExpressions
-        val inheritanceTypes = extractInheritanceTypes(declaration, sourceCode)
+        val inheritanceTypes = extractInheritanceTypes(buckets, sourceCode)
         val propertyTypes = extractPropertyTypes(buckets, sourceCode)
         val parameterTypes = extractParameterTypes(buckets, sourceCode)
         val returnTypes = extractReturnTypes(buckets, sourceCode)
@@ -59,27 +60,18 @@ internal object UsedTypeExtractor {
         ).toSet()
     }
 
-    private fun extractInheritanceTypes(declaration: TSNode, sourceCode: String): List<UsedType> = declaration
-        .children()
-        .filter { it.type == DELEGATION_SPECIFIER }
-        .mapNotNull { specifier ->
-            val constructorInvocation = specifier.children().firstOrNull { it.type == CONSTRUCTOR_INVOCATION }
-            if (constructorInvocation != null) {
-                val userType = constructorInvocation.children().firstOrNull { it.type == USER_TYPE }
-                userType?.let { extractType(it, sourceCode) }
-            } else {
-                val userType = specifier.children().firstOrNull { it.type == USER_TYPE }
-                userType?.let { extractType(it, sourceCode) }
-            }
-        }.toList()
+    private fun extractInheritanceTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
+        buckets[DELEGATION_SPECIFIER]
+            .orEmpty()
+            .mapNotNull { extractTypeFromConstructorOrUserType(it, sourceCode) }
 
     private fun extractPropertyTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
         val fromProperties = buckets[PROPERTY_DECLARATION].orEmpty().mapNotNull { property ->
             val varDecl = property.children().firstOrNull { it.type == VARIABLE_DECLARATION }
-            varDecl?.let { extractTypeFromTypedNode(it, sourceCode) }
+            varDecl?.let { extractTypeAfterColon(it, sourceCode) }
         }
         val fromClassParams = buckets[CLASS_PARAMETER].orEmpty().mapNotNull { param ->
-            extractTypeFromTypedNode(param, sourceCode)
+            extractTypeAfterColon(param, sourceCode)
         }
         return fromProperties + fromClassParams
     }
@@ -91,27 +83,18 @@ internal object UsedTypeExtractor {
             params
                 .namedChildren()
                 .filter { it.type == PARAMETER }
-                .mapNotNull { extractTypeFromTypedNode(it, sourceCode) }
+                .mapNotNull { extractTypeAfterColon(it, sourceCode) }
                 .toList()
         }
     }
 
     private fun extractReturnTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
         buckets[FUNCTION_DECLARATION].orEmpty().mapNotNull { function ->
-            extractReturnType(function, sourceCode)
+            extractTypeAfterColon(function, sourceCode)
         }
 
     private fun extractAnnotationTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
-        buckets[ANNOTATION].orEmpty().mapNotNull { annotation ->
-            val constructorInvocation = annotation.children().firstOrNull { it.type == CONSTRUCTOR_INVOCATION }
-            if (constructorInvocation != null) {
-                val userType = constructorInvocation.children().firstOrNull { it.type == USER_TYPE }
-                userType?.let { extractType(it, sourceCode) }
-            } else {
-                val userType = annotation.children().firstOrNull { it.type == USER_TYPE }
-                userType?.let { extractType(it, sourceCode) }
-            }
-        }
+        buckets[ANNOTATION].orEmpty().mapNotNull { extractTypeFromConstructorOrUserType(it, sourceCode) }
 
     private fun extractConstructorCallTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
         return buckets[CALL_EXPRESSION].orEmpty().mapNotNull { callExpr ->
@@ -139,24 +122,16 @@ internal object UsedTypeExtractor {
         }
     }
 
-    private fun extractReturnType(function: TSNode, sourceCode: String): UsedType? {
-        // In Kotlin AST, return type comes after `:` which follows function_value_parameters
-        // Look for user_type or nullable_type as direct children of function_declaration
-        val children = function.children().toList()
-        val colonIndex = children.indexOfFirst { it.type == ":" }
-        if (colonIndex < 0 || colonIndex + 1 >= children.size) return null
-        val typeNode = children[colonIndex + 1]
-        return when (typeNode.type) {
-            USER_TYPE -> extractType(typeNode, sourceCode)
-            NULLABLE_TYPE -> extractTypeFromNullable(typeNode, sourceCode)
-            else -> null
-        }
+    private fun extractTypeFromConstructorOrUserType(node: TSNode, sourceCode: String): UsedType? {
+        val constructorInvocation = node.children().firstOrNull { it.type == CONSTRUCTOR_INVOCATION }
+        val typeParent = constructorInvocation ?: node
+        val userType = typeParent.children().firstOrNull { it.type == USER_TYPE }
+        return userType?.let { extractType(it, sourceCode) }
     }
 
-    private fun extractTypeFromTypedNode(node: TSNode, sourceCode: String): UsedType? {
-        // Find user_type or nullable_type child after the `:` separator
+    private fun extractTypeAfterColon(node: TSNode, sourceCode: String): UsedType? {
         val children = node.children().toList()
-        val colonIndex = children.indexOfFirst { it.type == ":" }
+        val colonIndex = children.indexOfFirst { it.type == COLON }
         if (colonIndex < 0 || colonIndex + 1 >= children.size) return null
         val typeNode = children[colonIndex + 1]
         return when (typeNode.type) {

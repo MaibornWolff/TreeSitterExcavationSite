@@ -457,6 +457,58 @@ class KotlinDependencyTest {
         }
 
         @Test
+        fun `should extract first segment from dotted user types`() {
+            // Arrange — DC legacy extracts only the first type_identifier from dotted user_type nodes;
+            // the resolver handles matching simple names to full qualified paths
+            val code = """
+            package com.example
+
+            class Formatter : DateTimeFormatBuilder.WithDate() {
+                lateinit var unit: DateTimeUnit.DateBased
+                fun format(directive: UnicodeFormat.Directive): AbstractWith.Builder {
+                    return AbstractWith.Builder()
+                }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert — only first segments from type positions, full dotted names from call/nav expressions
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("DateTimeFormatBuilder"),
+                UsedType("DateTimeUnit"),
+                UsedType("UnicodeFormat"),
+                UsedType("AbstractWith"),
+                UsedType("AbstractWith.Builder")
+            )
+        }
+
+        @Test
+        fun `should extract first segment from dotted user types with generics`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Container {
+                lateinit var items: Outer.Inner<String>
+                lateinit var mapping: Outer.Inner<String, Nested.Type<Int>>
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert — only first type_identifier segment, generics still extracted
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("Outer", listOf(UsedType("String"))),
+                UsedType("Outer", listOf(UsedType("String"), UsedType("Nested", listOf(UsedType("Int")))))
+            )
+        }
+
+        @Test
         fun `should extract qualified navigation expression types`() {
             // Arrange
             val code = """
