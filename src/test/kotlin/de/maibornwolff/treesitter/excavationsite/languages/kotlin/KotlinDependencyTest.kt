@@ -567,6 +567,35 @@ class KotlinDependencyTest {
         }
 
         @Test
+        fun `should extract generic types from qualified constructor calls`() {
+            // Arrange
+            val code = """
+            package com.example
+
+            class Factory {
+                fun create() {
+                    val typed = Outer.Inner<String>()
+                    val multi = Container.Builder<String, Int>()
+                    val simple = MyClass<Boolean>()
+                }
+            }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.KOTLIN)
+
+            // Assert
+            val usedTypes = result.declarations.first().usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("Outer.Inner", listOf(UsedType("String"))),
+                UsedType("Outer"),
+                UsedType("Container.Builder", listOf(UsedType("String"), UsedType("Int"))),
+                UsedType("Container"),
+                UsedType("MyClass", listOf(UsedType("Boolean")))
+            )
+        }
+
+        @Test
         fun `should find nested declarations recursively`() {
             // Arrange
             val code = """
