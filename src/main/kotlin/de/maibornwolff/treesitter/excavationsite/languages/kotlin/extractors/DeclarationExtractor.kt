@@ -29,8 +29,9 @@ internal object DeclarationExtractor {
             node.startByte to extractName(node, sourceCode)
         }
         return allDeclarations
-            .map { declarationNode ->
-                val name = namesByStartByte[declarationNode.startByte] ?: ""
+            .mapNotNull { declarationNode ->
+                val name = namesByStartByte[declarationNode.startByte]
+                if (name.isNullOrBlank()) return@mapNotNull null
                 val type = declarationType(declarationNode)
                 val usedTypes = UsedTypeExtractor.extract(declarationNode, sourceCode)
                 val parentPath = findParentPath(declarationNode, namesByStartByte)
