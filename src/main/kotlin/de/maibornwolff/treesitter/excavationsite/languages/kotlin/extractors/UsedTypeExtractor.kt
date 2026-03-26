@@ -22,7 +22,6 @@ internal object UsedTypeExtractor {
     private const val CALL_EXPRESSION = "call_expression"
     private const val NAVIGATION_EXPRESSION = "navigation_expression"
     private const val CALL_SUFFIX = "call_suffix"
-    private const val SIMPLE_IDENTIFIER = "simple_identifier"
 
     // Type nodes
     private const val USER_TYPE = "user_type"
