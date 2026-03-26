@@ -102,13 +102,9 @@ internal object UsedTypeExtractor {
             if (firstChild.isNull) return@mapNotNull null
             val name = TreeTraversal.getNodeText(firstChild, sourceCode).trim()
             if (name.firstOrNull()?.isUpperCase() != true) return@mapNotNull null
-            if (firstChild.type == SIMPLE_IDENTIFIER) {
-                val callSuffix = callExpr.children().firstOrNull { it.type == CALL_SUFFIX }
-                val genericTypes = callSuffix?.let { extractGenericTypesFromCallSuffix(it, sourceCode) } ?: emptyList()
-                UsedType(name = name, genericTypes = genericTypes)
-            } else {
-                UsedType(name = name)
-            }
+            val callSuffix = callExpr.children().firstOrNull { it.type == CALL_SUFFIX }
+            val genericTypes = callSuffix?.let { extractGenericTypesFromCallSuffix(it, sourceCode) } ?: emptyList()
+            UsedType(name = name, genericTypes = genericTypes)
         }
     }
 
@@ -118,7 +114,9 @@ internal object UsedTypeExtractor {
             if (firstChild.isNull) return@mapNotNull null
             val name = TreeTraversal.getNodeText(firstChild, sourceCode).trim()
             if (name.firstOrNull()?.isUpperCase() != true) return@mapNotNull null
-            UsedType(name = name)
+            val callSuffix = navExpr.children().firstOrNull { it.type == CALL_SUFFIX }
+            val genericTypes = callSuffix?.let { extractGenericTypesFromCallSuffix(it, sourceCode) } ?: emptyList()
+            UsedType(name = name, genericTypes = genericTypes)
         }
     }
 
