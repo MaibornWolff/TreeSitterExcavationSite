@@ -50,8 +50,8 @@ internal object UsedTypeExtractor {
         val parameterTypes = extractParameterTypes(buckets, sourceCode)
         val returnTypes = extractReturnTypes(buckets, sourceCode)
         val annotationTypes = extractAnnotationTypes(buckets, sourceCode)
-        val constructorCallTypes = extractConstructorCallTypes(buckets, sourceCode)
-        val callExpressionTypes = extractCallExpressionTypes(buckets, sourceCode)
+        val constructorCallTypes = extractUppercaseCallTypes(buckets, CALL_EXPRESSION, sourceCode)
+        val callExpressionTypes = extractUppercaseCallTypes(buckets, NAVIGATION_EXPRESSION, sourceCode)
 
         return (
             inheritanceTypes + propertyTypes + parameterTypes + returnTypes +
@@ -95,25 +95,13 @@ internal object UsedTypeExtractor {
     private fun extractAnnotationTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
         buckets[ANNOTATION].orEmpty().mapNotNull { extractTypeFromConstructorOrUserType(it, sourceCode) }
 
-    private fun extractConstructorCallTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
-        return buckets[CALL_EXPRESSION].orEmpty().mapNotNull { callExpr ->
-            val firstChild = callExpr.getNamedChild(0)
+    private fun extractUppercaseCallTypes(buckets: Map<String, List<TSNode>>, nodeType: String, sourceCode: String): List<UsedType> {
+        return buckets[nodeType].orEmpty().mapNotNull { node ->
+            val firstChild = node.getNamedChild(0)
             if (firstChild.isNull) return@mapNotNull null
             val name = TreeTraversal.getNodeText(firstChild, sourceCode).trim()
             if (name.firstOrNull()?.isUpperCase() != true) return@mapNotNull null
-            val callSuffix = callExpr.children().firstOrNull { it.type == CALL_SUFFIX }
-            val genericTypes = callSuffix?.let { extractGenericTypesFromCallSuffix(it, sourceCode) } ?: emptyList()
-            UsedType(name = name, genericTypes = genericTypes)
-        }
-    }
-
-    private fun extractCallExpressionTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
-        return buckets[NAVIGATION_EXPRESSION].orEmpty().mapNotNull { navExpr ->
-            val firstChild = navExpr.getNamedChild(0)
-            if (firstChild.isNull) return@mapNotNull null
-            val name = TreeTraversal.getNodeText(firstChild, sourceCode).trim()
-            if (name.firstOrNull()?.isUpperCase() != true) return@mapNotNull null
-            val callSuffix = navExpr.children().firstOrNull { it.type == CALL_SUFFIX }
+            val callSuffix = node.children().firstOrNull { it.type == CALL_SUFFIX }
             val genericTypes = callSuffix?.let { extractGenericTypesFromCallSuffix(it, sourceCode) } ?: emptyList()
             UsedType(name = name, genericTypes = genericTypes)
         }
