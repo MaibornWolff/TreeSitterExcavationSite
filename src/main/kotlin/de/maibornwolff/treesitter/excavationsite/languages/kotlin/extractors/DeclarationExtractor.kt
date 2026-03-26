@@ -50,7 +50,7 @@ internal object DeclarationExtractor {
         while (!current.isNull) {
             if (current.type in DECLARATION_TYPES) {
                 val parentName = namesByStartByte[current.startByte]
-                if (parentName != null) {
+                if (!parentName.isNullOrBlank()) {
                     parents.add(0, parentName)
                 }
             }
