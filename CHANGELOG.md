@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-03-26
+
+### Fixed
+- Fixed tree-sitter-tsx packaging in build artifact
+
 ## [0.4.0] - 2026-03-23
 
 ### Added
@@ -37,7 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Metrics API: `TreeSitterMetrics.parse(code, language) -> MetricsResult`
 - Support for 14 languages
 
-[unreleased]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.4.0...HEAD
+[unreleased]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.3.1...v0.4.0
 [0.3.1]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.2.0...v0.3.0
