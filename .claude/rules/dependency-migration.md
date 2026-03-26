@@ -61,7 +61,7 @@ Rules:
 
 - Use direct tree traversal (`TreeTraversal.*`), never TSQuery
 - Use `findAllDescendantsOfType` for recursive discovery (not `children().filter`)
-- Add boundary exclusion in UsedTypeExtractor to prevent type leakage across nested declarations
+- Boundary exclusion in UsedTypeExtractor is language- and analyzer-specific: apply it only when the language's DC legacy analyzer does not leak nested types upward. Kotlin intentionally omits boundary exclusion because DC's legacy re-parsing leaks nested types upward and TSE's traversal mirrors that behavior (see `plans/add-kotlin-dependency-support.md`). For languages where the analyzer scopes types per declaration (e.g., Java), add boundary exclusion to prevent type leakage across nested declarations.
 - Match DC's concatenation order for used type categories (documented in `integration/dependencies/README.md`)
 
 ### Phase 2: Verify with dc-compare
