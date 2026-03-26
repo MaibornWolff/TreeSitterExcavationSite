@@ -164,7 +164,7 @@ Update the DC branch's TSE commit hash after each TSE push.
 - [x] Write DeclarationExtractor tests → implement DeclarationExtractor (finding + classifying declarations)
 - [x] Write UsedTypeExtractor tests (incremental) → implement UsedTypeExtractor (type extraction per category)
 - [x] Create KotlinDependencyMapping and register in KotlinDefinition
-- [x] Set up DC branch (`feat/tse-kotlin-integration`) pointing to TSE commit 7d1f7f2, KotlinAnalyzer rewritten to use TSE
+- [x] Set up DC branch (`feat/tse-kotlin-integration`) pointing to TSE commit 7d1f7f2 (KotlinAnalyzer rewrite is on DC side, out of scope for this plan)
 - [x] First dc-compare run — 17k line diff, identified parentPath + navigation expression issues
 - [x] Write negative/edge case tests + completeness test
 - [x] Write nesting tests (recursive discovery, companion objects, sealed types, object used types)
