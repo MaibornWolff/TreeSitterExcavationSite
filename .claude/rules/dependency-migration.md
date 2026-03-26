@@ -104,11 +104,14 @@ implementation("de.maibornwolff.treesitter.excavationsite:treesitter-excavations
 
 Keep the JitPack repository (TSE has transitive dependencies there). **Revert these changes before committing.**
 
-## Lessons Learned from Java Migration
+## Lessons Learned
 
 - **Nested declarations**: Always use recursive traversal, never top-level-only filtering
-- **Type boundary scoping**: Exclude nested declaration subtrees when extracting used types for an outer declaration
 - **Concatenation order**: Must match DC legacy order exactly — affects levelization and cycle detection
 - **No TSQuery**: Direct tree traversal is simpler and avoids native GC crashes
-- **Inner class types in outer scope**: DC legacy re-parses each declaration body in isolation; TSE needs explicit boundary logic to match
-  this behavior
+- **Defensive extraction**: Prefer skipping (`mapNotNull` + return null) over fallback defaults (`?: ""`, `?: emptyList()`) when an extractor can't resolve a name or path. DC's handling is inconsistent across languages (Go filters empties, Java/Kotlin don't), but empty-named Declarations or empty-path Imports are garbage data. Note: TSE's Java extractors have the same gap (no empty-name guard in DeclarationExtractor, `?: emptyList()` in ImportExtractor) — apply the same fix pattern when touching them.
+- **Generic types on qualified calls**: Always look for call suffix type arguments on the call expression node, regardless of whether the first child is a simple identifier or a navigation expression
+- **Inheritance extraction must be recursive**: Use `findAllDescendantsGroupedByType`, not direct children — DC's re-parsing leaks nested types' inheritance to the outer class (verify per language whether this leakage is intentional)
+- **Dotted type references**: Only extract the first type identifier segment — DC's resolver handles matching simple names to full qualified paths
+- **Nested type paths (parentPath)**: Some languages need hierarchical parent paths for nested declarations. Default `emptyList()` is backward-compatible — add when dc-compare reveals path mismatches.
+- **Set up dc-compare early**: Run after basic extractors work, not just at the end. Iterate: fix, rebuild, re-compare.
