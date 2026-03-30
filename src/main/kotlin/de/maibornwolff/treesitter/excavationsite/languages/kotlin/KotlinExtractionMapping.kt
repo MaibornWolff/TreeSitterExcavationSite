@@ -1,9 +1,9 @@
 package de.maibornwolff.treesitter.excavationsite.languages.kotlin
 
-import de.maibornwolff.treesitter.excavationsite.languages.kotlin.extractor.extractAnnotationClassFromInfixExpression
-import de.maibornwolff.treesitter.excavationsite.languages.kotlin.extractor.extractLabelIdentifier
-import de.maibornwolff.treesitter.excavationsite.languages.kotlin.extractor.extractLambdaParameterIdentifiers
-import de.maibornwolff.treesitter.excavationsite.languages.kotlin.extractor.extractPropertyIdentifiers
+import de.maibornwolff.treesitter.excavationsite.languages.kotlin.extractors.extractAnnotationClassFromInfixExpression
+import de.maibornwolff.treesitter.excavationsite.languages.kotlin.extractors.extractLabelIdentifier
+import de.maibornwolff.treesitter.excavationsite.languages.kotlin.extractors.extractLambdaParameterIdentifiers
+import de.maibornwolff.treesitter.excavationsite.languages.kotlin.extractors.extractPropertyIdentifiers
 import de.maibornwolff.treesitter.excavationsite.shared.domain.CommentFormats
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Extract
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionMapping
