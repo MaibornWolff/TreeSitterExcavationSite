@@ -149,4 +149,128 @@ class TypescriptDependencyTest {
             assertThat(result.imports[0].isWildcard).isFalse()
         }
     }
+
+    @Nested
+    inner class DeclarationExtraction {
+        @Test
+        fun `should extract class declaration`() {
+            // Arrange
+            val code = "class Foo {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("Foo")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.CLASS)
+        }
+
+        @Test
+        fun `should extract interface declaration`() {
+            // Arrange
+            val code = "interface IFoo {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("IFoo")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.INTERFACE)
+        }
+
+        @Test
+        fun `should extract enum declaration`() {
+            // Arrange
+            val code = "enum Color { RED, GREEN, BLUE }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("Color")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.ENUM)
+        }
+
+        @Test
+        fun `should extract function declaration`() {
+            // Arrange
+            val code = "function greet(name: string): void {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("greet")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.FUNCTION)
+        }
+
+        @Test
+        fun `should extract type alias declaration as CLASS`() {
+            // Arrange
+            val code = "type Id = string"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("Id")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.CLASS)
+        }
+
+        @Test
+        fun `should extract const variable declaration`() {
+            // Arrange
+            val code = "const greeting: string = 'hello'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("greeting")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.VARIABLE)
+        }
+
+        @Test
+        fun `should extract multiple declarations`() {
+            // Arrange
+            val code = """
+                class Foo {}
+                interface IBar {}
+                enum Baz { A, B }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(3)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName["Foo"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["IBar"]?.type).isEqualTo(DeclarationType.INTERFACE)
+            assertThat(byName["Baz"]?.type).isEqualTo(DeclarationType.ENUM)
+        }
+
+        @Test
+        fun `should extract nested class declarations`() {
+            // Arrange
+            val code = """
+                class Outer {
+                    inner = class Inner {}
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val names = result.declarations.map { it.name }
+            assertThat(names).containsExactlyInAnyOrder("Outer")
+        }
+    }
 }

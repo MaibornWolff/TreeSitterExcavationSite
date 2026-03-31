@@ -133,9 +133,9 @@ When to run:
 - [x] Extend `DeclarationType` with FUNCTION and VARIABLE (TDD)
 - [x] Write ImportExtraction tests → implement shared `ImportExtractor` (ES6 + CommonJS)
 - [x] Write TypeScript PackageExtraction tests → implement (returns empty list)
-- [ ] Write TypeScript DeclarationExtractor tests → implement (find + classify all declaration types)
+- [x] Write TypeScript DeclarationExtractor tests → implement (find + classify all declaration types)
 - [ ] Write TypeScript UsedTypeExtractor tests (incremental, 6 categories) → implement
-- [ ] Create `TypescriptDependencyMapping`, register in `TypescriptDefinition`
+- [x] Create `TypescriptDependencyMapping`, register in `TypescriptDefinition`
 - [ ] Create `JavascriptDependencyMapping`, register in `JavascriptDefinition`
 - [ ] Set up DC branch, run first dc-compare (TypeScript project) — iterate
 - [ ] Run first dc-compare (JavaScript project) — iterate
