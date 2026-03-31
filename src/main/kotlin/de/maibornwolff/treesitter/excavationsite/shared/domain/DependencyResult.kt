@@ -13,7 +13,12 @@ enum class DeclarationType {
     UNKNOWN
 }
 
-data class Declaration(val name: String, val type: DeclarationType, val usedTypes: Set<UsedType>)
+data class Declaration(
+    val name: String,
+    val type: DeclarationType,
+    val usedTypes: Set<UsedType>,
+    val parentPath: List<String> = emptyList()
+)
 
 data class UsedType(val name: String, val genericTypes: List<UsedType> = emptyList()) {
     fun isUppercase(): Boolean = name.firstOrNull()?.isUpperCase() == true

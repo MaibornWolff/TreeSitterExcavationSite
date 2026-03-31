@@ -1,4 +1,4 @@
-package de.maibornwolff.treesitter.excavationsite.languages.kotlin.extractor
+package de.maibornwolff.treesitter.excavationsite.languages.kotlin.extractors
 
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import org.treesitter.TSNode

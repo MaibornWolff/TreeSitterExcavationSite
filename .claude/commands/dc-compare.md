@@ -20,6 +20,8 @@ Ask the user where to save the temporary comparison output files (two JSON files
 
 ### 1. Generate golden standard (DC main)
 
+**Guard**: Before running this step, check if `$OUTPUT_DIR/main/analysis.cg.json` already exists. If it does, skip this step entirely unless the user passes `--regen-main` or explicitly asks to regenerate the golden standard.
+
 ```bash
 cd ../DependaCharta
 
@@ -107,13 +109,9 @@ If there are differences:
 
 ### 5. Cleanup
 
-Once the user confirms they are happy with the result, remove all generated files:
+Keep the `$OUTPUT_DIR/main/` golden standard output across runs — only regenerate it if the user explicitly asks. On subsequent runs, skip Step 1 if `$OUTPUT_DIR/main/analysis.cg.json` already exists.
 
-```bash
-rm -rf $OUTPUT_DIR
-```
-
-Always ask the user before cleaning up — don't delete automatically.
+Only delete the feature output (`$OUTPUT_DIR/feature/`) between runs so it gets regenerated fresh. Ask the user before cleaning up the entire `$OUTPUT_DIR`.
 
 ## Extending to other languages
 
