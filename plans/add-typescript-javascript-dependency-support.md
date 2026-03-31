@@ -131,8 +131,8 @@ When to run:
 
 - [x] Explore TypeScript + JavaScript AST (dump samples, verify all node type assumptions)
 - [x] Extend `DeclarationType` with FUNCTION and VARIABLE (TDD)
-- [ ] Write ImportExtraction tests → implement shared `ImportExtractor` (ES6 + CommonJS)
-- [ ] Write TypeScript PackageExtraction tests → implement (returns empty list)
+- [x] Write ImportExtraction tests → implement shared `ImportExtractor` (ES6 + CommonJS)
+- [x] Write TypeScript PackageExtraction tests → implement (returns empty list)
 - [ ] Write TypeScript DeclarationExtractor tests → implement (find + classify all declaration types)
 - [ ] Write TypeScript UsedTypeExtractor tests (incremental, 6 categories) → implement
 - [ ] Create `TypescriptDependencyMapping`, register in `TypescriptDefinition`

@@ -1,6 +1,7 @@
 package de.maibornwolff.treesitter.excavationsite.api.contract
 
 import de.maibornwolff.treesitter.excavationsite.api.Language
+import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterMetrics
 import org.assertj.core.api.Assertions.assertThat
@@ -279,6 +280,16 @@ class LanguageSupportContractTest {
 
             // Assert
             assertThat(extractionExtensions).containsExactlyInAnyOrderElementsOf(metricsExtensions)
+        }
+    }
+
+    @Nested
+    inner class DependencySupportContract {
+        @Test
+        fun `should return supported dependency analysis languages`() {
+            // Act & Assert
+            assertThat(TreeSitterDependencies.getSupportedLanguages())
+                .containsExactlyInAnyOrder(Language.JAVA, Language.KOTLIN, Language.CSHARP, Language.TYPESCRIPT)
         }
     }
 
