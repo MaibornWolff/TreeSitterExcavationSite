@@ -39,7 +39,8 @@ internal object DeclarationExtractor {
         else -> {
             val name = extractName(node, sourceCode)
             val type = declarationType(node.type)
-            listOf(Declaration(name = name, type = type, usedTypes = emptySet()))
+            val usedTypes = UsedTypeExtractor.extract(node, sourceCode)
+            listOf(Declaration(name = name, type = type, usedTypes = usedTypes))
         }
     }
 
@@ -51,7 +52,7 @@ internal object DeclarationExtractor {
             if (name.isNullOrBlank()) {
                 null
             } else {
-                Declaration(name = name, type = DeclarationType.VARIABLE, usedTypes = emptySet())
+                Declaration(name = name, type = DeclarationType.VARIABLE, usedTypes = UsedTypeExtractor.extract(node, sourceCode))
             }
         }.toList()
 

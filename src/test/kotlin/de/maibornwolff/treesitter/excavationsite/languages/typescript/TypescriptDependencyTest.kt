@@ -273,4 +273,124 @@ class TypescriptDependencyTest {
             assertThat(names).containsExactlyInAnyOrder("Outer")
         }
     }
+
+    @Nested
+    inner class UsedTypeExtraction {
+        @Test
+        fun `should extract type from type annotation`() {
+            // Arrange
+            val code = "class Foo { field: MyService }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("MyService")
+        }
+
+        @Test
+        fun `should extract type from constructor call`() {
+            // Arrange
+            val code = "class Foo { bar() { return new MyService() } }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("MyService")
+        }
+
+        @Test
+        fun `should extract uppercase object from member access`() {
+            // Arrange
+            val code = "class Foo { bar() { return MyModule.value } }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("MyModule")
+        }
+
+        @Test
+        fun `should not extract lowercase object from member access`() {
+            // Arrange
+            val code = "class Foo { bar() { return myModule.value } }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).doesNotContain("myModule")
+        }
+
+        @Test
+        fun `should extract extends clause type`() {
+            // Arrange
+            val code = "class Foo extends Bar {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("Bar")
+        }
+
+        @Test
+        fun `should extract implements clause types`() {
+            // Arrange
+            val code = "class Foo implements IBar, IBaz {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("IBar", "IBaz")
+        }
+
+        @Test
+        fun `should extract uppercase identifier`() {
+            // Arrange
+            val code = "class Foo { bar() { return MyFactory } }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("MyFactory")
+        }
+
+        @Test
+        fun `should not extract lowercase identifiers`() {
+            // Arrange
+            val code = "class Foo { bar() { return myFactory } }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).doesNotContain("myFactory")
+        }
+
+        @Test
+        fun `should extract generic type argument`() {
+            // Arrange
+            val code = "class Foo { items: Array<MyItem> }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("MyItem", "Array")
+        }
+    }
 }

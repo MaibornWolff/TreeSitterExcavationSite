@@ -134,7 +134,7 @@ When to run:
 - [x] Write ImportExtraction tests → implement shared `ImportExtractor` (ES6 + CommonJS)
 - [x] Write TypeScript PackageExtraction tests → implement (returns empty list)
 - [x] Write TypeScript DeclarationExtractor tests → implement (find + classify all declaration types)
-- [ ] Write TypeScript UsedTypeExtractor tests (incremental, 6 categories) → implement
+- [x] Write TypeScript UsedTypeExtractor tests (incremental, 6 categories) → implement
 - [x] Create `TypescriptDependencyMapping`, register in `TypescriptDefinition`
 - [ ] Create `JavascriptDependencyMapping`, register in `JavascriptDefinition`
 - [ ] Set up DC branch, run first dc-compare (TypeScript project) — iterate
