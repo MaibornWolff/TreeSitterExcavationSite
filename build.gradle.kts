@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "de.maibornwolff.treesitter.excavationsite"
-version = "0.4.1"
+version = "0.5.0"
 
 val treeSitterTsxJar = "libs/tree-sitter-tsx-0.23.2.jar"
 
