@@ -77,4 +77,12 @@ class JavascriptDependencyTest {
             assertThat(result.declarations).isEmpty()
         }
     }
+
+    @Nested
+    inner class ApiSupportCheck {
+        @Test
+        fun `should support JavaScript dependency analysis`() {
+            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.JAVASCRIPT)).isTrue()
+        }
+    }
 }

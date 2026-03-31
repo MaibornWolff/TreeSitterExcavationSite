@@ -393,4 +393,12 @@ class TypescriptDependencyTest {
             assertThat(usedTypeNames).containsExactlyInAnyOrder("MyItem", "Array")
         }
     }
+
+    @Nested
+    inner class ApiSupportCheck {
+        @Test
+        fun `should support TypeScript dependency analysis`() {
+            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.TYPESCRIPT)).isTrue()
+        }
+    }
 }
