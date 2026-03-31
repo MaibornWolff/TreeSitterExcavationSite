@@ -136,7 +136,7 @@ When to run:
 - [x] Write TypeScript DeclarationExtractor tests → implement (find + classify all declaration types)
 - [x] Write TypeScript UsedTypeExtractor tests (incremental, 6 categories) → implement
 - [x] Create `TypescriptDependencyMapping`, register in `TypescriptDefinition`
-- [ ] Create `JavascriptDependencyMapping`, register in `JavascriptDefinition`
+- [x] Create `JavascriptDependencyMapping`, register in `JavascriptDefinition`
 - [ ] Set up DC branch, run first dc-compare (TypeScript project) — iterate
 - [ ] Run first dc-compare (JavaScript project) — iterate
 - [ ] Write edge case and completeness tests
