@@ -20,6 +20,8 @@ enum class DeclarationType {
     ENUM,
     RECORD,
     ANNOTATION,
+    FUNCTION,
+    VARIABLE,
     UNKNOWN
 }
 
