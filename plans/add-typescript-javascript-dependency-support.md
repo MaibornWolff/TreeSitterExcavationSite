@@ -139,7 +139,7 @@ When to run:
 - [x] Create `JavascriptDependencyMapping`, register in `JavascriptDefinition`
 - [ ] Set up DC branch, run first dc-compare (TypeScript project) — iterate
 - [ ] Run first dc-compare (JavaScript project) — iterate
-- [ ] Write edge case and completeness tests
+- [x] Write edge case and completeness tests
 - [ ] Final verification: full test suite + ktlintCheck + architecture tests
 
 ## Notes

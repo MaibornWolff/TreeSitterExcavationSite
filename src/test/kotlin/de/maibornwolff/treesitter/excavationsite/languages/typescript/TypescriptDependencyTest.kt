@@ -395,6 +395,91 @@ class TypescriptDependencyTest {
     }
 
     @Nested
+    inner class EdgeCases {
+        @Test
+        fun `should return empty result for empty file`() {
+            // Arrange
+            val code = ""
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.packagePath).isEmpty()
+            assertThat(result.imports).isEmpty()
+            assertThat(result.declarations).isEmpty()
+        }
+
+        @Test
+        fun `should return empty declarations for imports-only file`() {
+            // Arrange
+            val code = "import { Foo } from './foo'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
+
+        @Test
+        fun `should extract multiple variable declarators from one const statement`() {
+            // Arrange
+            val code = "const a: TypeA = 1, b: TypeB = 2"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName).containsKeys("a", "b")
+            assertThat(byName["a"]?.type).isEqualTo(DeclarationType.VARIABLE)
+            assertThat(byName["b"]?.type).isEqualTo(DeclarationType.VARIABLE)
+        }
+
+        @Test
+        fun `should extract used types from function declaration parameters and return type`() {
+            // Arrange
+            val code = "function process(service: MyService): MyResult {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "process" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("MyService", "MyResult")
+        }
+
+        @Test
+        fun `should extract declaration from exported class`() {
+            // Arrange
+            val code = "export class Foo {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("Foo")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.CLASS)
+        }
+
+        @Test
+        fun `should extract function signature as FUNCTION type`() {
+            // Arrange — function without body (e.g. overload or ambient declaration)
+            val code = "function greet(name: string): void;"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName).containsKey("greet")
+            assertThat(byName["greet"]?.type).isEqualTo(DeclarationType.FUNCTION)
+        }
+    }
+
+    @Nested
     inner class ApiSupportCheck {
         @Test
         fun `should support TypeScript dependency analysis`() {
