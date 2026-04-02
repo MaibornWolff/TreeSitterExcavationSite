@@ -1,5 +1,6 @@
 package de.maibornwolff.treesitter.excavationsite.languages.csharp
 
+import de.maibornwolff.treesitter.excavationsite.api.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
 import org.assertj.core.api.Assertions.assertThat
@@ -198,6 +199,230 @@ class CSharpDependencyTest {
 
             // Assert
             assertThat(result.imports).isEmpty()
+        }
+    }
+
+    @Nested
+    inner class DeclarationExtraction {
+        @Test
+        fun `should extract class declaration`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace;
+
+                public class MyClass {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyClass")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.CLASS)
+        }
+
+        @Test
+        fun `should extract struct declaration`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace;
+
+                public struct MyStruct {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyStruct")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.CLASS)
+        }
+
+        @Test
+        fun `should extract record declaration`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace;
+
+                public record MyRecord(string Name);
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyRecord")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.RECORD)
+        }
+
+        @Test
+        fun `should extract interface declaration`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace;
+
+                public interface IMyInterface {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("IMyInterface")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.INTERFACE)
+        }
+
+        @Test
+        fun `should extract enum declaration`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace;
+
+                public enum MyEnum { A, B }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyEnum")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.ENUM)
+        }
+
+        @Test
+        fun `should extract delegate declaration`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace;
+
+                public delegate void MyDelegate(int x);
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyDelegate")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.INTERFACE)
+        }
+
+        @Test
+        fun `should extract multiple declarations`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace;
+
+                public class MyClass {}
+                public interface IMyInterface {}
+                public enum MyEnum { A }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(3)
+            assertThat(result.declarations.map { it.name }).containsExactly("MyClass", "IMyInterface", "MyEnum")
+        }
+
+        @Test
+        fun `should extract declarations from traditional namespace with parentPath`() {
+            // Arrange
+            val code = """
+                namespace My.Traditional.Namespace {
+                    public class MyClass {}
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyClass")
+            assertThat(result.declarations[0].parentPath).containsExactly("My", "Traditional", "Namespace")
+        }
+
+        @Test
+        fun `should extract declarations from file-scoped namespace with parentPath`() {
+            // Arrange
+            val code = """
+                namespace My.FileScoped;
+
+                public class MyClass {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyClass")
+            assertThat(result.declarations[0].parentPath).containsExactly("My", "FileScoped")
+        }
+
+        @Test
+        fun `should extract declarations from multiple namespaces with correct parentPaths`() {
+            // Arrange
+            val code = """
+                namespace NamespaceA {
+                    public class ClassA {}
+                }
+
+                namespace NamespaceB {
+                    public class ClassB {}
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(2)
+            assertThat(result.declarations[0].name).isEqualTo("ClassA")
+            assertThat(result.declarations[0].parentPath).containsExactly("NamespaceA")
+            assertThat(result.declarations[1].name).isEqualTo("ClassB")
+            assertThat(result.declarations[1].parentPath).containsExactly("NamespaceB")
+        }
+
+        @Test
+        fun `should not extract nested declarations`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace;
+
+                public class Outer {
+                    public class Inner {}
+                    public enum InnerEnum { X }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("Outer")
+        }
+
+        @Test
+        fun `should return empty declarations when no type declarations`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace;
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
         }
     }
 }
