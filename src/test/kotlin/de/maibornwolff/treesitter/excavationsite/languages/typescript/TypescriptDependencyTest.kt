@@ -176,6 +176,20 @@ class TypescriptDependencyTest {
             assertThat(result.imports[0].path).containsExactly(".", "utils")
             assertThat(result.imports[0].isWildcard).isTrue()
         }
+
+        @Test
+        fun `should extract dynamic import`() {
+            // Arrange
+            val code = "const mod = import('./utils')"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly(".", "utils")
+            assertThat(result.imports[0].isWildcard).isFalse()
+        }
     }
 
     @Nested

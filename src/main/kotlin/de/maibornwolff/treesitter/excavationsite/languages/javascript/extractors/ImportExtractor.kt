@@ -15,6 +15,7 @@ internal object ImportExtractor {
     private const val EXPORT_CLAUSE = "export_clause"
     private const val ARGUMENTS = "arguments"
     private const val REQUIRE = "require"
+    private const val IMPORT_KEYWORD = "import"
     private const val PATH_SEPARATOR = "/"
 
     fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> {
@@ -22,7 +23,8 @@ internal object ImportExtractor {
         val commonJsImports = extractCommonJsImports(rootNode, sourceCode)
         val namedReexports = extractNamedReexports(rootNode, sourceCode)
         val wildcardReexports = extractWildcardReexports(rootNode, sourceCode)
-        return es6Imports + commonJsImports + namedReexports + wildcardReexports
+        val dynamicImports = extractDynamicImports(rootNode, sourceCode)
+        return es6Imports + commonJsImports + namedReexports + wildcardReexports + dynamicImports
     }
 
     private fun extractEs6Imports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
@@ -62,6 +64,17 @@ internal object ImportExtractor {
         }.mapNotNull { exportNode ->
             val pathText = extractStringText(exportNode, sourceCode) ?: return@mapNotNull null
             ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = true)
+        }
+
+    private fun extractDynamicImports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
+        .findAllDescendantsOfType(rootNode, CALL_EXPRESSION)
+        .mapNotNull { callNode ->
+            val callee = callNode.children().firstOrNull { it.type == IMPORT_KEYWORD }
+                ?: return@mapNotNull null
+            val args = callNode.children().firstOrNull { it.type == ARGUMENTS }
+                ?: return@mapNotNull null
+            val pathText = extractStringText(args, sourceCode) ?: return@mapNotNull null
+            ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = false)
         }
 
     private fun extractStringText(node: TSNode, sourceCode: String): String? {

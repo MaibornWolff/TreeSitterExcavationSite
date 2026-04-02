@@ -167,7 +167,7 @@ When to run:
 - [x] Write edge case and completeness tests
 - [x] Add named re-exports as imports (`export { Foo } from '...'`) to `ImportExtractor` (TDD)
 - [x] Add wildcard re-exports as imports (`export * from '...'`) to `ImportExtractor` (TDD)
-- [ ] Add dynamic imports (`import('...')`) to `ImportExtractor` (TDD)
+- [x] Add dynamic imports (`import('...')`) to `ImportExtractor` (TDD)
 - [ ] Set up DC branch, run first dc-compare (TypeScript project) — iterate
 - [ ] Run first dc-compare (JavaScript project) — iterate
 - [ ] Final verification: full test suite + ktlintCheck + architecture tests
