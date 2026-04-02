@@ -85,4 +85,119 @@ class CSharpDependencyTest {
             assertThat(result.packagePath).isEmpty()
         }
     }
+
+    @Nested
+    inner class UsingDirectiveExtraction {
+        @Test
+        fun `should extract single using directive`() {
+            // Arrange
+            val code = """
+                using System;
+
+                public class MyClass {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly("System")
+            assertThat(result.imports[0].isWildcard).isTrue()
+        }
+
+        @Test
+        fun `should extract multiple using directives`() {
+            // Arrange
+            val code = """
+                using System;
+                using System.Collections.Generic;
+                using Microsoft.Extensions.Options;
+
+                public class MyClass {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.imports).hasSize(3)
+            assertThat(result.imports[0].path).containsExactly("System")
+            assertThat(result.imports[1].path).containsExactly("System", "Collections", "Generic")
+            assertThat(result.imports[2].path).containsExactly("Microsoft", "Extensions", "Options")
+            assertThat(result.imports).allMatch { it.isWildcard }
+        }
+
+        @Test
+        fun `should extract namespace-scoped using directives`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace {
+                    using Microsoft.Extensions.Options;
+
+                    public class MyClass {}
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly("Microsoft", "Extensions", "Options")
+            assertThat(result.imports[0].isWildcard).isTrue()
+        }
+
+        @Test
+        fun `should merge global and namespace-scoped using directives`() {
+            // Arrange
+            val code = """
+                using System;
+
+                namespace MyNamespace {
+                    using Microsoft.Extensions.Options;
+
+                    public class MyClass {}
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.imports).hasSize(2)
+            assertThat(result.imports[0].path).containsExactly("System")
+            assertThat(result.imports[1].path).containsExactly("Microsoft", "Extensions", "Options")
+        }
+
+        @Test
+        fun `should extract aliased using directives`() {
+            // Arrange
+            val code = """
+                using Alias = System.Collections.Generic;
+
+                public class MyClass {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly("System", "Collections", "Generic")
+            assertThat(result.imports[0].isWildcard).isTrue()
+        }
+
+        @Test
+        fun `should return empty imports when no using directives`() {
+            // Arrange
+            val code = "public class MyClass {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.imports).isEmpty()
+        }
+    }
 }
