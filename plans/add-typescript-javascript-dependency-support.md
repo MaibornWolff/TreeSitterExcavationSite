@@ -101,7 +101,34 @@ TDD: start with simple type annotations, incrementally add generics, inheritance
 - Create `JavascriptDependencyMapping.kt` in `languages/javascript/` — uses shared `ImportExtractor`, `extractDeclarations` returns `emptyList()`
 - Find `JavascriptDefinition.kt` (verify location) and override `dependencyMapping`
 
-### 6. Set up early dc-compare loop
+### 6. Named re-exports as imports (TDD)
+
+DC treats `export { Foo } from './module'` as a dependency source. TSE's `ImportExtractor` currently only scans `import_statement` nodes; `export_statement` nodes with a source string are missed.
+
+- Write test: `export { Foo } from './utils'` → one import with path `[".", "utils"]`, `isWildcard = false`
+- Write test: `export { Foo, Bar } from './utils'` → one import (same source, deduplication not needed)
+- Implement: in `ImportExtractor`, add `extractNamedReexports` — find all `export_statement` nodes that contain a `string` child but no `*`
+- Applies to both TypeScript and JavaScript (shared extractor)
+
+### 7. Wildcard re-exports as imports (TDD)
+
+DC treats `export * from './module'` as a wildcard dependency. TSE misses these entirely.
+
+- Write test: `export * from './utils'` → one import with path `[".", "utils"]`, `isWildcard = true`
+- Write test: `export * as ns from './utils'` → one import, `isWildcard = true`
+- Implement: in `ImportExtractor`, add `extractWildcardReexports` — find `export_statement` nodes that contain `*` and a `string` child
+- Applies to both TypeScript and JavaScript (shared extractor)
+
+### 8. Dynamic imports (TDD)
+
+DC handles `import('./module')` as an import. TSE's CommonJS handler only matches `require` identifier calls; dynamic `import()` uses a different node type (`import` keyword, not `identifier`).
+
+- Write test: `import('./utils')` → one import with path `[".", "utils"]`, `isWildcard = false`
+- Write test: dynamic import inside async function → still extracted
+- Implement: in `ImportExtractor`, add `extractDynamicImports` — find `call_expression` nodes where the function child type is `import` (not `identifier`)
+- Applies to both TypeScript and JavaScript (shared extractor)
+
+### 9. Set up early dc-compare loop
 
 Create DC branch `feat/tse-typescript-javascript-integration` pointing to TSE feature branch via JitPack. Run after basic extractors work — don't wait until feature-complete.
 
@@ -114,13 +141,13 @@ When to run:
 - After UsedTypeExtractor is complete
 - After each fix
 
-### 7. Remaining tests + final iteration
+### 10. Remaining tests + final iteration
 
 - Edge cases: empty file, imports-only, declarations without type annotations, deeply nested declarations
 - Completeness check: realistic file exercising all features
 - Iterate on dc-compare differences until match
 
-### 8. Final verification
+### 11. Final verification
 
 - `./gradlew test` — all tests pass
 - `./gradlew ktlintCheck` — clean
@@ -137,9 +164,12 @@ When to run:
 - [x] Write TypeScript UsedTypeExtractor tests (incremental, 6 categories) → implement
 - [x] Create `TypescriptDependencyMapping`, register in `TypescriptDefinition`
 - [x] Create `JavascriptDependencyMapping`, register in `JavascriptDefinition`
+- [x] Write edge case and completeness tests
+- [x] Add named re-exports as imports (`export { Foo } from '...'`) to `ImportExtractor` (TDD)
+- [ ] Add wildcard re-exports as imports (`export * from '...'`) to `ImportExtractor` (TDD)
+- [ ] Add dynamic imports (`import('...')`) to `ImportExtractor` (TDD)
 - [ ] Set up DC branch, run first dc-compare (TypeScript project) — iterate
 - [ ] Run first dc-compare (JavaScript project) — iterate
-- [x] Write edge case and completeness tests
 - [ ] Final verification: full test suite + ktlintCheck + architecture tests
 
 ## Notes

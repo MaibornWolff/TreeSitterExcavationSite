@@ -7,6 +7,7 @@ import org.treesitter.TSNode
 
 internal object ImportExtractor {
     private const val IMPORT_STATEMENT = "import_statement"
+    private const val EXPORT_STATEMENT = "export_statement"
     private const val CALL_EXPRESSION = "call_expression"
     private const val IDENTIFIER = "identifier"
     private const val STRING = "string"
@@ -18,7 +19,8 @@ internal object ImportExtractor {
     fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> {
         val es6Imports = extractEs6Imports(rootNode, sourceCode)
         val commonJsImports = extractCommonJsImports(rootNode, sourceCode)
-        return es6Imports + commonJsImports
+        val namedReexports = extractNamedReexports(rootNode, sourceCode)
+        return es6Imports + commonJsImports + namedReexports
     }
 
     private fun extractEs6Imports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
@@ -39,6 +41,14 @@ internal object ImportExtractor {
             val args = callNode.children().firstOrNull { it.type == ARGUMENTS }
                 ?: return@mapNotNull null
             val pathText = extractStringText(args, sourceCode) ?: return@mapNotNull null
+            ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = false)
+        }
+
+    private fun extractNamedReexports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
+        .findAllDescendantsOfType(rootNode, EXPORT_STATEMENT)
+        .filter { exportNode -> !TreeTraversal.containsNodeOfType(exportNode, NAMESPACE_IMPORT) }
+        .mapNotNull { exportNode ->
+            val pathText = extractStringText(exportNode, sourceCode) ?: return@mapNotNull null
             ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = false)
         }
 

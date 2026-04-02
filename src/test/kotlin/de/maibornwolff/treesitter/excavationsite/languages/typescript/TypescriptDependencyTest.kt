@@ -148,6 +148,20 @@ class TypescriptDependencyTest {
             assertThat(result.imports[0].path).containsExactly(".", "styles.css")
             assertThat(result.imports[0].isWildcard).isFalse()
         }
+
+        @Test
+        fun `should extract named re-export as import`() {
+            // Arrange
+            val code = "export { Foo } from './utils'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly(".", "utils")
+            assertThat(result.imports[0].isWildcard).isFalse()
+        }
     }
 
     @Nested
