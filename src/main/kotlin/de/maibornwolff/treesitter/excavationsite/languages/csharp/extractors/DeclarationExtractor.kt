@@ -56,7 +56,7 @@ internal object DeclarationExtractor {
         return Declaration(
             name = name,
             type = mapDeclarationType(node.type),
-            usedTypes = emptySet(),
+            usedTypes = UsedTypeExtractor.extract(node, sourceCode),
             parentPath = namespacePath
         )
     }

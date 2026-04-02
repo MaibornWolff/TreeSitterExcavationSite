@@ -3,6 +3,7 @@ package de.maibornwolff.treesitter.excavationsite.languages.csharp
 import de.maibornwolff.treesitter.excavationsite.api.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
+import de.maibornwolff.treesitter.excavationsite.api.UsedType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -423,6 +424,386 @@ class CSharpDependencyTest {
 
             // Assert
             assertThat(result.declarations).isEmpty()
+        }
+    }
+
+    @Nested
+    inner class UsedTypeExtraction {
+        @Nested
+        inner class ConstructorParameters {
+            @Test
+            fun `should extract constructor parameter types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public MyClass(string name, IService service) { }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("string"),
+                    UsedType("IService")
+                )
+            }
+
+            @Test
+            fun `should extract primary constructor parameter types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass(string name, IService service) { }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("string"),
+                    UsedType("IService")
+                )
+            }
+        }
+
+        @Nested
+        inner class MethodTypes {
+            @Test
+            fun `should extract method return type and parameter types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public string GetName(int id) { return ""; }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("string"),
+                    UsedType("int")
+                )
+            }
+
+            @Test
+            fun `should extract void return type`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public void DoSomething(MyParam param) { }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("void"),
+                    UsedType("MyParam")
+                )
+            }
+        }
+
+        @Nested
+        inner class TypeCasts {
+            @Test
+            fun `should extract cast expression types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public void Test() { var x = (CastType) obj; }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("void"),
+                    UsedType("CastType")
+                )
+            }
+
+            @Test
+            fun `should extract as expression types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public void Test() { var x = obj as AsType; }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("void"),
+                    UsedType("AsType")
+                )
+            }
+        }
+
+        @Nested
+        inner class GenericTypes {
+            @Test
+            fun `should extract generic type arguments`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        private List<string> _items;
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("List", listOf(UsedType("string"))),
+                    UsedType("string")
+                )
+            }
+
+            @Test
+            fun `should extract generic type constraints`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass<T> where T : IFoobar { }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(UsedType("IFoobar"))
+            }
+        }
+
+        @Nested
+        inner class InheritanceTypes {
+            @Test
+            fun `should extract base class and interface types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass : BaseClass, IInterface { }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("BaseClass"),
+                    UsedType("IInterface")
+                )
+            }
+        }
+
+        @Nested
+        inner class VariableTypes {
+            @Test
+            fun `should extract field types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        private MyFieldType _field;
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(UsedType("MyFieldType"))
+            }
+
+            @Test
+            fun `should filter var from variable types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public void Test() { var x = 42; }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).noneMatch { it.name == "var" }
+            }
+        }
+
+        @Nested
+        inner class ObjectCreationTypes {
+            @Test
+            fun `should extract object creation types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public void Test() { var x = new CreatedType(); }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("void"),
+                    UsedType("CreatedType")
+                )
+            }
+        }
+
+        @Nested
+        inner class MemberAccessTypes {
+            @Test
+            fun `should extract static member access types with uppercase filter`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public void Test() { MyStaticType.DoSomething(); }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("void"),
+                    UsedType("MyStaticType")
+                )
+            }
+
+            @Test
+            fun `should not extract lowercase member access as type`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public void Test() { myVariable.DoSomething(); }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).noneMatch { it.name == "myVariable" }
+            }
+        }
+
+        @Nested
+        inner class AttributeTypes {
+            @Test
+            fun `should extract attribute types with suffix duplication`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    [Obsolete]
+                    public class MyClass { }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("Obsolete"),
+                    UsedType("ObsoleteAttribute")
+                )
+            }
+        }
+
+        @Nested
+        inner class IsTypeChecking {
+            @Test
+            fun `should extract is-pattern expression types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public void Test() { if (obj is CheckedType ct) {} }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("void"),
+                    UsedType("CheckedType")
+                )
+            }
+        }
+
+        @Test
+        fun `should extract all used type categories in correct order`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace;
+
+                [MyAttribute]
+                public class MyClass<T> : BaseClass, IInterface where T : IConstraint {
+                    private MyFieldType _field;
+                    public MyClass(ParamType param) {}
+                    public ReturnType MyMethod(ArgType arg) {
+                        var x = new CreatedType();
+                        var y = (CastType) obj;
+                        var z = obj as AsType;
+                        if (obj is CheckedType ct) {}
+                        MyStaticType.DoSomething();
+                        List<GenericArg> items = null;
+                    }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            val usedTypes = result.declarations[0].usedTypes
+            assertThat(usedTypes).containsExactlyInAnyOrder(
+                UsedType("ParamType"),
+                UsedType("ReturnType"),
+                UsedType("ArgType"),
+                UsedType("CastType"),
+                UsedType("AsType"),
+                UsedType("GenericArg"),
+                UsedType("IConstraint"),
+                UsedType("BaseClass"),
+                UsedType("IInterface"),
+                UsedType("MyFieldType"),
+                UsedType("List", listOf(UsedType("GenericArg"))),
+                UsedType("CreatedType"),
+                UsedType("MyStaticType"),
+                UsedType("MyAttribute"),
+                UsedType("MyAttributeAttribute"),
+                UsedType("CheckedType")
+            )
         }
     }
 }
