@@ -12,6 +12,7 @@ internal object ImportExtractor {
     private const val IDENTIFIER = "identifier"
     private const val STRING = "string"
     private const val NAMESPACE_IMPORT = "namespace_import"
+    private const val EXPORT_CLAUSE = "export_clause"
     private const val ARGUMENTS = "arguments"
     private const val REQUIRE = "require"
     private const val PATH_SEPARATOR = "/"
@@ -20,7 +21,8 @@ internal object ImportExtractor {
         val es6Imports = extractEs6Imports(rootNode, sourceCode)
         val commonJsImports = extractCommonJsImports(rootNode, sourceCode)
         val namedReexports = extractNamedReexports(rootNode, sourceCode)
-        return es6Imports + commonJsImports + namedReexports
+        val wildcardReexports = extractWildcardReexports(rootNode, sourceCode)
+        return es6Imports + commonJsImports + namedReexports + wildcardReexports
     }
 
     private fun extractEs6Imports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
@@ -46,10 +48,20 @@ internal object ImportExtractor {
 
     private fun extractNamedReexports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
         .findAllDescendantsOfType(rootNode, EXPORT_STATEMENT)
-        .filter { exportNode -> !TreeTraversal.containsNodeOfType(exportNode, NAMESPACE_IMPORT) }
+        .filter { exportNode -> TreeTraversal.containsNodeOfType(exportNode, EXPORT_CLAUSE) }
         .mapNotNull { exportNode ->
             val pathText = extractStringText(exportNode, sourceCode) ?: return@mapNotNull null
             ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = false)
+        }
+
+    private fun extractWildcardReexports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
+        .findAllDescendantsOfType(rootNode, EXPORT_STATEMENT)
+        .filter { exportNode ->
+            exportNode.children().any { it.type == STRING } &&
+                !TreeTraversal.containsNodeOfType(exportNode, EXPORT_CLAUSE)
+        }.mapNotNull { exportNode ->
+            val pathText = extractStringText(exportNode, sourceCode) ?: return@mapNotNull null
+            ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = true)
         }
 
     private fun extractStringText(node: TSNode, sourceCode: String): String? {
