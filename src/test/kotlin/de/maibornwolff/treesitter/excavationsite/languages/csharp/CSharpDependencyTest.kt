@@ -131,7 +131,7 @@ class CSharpDependencyTest {
         }
 
         @Test
-        fun `should extract namespace-scoped using directives`() {
+        fun `should extract namespace-scoped using directives with namespacePath`() {
             // Arrange
             val code = """
                 namespace MyNamespace {
@@ -148,10 +148,11 @@ class CSharpDependencyTest {
             assertThat(result.imports).hasSize(1)
             assertThat(result.imports[0].path).containsExactly("Microsoft", "Extensions", "Options")
             assertThat(result.imports[0].isWildcard).isTrue()
+            assertThat(result.imports[0].namespacePath).containsExactly("MyNamespace")
         }
 
         @Test
-        fun `should merge global and namespace-scoped using directives`() {
+        fun `should set empty namespacePath for global using directives`() {
             // Arrange
             val code = """
                 using System;
@@ -169,7 +170,33 @@ class CSharpDependencyTest {
             // Assert
             assertThat(result.imports).hasSize(2)
             assertThat(result.imports[0].path).containsExactly("System")
+            assertThat(result.imports[0].namespacePath).isEmpty()
             assertThat(result.imports[1].path).containsExactly("Microsoft", "Extensions", "Options")
+            assertThat(result.imports[1].namespacePath).containsExactly("MyNamespace")
+        }
+
+        @Test
+        fun `should scope using directives to their namespace only`() {
+            // Arrange
+            val code = """
+                namespace NamespaceA {
+                    using System;
+                    using Microsoft.Extensions.Options;
+
+                    public class ClassA {}
+                }
+
+                namespace NamespaceB {
+                    public class ClassB {}
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.imports).hasSize(2)
+            assertThat(result.imports).allMatch { it.namespacePath == listOf("NamespaceA") }
         }
 
         @Test
