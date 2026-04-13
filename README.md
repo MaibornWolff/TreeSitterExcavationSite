@@ -109,7 +109,7 @@ println(result.declarations)  // [Declaration(name=UserService, type=CLASS, used
 
 // Check language support
 println(TreeSitterDependencies.isDependencyAnalysisSupported(Language.JAVA))   // true
-println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA]
+println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA, KOTLIN, CSHARP]
 ```
 
 ## Supported Languages and Frameworks

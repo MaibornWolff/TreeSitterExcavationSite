@@ -49,17 +49,18 @@ internal object UsingDirectiveExtractor {
         )
     }
 
-    private fun extractImportPath(node: TSNode, sourceCode: String): String? {
-        val qualifiedName = TreeTraversal.findFirstChildTextByType(node, sourceCode, QUALIFIED_NAME)
-        if (qualifiedName != null) return qualifiedName
+    private fun extractImportPath(node: TSNode, sourceCode: String): String? = extractQualifiedOrAliasedPath(node, sourceCode)
+        ?: extractSimpleIdentifierPath(node, sourceCode)
 
-        val identifiers = node
-            .children()
-            .filter { it.type == IDENTIFIER }
-            .map { TreeTraversal.getNodeText(it, sourceCode) }
-            .toList()
-        return identifiers.lastOrNull()
-    }
+    private fun extractQualifiedOrAliasedPath(node: TSNode, sourceCode: String): String? =
+        TreeTraversal.findFirstChildTextByType(node, sourceCode, QUALIFIED_NAME)
+
+    private fun extractSimpleIdentifierPath(node: TSNode, sourceCode: String): String? = node
+        .children()
+        .filter { it.type == IDENTIFIER }
+        .map { TreeTraversal.getNodeText(it, sourceCode) }
+        .toList()
+        .lastOrNull()
 
     private fun extractNamespacePath(node: TSNode, sourceCode: String): List<String> {
         val text = TreeTraversal.findFirstChildTextByType(node, sourceCode, QUALIFIED_NAME, IDENTIFIER)

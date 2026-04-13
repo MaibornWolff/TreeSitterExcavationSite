@@ -58,13 +58,15 @@ data class DependencyResult(
 
 data class ImportDeclaration(
     val path: List<String>,                 // ["java", "util", "List"]
-    val isWildcard: Boolean                 // true for "import java.util.*"
+    val isWildcard: Boolean,                // true for "import java.util.*"
+    val namespacePath: List<String> = []    // namespace scope: [] = global, ["My", "Namespace"] = scoped to that namespace
 )
 
 data class Declaration(
     val name: String,                       // "MyService"
     val type: DeclarationType,              // CLASS, INTERFACE, ENUM, RECORD, ANNOTATION
-    val usedTypes: Set<UsedType>            // types referenced inside this declaration
+    val usedTypes: Set<UsedType>,           // types referenced inside this declaration
+    val parentPath: List<String> = []       // namespace/package path: ["com", "example"]
 )
 
 data class UsedType(

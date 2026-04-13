@@ -55,13 +55,13 @@ internal object DeclarationExtractor {
         val name = TreeTraversal.findChildByType(node, IDENTIFIER, sourceCode) ?: return null
         return Declaration(
             name = name,
-            type = mapDeclarationType(node.type),
+            type = mapDeclarationTypeToClosestEquivalent(node.type),
             usedTypes = UsedTypeExtractor.extract(node, sourceCode),
             parentPath = namespacePath
         )
     }
 
-    private fun mapDeclarationType(nodeType: String): DeclarationType = when (nodeType) {
+    private fun mapDeclarationTypeToClosestEquivalent(nodeType: String): DeclarationType = when (nodeType) {
         "class_declaration", "struct_declaration" -> DeclarationType.CLASS
         "record_declaration" -> DeclarationType.RECORD
         "interface_declaration", "delegate_declaration" -> DeclarationType.INTERFACE
