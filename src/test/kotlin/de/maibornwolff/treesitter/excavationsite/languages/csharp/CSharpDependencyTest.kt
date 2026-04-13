@@ -832,6 +832,26 @@ class CSharpDependencyTest {
                     UsedType("ObsoleteAttribute")
                 )
             }
+
+            @Test
+            fun `should extract qualified attribute types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    [System.Diagnostics.CodeAnalysis.SuppressMessage("Category", "Id")]
+                    public class MyClass { }
+                """.trimIndent()
+
+                // Act
+
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("System.Diagnostics.CodeAnalysis.SuppressMessage"),
+                    UsedType("System.Diagnostics.CodeAnalysis.SuppressMessageAttribute")
+                )
+            }
         }
 
         @Nested
