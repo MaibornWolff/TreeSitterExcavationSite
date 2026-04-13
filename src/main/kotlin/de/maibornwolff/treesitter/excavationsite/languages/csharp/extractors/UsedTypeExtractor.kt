@@ -7,69 +7,43 @@ import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.na
 import org.treesitter.TSNode
 
 internal object UsedTypeExtractor {
-    // Constructor and method structures
     private const val CONSTRUCTOR_DECLARATION = "constructor_declaration"
     private const val METHOD_DECLARATION = "method_declaration"
     private const val PARAMETER_LIST = "parameter_list"
     private const val PARAMETER = "parameter"
-
-    // Type cast and checking
     private const val CAST_EXPRESSION = "cast_expression"
     private const val AS_EXPRESSION = "as_expression"
     private const val IS_PATTERN_EXPRESSION = "is_pattern_expression"
     private const val DECLARATION_PATTERN = "declaration_pattern"
-
-    // Generic types
     private const val TYPE_ARGUMENT_LIST = "type_argument_list"
     private const val TYPE_PARAMETER_CONSTRAINTS_CLAUSE = "type_parameter_constraints_clause"
     private const val TYPE_PARAMETER_CONSTRAINT = "type_parameter_constraint"
-
-    // Inheritance
     private const val BASE_LIST = "base_list"
-
-    // Variables and fields
     private const val FIELD_DECLARATION = "field_declaration"
     private const val LOCAL_DECLARATION_STATEMENT = "local_declaration_statement"
     private const val VARIABLE_DECLARATION = "variable_declaration"
-
-    // Object creation and member access
     private const val OBJECT_CREATION_EXPRESSION = "object_creation_expression"
     private const val MEMBER_ACCESS_EXPRESSION = "member_access_expression"
     private const val INVOCATION_EXPRESSION = "invocation_expression"
-
-    // Array types
     private const val ARRAY_TYPE = "array_type"
-
-    // Attributes
     private const val ATTRIBUTE = "attribute"
-
     private const val IMPLICIT_TYPE = "implicit_type"
 
     private val FILTERED_VARIABLE_TYPES = setOf("var", "void")
 
     private val ALL_NODE_TYPES = setOf(
-        CONSTRUCTOR_DECLARATION,
-        METHOD_DECLARATION,
-        CAST_EXPRESSION,
-        AS_EXPRESSION,
-        TYPE_ARGUMENT_LIST,
-        TYPE_PARAMETER_CONSTRAINTS_CLAUSE,
+        CONSTRUCTOR_DECLARATION, METHOD_DECLARATION,
+        CAST_EXPRESSION, AS_EXPRESSION,
+        TYPE_ARGUMENT_LIST, TYPE_PARAMETER_CONSTRAINTS_CLAUSE,
         BASE_LIST,
-        FIELD_DECLARATION,
-        LOCAL_DECLARATION_STATEMENT,
-        OBJECT_CREATION_EXPRESSION,
-        MEMBER_ACCESS_EXPRESSION,
-        INVOCATION_EXPRESSION,
-        ATTRIBUTE,
-        IS_PATTERN_EXPRESSION,
-        PARAMETER_LIST
+        FIELD_DECLARATION, LOCAL_DECLARATION_STATEMENT,
+        OBJECT_CREATION_EXPRESSION, MEMBER_ACCESS_EXPRESSION, INVOCATION_EXPRESSION,
+        ATTRIBUTE, IS_PATTERN_EXPRESSION, PARAMETER_LIST
     )
 
     fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
         val buckets = TreeTraversal.findAllDescendantsGroupedByType(declaration, ALL_NODE_TYPES)
 
-        // DC concatenation order: constructors, methods, casts, genericParams, genericConstraints,
-        // inherited, variables, objectCreations, memberAccesses, attributes, isTypeChecks
         val constructorTypes = extractConstructorParameterTypes(declaration, buckets, sourceCode)
         val methodTypes = extractMethodTypes(buckets, sourceCode)
         val castTypes = extractCastTypes(buckets, sourceCode)
@@ -79,7 +53,7 @@ internal object UsedTypeExtractor {
         val variableTypes = extractVariableTypes(buckets, sourceCode)
         val objectCreationTypes = extractObjectCreationTypes(buckets, sourceCode)
         val memberAccessTypes = extractMemberAccessTypes(buckets, sourceCode)
-        val attributeTypes = extractAttributeTypes(buckets, sourceCode)
+        val attributeTypes = extractAttributeTypesWithSuffix(buckets, sourceCode)
         val isTypeCheckTypes = extractIsTypeCheckTypes(buckets, sourceCode)
 
         return (
@@ -89,38 +63,27 @@ internal object UsedTypeExtractor {
         ).toSet()
     }
 
-    // region Constructor parameters
-
     private fun extractConstructorParameterTypes(
         declaration: TSNode,
         buckets: Map<String, List<TSNode>>,
         sourceCode: String
     ): List<UsedType> {
-        // Regular constructors
         val regularCtorTypes = buckets[CONSTRUCTOR_DECLARATION].orEmpty().flatMap { ctor ->
             val paramList = ctor.children().firstOrNull { it.type == PARAMETER_LIST }
                 ?: return@flatMap emptyList()
             extractParameterTypes(paramList, sourceCode)
         }
-
-        // Primary constructors: parameter_list directly on the declaration node
         val primaryCtorTypes = declaration
             .children()
             .firstOrNull { it.type == PARAMETER_LIST }
             ?.let { extractParameterTypes(it, sourceCode) }
             ?: emptyList()
-
         return primaryCtorTypes + regularCtorTypes
     }
-
-    // endregion
-
-    // region Method parameters + return types
 
     private fun extractMethodTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
         buckets[METHOD_DECLARATION].orEmpty().flatMap { method ->
             val children = method.children().toList()
-            // Return type is the first identifier/predefined_type/generic_name child after modifiers
             val returnType = children
                 .firstOrNull { CSharpTypeHelper.isTypeNode(it) }
                 ?.let { CSharpTypeHelper.extractType(it, sourceCode) }
@@ -129,27 +92,17 @@ internal object UsedTypeExtractor {
             paramTypes + listOfNotNull(returnType)
         }
 
-    // endregion
-
-    // region Type casts
-
     private fun extractCastTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
-        // (CastType) expr
-        val castTypes = buckets[CAST_EXPRESSION].orEmpty().mapNotNull { cast ->
+        val explicitCasts = buckets[CAST_EXPRESSION].orEmpty().mapNotNull { cast ->
             val typeNode = cast.namedChildren().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
             typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
         }
-        // expr as AsType
-        val asTypes = buckets[AS_EXPRESSION].orEmpty().mapNotNull { asExpr ->
+        val asCasts = buckets[AS_EXPRESSION].orEmpty().mapNotNull { asExpr ->
             val typeNode = asExpr.namedChildren().lastOrNull { CSharpTypeHelper.isTypeNode(it) }
             typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
         }
-        return castTypes + asTypes
+        return explicitCasts + asCasts
     }
-
-    // endregion
-
-    // region Generic type arguments (standalone type_argument_list)
 
     private fun extractGenericTypeArguments(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
         buckets[TYPE_ARGUMENT_LIST].orEmpty().flatMap { typeArgList ->
@@ -159,10 +112,6 @@ internal object UsedTypeExtractor {
                 .mapNotNull { CSharpTypeHelper.extractType(it, sourceCode) }
                 .toList()
         }
-
-    // endregion
-
-    // region Generic type constraints
 
     private fun extractGenericConstraintTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
         buckets[TYPE_PARAMETER_CONSTRAINTS_CLAUSE].orEmpty().flatMap { clause ->
@@ -175,10 +124,6 @@ internal object UsedTypeExtractor {
                 }.toList()
         }
 
-    // endregion
-
-    // region Inheritance types
-
     private fun extractInheritanceTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
         buckets[BASE_LIST].orEmpty().flatMap { baseList ->
             baseList
@@ -187,10 +132,6 @@ internal object UsedTypeExtractor {
                 .mapNotNull { CSharpTypeHelper.extractType(it, sourceCode) }
                 .toList()
         }
-
-    // endregion
-
-    // region Variable declaration types
 
     private fun extractVariableTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
         val fieldTypes = buckets[FIELD_DECLARATION].orEmpty().mapNotNull { field ->
@@ -215,28 +156,16 @@ internal object UsedTypeExtractor {
         return type
     }
 
-    // endregion
-
-    // region Object creation types
-
     private fun extractObjectCreationTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
         buckets[OBJECT_CREATION_EXPRESSION].orEmpty().mapNotNull { objCreation ->
             val typeNode = objCreation.namedChildren().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
             typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
         }
 
-    // endregion
-
-    // region Member access types
-
-    private fun extractMemberAccessTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
-        // Get member_access_expression from both invocations and direct accesses
-        val memberAccesses = buckets[MEMBER_ACCESS_EXPRESSION].orEmpty()
-        return memberAccesses.mapNotNull { memberAccess ->
+    private fun extractMemberAccessTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
+        buckets[MEMBER_ACCESS_EXPRESSION].orEmpty().mapNotNull { memberAccess ->
             val firstChild = memberAccess.getNamedChild(0)
             if (firstChild.isNull) return@mapNotNull null
-            // For chained access (e.g., Spectre.Console.Style.Plain), the expression child
-            // is itself a member_access_expression. Stringify it to match DC's TSQuery behavior.
             val type = CSharpTypeHelper.extractType(firstChild, sourceCode)
                 ?: if (firstChild.type == MEMBER_ACCESS_EXPRESSION) {
                     UsedType(name = TreeTraversal.getNodeText(firstChild, sourceCode).trim())
@@ -246,41 +175,25 @@ internal object UsedTypeExtractor {
             if (type == null || !type.isUppercase()) return@mapNotNull null
             type
         }
-    }
 
-    // endregion
-
-    // region Attribute types
-
-    private fun extractAttributeTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
+    private fun extractAttributeTypesWithSuffix(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
         val attributes = buckets[ATTRIBUTE].orEmpty().mapNotNull { attr ->
             val nameNode = attr.namedChildren().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
             nameNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
         }
-        // DC duplicates each attribute with "Attribute" suffix
         return attributes + attributes.map { UsedType(name = it.name + "Attribute") }
     }
 
-    // endregion
-
-    // region Is-type checking
-
-    private fun extractIsTypeCheckTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
-        return buckets[IS_PATTERN_EXPRESSION].orEmpty().mapNotNull { isExpr ->
-            val pattern = isExpr.children().firstOrNull { it.type == DECLARATION_PATTERN }
-            if (pattern != null) {
-                val typeNode = pattern.namedChildren().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
+    private fun extractIsTypeCheckTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
+        buckets[IS_PATTERN_EXPRESSION].orEmpty().mapNotNull { isExpr ->
+            val declarationPattern = isExpr.children().firstOrNull { it.type == DECLARATION_PATTERN }
+            if (declarationPattern != null) {
+                val typeNode = declarationPattern.namedChildren().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
                 return@mapNotNull typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
             }
-            // constant pattern: `obj is TypeName` without variable binding
             val typeNode = isExpr.namedChildren().lastOrNull { CSharpTypeHelper.isTypeNode(it) }
             typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
         }
-    }
-
-    // endregion
-
-    // region Parameter type extraction
 
     private fun extractParameterTypes(paramList: TSNode, sourceCode: String): List<UsedType> {
         val regularParams = paramList
@@ -290,14 +203,11 @@ internal object UsedTypeExtractor {
                 val typeNode = param.children().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
                 typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
             }.toList()
-        // Handle `params` parameters: array_type is a direct child of parameter_list
-        val paramsTypes = paramList
+        val paramsArrayTypes = paramList
             .children()
             .filter { it.type == ARRAY_TYPE }
             .mapNotNull { CSharpTypeHelper.extractType(it, sourceCode) }
             .toList()
-        return regularParams + paramsTypes
+        return regularParams + paramsArrayTypes
     }
-
-    // endregion
 }
