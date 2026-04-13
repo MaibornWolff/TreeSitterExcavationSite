@@ -698,6 +698,53 @@ class CSharpDependencyTest {
             }
 
             @Test
+            fun `should extract chained qualified member access types`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public void Test() { var x = Console.Style.Plain; }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("void"),
+                    UsedType("Console.Style"),
+                    UsedType("Console")
+                )
+            }
+
+            @Test
+            fun `should extract member access in null-coalescing expression`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public void Test() {
+                            Style? value = null;
+                            var x = value ?? Spectre.Console.Style.Plain;
+                        }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("void"),
+                    UsedType("Style"),
+                    UsedType("Spectre.Console.Style"),
+                    UsedType("Spectre.Console"),
+                    UsedType("Spectre")
+                )
+            }
+
+            @Test
             fun `should not extract lowercase member access as type`() {
                 // Arrange
                 val code = """
@@ -712,6 +759,29 @@ class CSharpDependencyTest {
 
                 // Assert
                 assertThat(result.declarations[0].usedTypes).noneMatch { it.name == "myVariable" }
+            }
+        }
+
+        @Nested
+        inner class ArrayParameterTypes {
+            @Test
+            fun `should extract array parameter element type`() {
+                // Arrange
+                val code = """
+                    namespace MyNamespace;
+                    public class MyClass {
+                        public void Test(params MyType[] items) { }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+                // Assert
+                assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
+                    UsedType("void"),
+                    UsedType("MyType")
+                )
             }
         }
 

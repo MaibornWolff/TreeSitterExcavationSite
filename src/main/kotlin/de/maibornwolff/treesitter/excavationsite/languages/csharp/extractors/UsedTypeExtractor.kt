@@ -37,16 +37,13 @@ internal object UsedTypeExtractor {
     private const val MEMBER_ACCESS_EXPRESSION = "member_access_expression"
     private const val INVOCATION_EXPRESSION = "invocation_expression"
 
+    // Array types
+    private const val ARRAY_TYPE = "array_type"
+
     // Attributes
     private const val ATTRIBUTE = "attribute"
 
-    // Type node helpers
-    private const val GENERIC_NAME = "generic_name"
-    private const val QUALIFIED_NAME = "qualified_name"
-    private const val IDENTIFIER = "identifier"
-    private const val PREDEFINED_TYPE = "predefined_type"
     private const val IMPLICIT_TYPE = "implicit_type"
-    private const val NULLABLE_TYPE = "nullable_type"
 
     private val FILTERED_VARIABLE_TYPES = setOf("var", "void")
 
@@ -125,8 +122,8 @@ internal object UsedTypeExtractor {
             val children = method.children().toList()
             // Return type is the first identifier/predefined_type/generic_name child after modifiers
             val returnType = children
-                .firstOrNull { isTypeNode(it) }
-                ?.let { extractType(it, sourceCode) }
+                .firstOrNull { CSharpTypeHelper.isTypeNode(it) }
+                ?.let { CSharpTypeHelper.extractType(it, sourceCode) }
             val paramList = children.firstOrNull { it.type == PARAMETER_LIST }
             val paramTypes = paramList?.let { extractParameterTypes(it, sourceCode) } ?: emptyList()
             paramTypes + listOfNotNull(returnType)
@@ -139,13 +136,13 @@ internal object UsedTypeExtractor {
     private fun extractCastTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
         // (CastType) expr
         val castTypes = buckets[CAST_EXPRESSION].orEmpty().mapNotNull { cast ->
-            val typeNode = cast.namedChildren().firstOrNull { isTypeNode(it) }
-            typeNode?.let { extractType(it, sourceCode) }
+            val typeNode = cast.namedChildren().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
+            typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
         }
         // expr as AsType
         val asTypes = buckets[AS_EXPRESSION].orEmpty().mapNotNull { asExpr ->
-            val typeNode = asExpr.namedChildren().lastOrNull { isTypeNode(it) }
-            typeNode?.let { extractType(it, sourceCode) }
+            val typeNode = asExpr.namedChildren().lastOrNull { CSharpTypeHelper.isTypeNode(it) }
+            typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
         }
         return castTypes + asTypes
     }
@@ -158,8 +155,8 @@ internal object UsedTypeExtractor {
         buckets[TYPE_ARGUMENT_LIST].orEmpty().flatMap { typeArgList ->
             typeArgList
                 .namedChildren()
-                .filter { isTypeNode(it) }
-                .mapNotNull { extractType(it, sourceCode) }
+                .filter { CSharpTypeHelper.isTypeNode(it) }
+                .mapNotNull { CSharpTypeHelper.extractType(it, sourceCode) }
                 .toList()
         }
 
@@ -173,8 +170,8 @@ internal object UsedTypeExtractor {
                 .children()
                 .filter { it.type == TYPE_PARAMETER_CONSTRAINT }
                 .mapNotNull { constraint ->
-                    val typeNode = constraint.namedChildren().firstOrNull { isTypeNode(it) }
-                    typeNode?.let { extractType(it, sourceCode) }
+                    val typeNode = constraint.namedChildren().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
+                    typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
                 }.toList()
         }
 
@@ -186,8 +183,8 @@ internal object UsedTypeExtractor {
         buckets[BASE_LIST].orEmpty().flatMap { baseList ->
             baseList
                 .namedChildren()
-                .filter { isTypeNode(it) }
-                .mapNotNull { extractType(it, sourceCode) }
+                .filter { CSharpTypeHelper.isTypeNode(it) }
+                .mapNotNull { CSharpTypeHelper.extractType(it, sourceCode) }
                 .toList()
         }
 
@@ -210,10 +207,10 @@ internal object UsedTypeExtractor {
     }
 
     private fun extractVariableDeclarationType(varDecl: TSNode, sourceCode: String): UsedType? {
-        val typeNode = varDecl.children().firstOrNull { isTypeNode(it) || it.type == IMPLICIT_TYPE }
+        val typeNode = varDecl.children().firstOrNull { CSharpTypeHelper.isTypeNode(it) || it.type == IMPLICIT_TYPE }
             ?: return null
         if (typeNode.type == IMPLICIT_TYPE) return null
-        val type = extractType(typeNode, sourceCode) ?: return null
+        val type = CSharpTypeHelper.extractType(typeNode, sourceCode) ?: return null
         if (type.name in FILTERED_VARIABLE_TYPES) return null
         return type
     }
@@ -224,8 +221,8 @@ internal object UsedTypeExtractor {
 
     private fun extractObjectCreationTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
         buckets[OBJECT_CREATION_EXPRESSION].orEmpty().mapNotNull { objCreation ->
-            val typeNode = objCreation.namedChildren().firstOrNull { isTypeNode(it) }
-            typeNode?.let { extractType(it, sourceCode) }
+            val typeNode = objCreation.namedChildren().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
+            typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
         }
 
     // endregion
@@ -238,8 +235,15 @@ internal object UsedTypeExtractor {
         return memberAccesses.mapNotNull { memberAccess ->
             val firstChild = memberAccess.getNamedChild(0)
             if (firstChild.isNull) return@mapNotNull null
-            val type = extractType(firstChild, sourceCode) ?: return@mapNotNull null
-            if (!type.isUppercase()) return@mapNotNull null
+            // For chained access (e.g., Spectre.Console.Style.Plain), the expression child
+            // is itself a member_access_expression. Stringify it to match DC's TSQuery behavior.
+            val type = CSharpTypeHelper.extractType(firstChild, sourceCode)
+                ?: if (firstChild.type == MEMBER_ACCESS_EXPRESSION) {
+                    UsedType(name = TreeTraversal.getNodeText(firstChild, sourceCode).trim())
+                } else {
+                    null
+                }
+            if (type == null || !type.isUppercase()) return@mapNotNull null
             type
         }
     }
@@ -250,8 +254,8 @@ internal object UsedTypeExtractor {
 
     private fun extractAttributeTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
         val attributes = buckets[ATTRIBUTE].orEmpty().mapNotNull { attr ->
-            val nameNode = attr.namedChildren().firstOrNull { isTypeNode(it) }
-            nameNode?.let { extractType(it, sourceCode) }
+            val nameNode = attr.namedChildren().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
+            nameNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
         }
         // DC duplicates each attribute with "Attribute" suffix
         return attributes + attributes.map { UsedType(name = it.name + "Attribute") }
@@ -265,64 +269,35 @@ internal object UsedTypeExtractor {
         return buckets[IS_PATTERN_EXPRESSION].orEmpty().mapNotNull { isExpr ->
             val pattern = isExpr.children().firstOrNull { it.type == DECLARATION_PATTERN }
             if (pattern != null) {
-                val typeNode = pattern.namedChildren().firstOrNull { isTypeNode(it) }
-                return@mapNotNull typeNode?.let { extractType(it, sourceCode) }
+                val typeNode = pattern.namedChildren().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
+                return@mapNotNull typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
             }
             // constant pattern: `obj is TypeName` without variable binding
-            val typeNode = isExpr.namedChildren().lastOrNull { isTypeNode(it) }
-            typeNode?.let { extractType(it, sourceCode) }
+            val typeNode = isExpr.namedChildren().lastOrNull { CSharpTypeHelper.isTypeNode(it) }
+            typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
         }
     }
 
     // endregion
 
-    // region Type extraction helpers
+    // region Parameter type extraction
 
-    private fun isTypeNode(node: TSNode): Boolean =
-        node.type in setOf(IDENTIFIER, PREDEFINED_TYPE, GENERIC_NAME, QUALIFIED_NAME, NULLABLE_TYPE)
-
-    private fun extractType(typeNode: TSNode, sourceCode: String): UsedType? {
-        if (typeNode.isNull) return null
-        return when (typeNode.type) {
-            GENERIC_NAME -> extractGenericType(typeNode, sourceCode)
-            QUALIFIED_NAME -> extractQualifiedType(typeNode, sourceCode)
-            NULLABLE_TYPE -> extractNullableType(typeNode, sourceCode)
-            IDENTIFIER, PREDEFINED_TYPE -> UsedType(name = TreeTraversal.getNodeText(typeNode, sourceCode).trim())
-            else -> null
-        }
+    private fun extractParameterTypes(paramList: TSNode, sourceCode: String): List<UsedType> {
+        val regularParams = paramList
+            .children()
+            .filter { it.type == PARAMETER }
+            .mapNotNull { param ->
+                val typeNode = param.children().firstOrNull { CSharpTypeHelper.isTypeNode(it) }
+                typeNode?.let { CSharpTypeHelper.extractType(it, sourceCode) }
+            }.toList()
+        // Handle `params` parameters: array_type is a direct child of parameter_list
+        val paramsTypes = paramList
+            .children()
+            .filter { it.type == ARRAY_TYPE }
+            .mapNotNull { CSharpTypeHelper.extractType(it, sourceCode) }
+            .toList()
+        return regularParams + paramsTypes
     }
-
-    private fun extractGenericType(genericNameNode: TSNode, sourceCode: String): UsedType? {
-        val nameNode = genericNameNode.children().firstOrNull { it.type == IDENTIFIER } ?: return null
-        val typeArgs = genericNameNode.children().firstOrNull { it.type == TYPE_ARGUMENT_LIST }
-        val genericTypes = typeArgs
-            ?.namedChildren()
-            ?.filter { isTypeNode(it) }
-            ?.mapNotNull { extractType(it, sourceCode) }
-            ?.toList() ?: emptyList()
-        return UsedType(
-            name = TreeTraversal.getNodeText(nameNode, sourceCode).trim(),
-            genericTypes = genericTypes
-        )
-    }
-
-    private fun extractQualifiedType(qualifiedNameNode: TSNode, sourceCode: String): UsedType? {
-        // For qualified names like System.Collections.Generic.List, extract the full dotted name
-        return UsedType(name = TreeTraversal.getNodeText(qualifiedNameNode, sourceCode).trim())
-    }
-
-    private fun extractNullableType(nullableNode: TSNode, sourceCode: String): UsedType? {
-        val innerType = nullableNode.namedChildren().firstOrNull { isTypeNode(it) }
-        return innerType?.let { extractType(it, sourceCode) }
-    }
-
-    private fun extractParameterTypes(paramList: TSNode, sourceCode: String): List<UsedType> = paramList
-        .children()
-        .filter { it.type == PARAMETER }
-        .mapNotNull { param ->
-            val typeNode = param.children().firstOrNull { isTypeNode(it) }
-            typeNode?.let { extractType(it, sourceCode) }
-        }.toList()
 
     // endregion
 }
