@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- C# dependency analysis including namespace extraction, using directives with namespace scoping, declarations, and used types (11 categories)
+
 ## [0.5.0] - 2026-03-31
 
 ### Added

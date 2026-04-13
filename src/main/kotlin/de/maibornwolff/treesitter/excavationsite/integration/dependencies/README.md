@@ -4,7 +4,7 @@
 
 The dependencies feature extracts structural dependency information from source files: package declarations, imports, class/interface/enum declarations, and the types each declaration uses. This data is consumed by DependaCharta (DC) to build dependency graphs, detect cycles, and assign architectural levels.
 
-Currently only Java is implemented. Other languages will be migrated from DC's legacy analyzers over time.
+Java, Kotlin, and C# are implemented. Other languages will be migrated from DC's legacy analyzers over time.
 
 ## Architecture
 

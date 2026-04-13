@@ -117,7 +117,7 @@ println(TreeSitterDependencies.getSupportedLanguages())                        /
 | Language | Extension(s) | Metrics | Extraction | Dependencies |
 |----------|-------------|---------|------------|--------------|
 | Java | `.java` | Stable | Stable | Experimental |
-| Kotlin | `.kt`, `.kts` | Stable | Stable | — |
+| Kotlin | `.kt`, `.kts` | Stable | Stable | Experimental |
 | TypeScript | `.ts`, `.tsx` | Stable | Stable | — |
 | JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | Stable | Stable | — |
 | Python | `.py` | Stable | Stable | — |
@@ -126,7 +126,7 @@ println(TreeSitterDependencies.getSupportedLanguages())                        /
 | Ruby | `.rb` | Stable | Stable | — |
 | Swift | `.swift` | Stable | Stable | — |
 | Bash | `.sh`, `.bash` | Stable | Stable | — |
-| C# | `.cs` | Stable | Stable | — |
+| C# | `.cs` | Stable | Stable | Experimental |
 | C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.h` | Stable | Stable | — |
 | C | `.c` | Stable | Stable | — |
 | Objective-C | `.m`, `.mm` | Stable | Stable | — |

@@ -9,13 +9,13 @@ DependaCharta/analysis/src/main/kotlin/de/maibornwolff/dependacharta/pipeline/an
 ├── LanguageAnalyzer.kt          # Interface all analyzers implement
 ├── LanguageAnalyzerFactory.kt   # Maps SupportedLanguage → analyzer class
 ├── java/JavaAnalyzer.kt         # ✅ MIGRATED — calls TreeSitterDependencies.analyze()
-├── kotlin/                      # ❌ Legacy — custom TSQuery extraction
+├── kotlin/KotlinAnalyzer.kt      # ✅ MIGRATED — calls TreeSitterDependencies.analyze()
 ├── typescript/                  # ❌ Legacy
 ├── javascript/                  # ❌ Legacy
 ├── python/                      # ❌ Legacy
 ├── golang/                      # ❌ Legacy
 ├── php/                         # ❌ Legacy
-├── csharp/                      # ❌ Legacy
+├── csharp/CSharpAnalyzer.kt      # ✅ MIGRATED — calls TreeSitterDependencies.analyze()
 ├── cpp/                         # ❌ Legacy
 └── vue/                         # ❌ Legacy
 ```
