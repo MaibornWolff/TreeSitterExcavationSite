@@ -54,7 +54,7 @@ internal object UsedTypeExtractor {
         val objectCreationTypes = extractObjectCreationTypes(buckets, sourceCode)
         val memberAccessTypes = extractMemberAccessTypes(buckets, sourceCode)
         val attributeTypes = extractAttributeTypesWithSuffix(buckets, sourceCode)
-        val isTypeCheckTypes = extractIsTypeCheckTypes(buckets, sourceCode)
+        val isTypeCheckTypes = extractPatternMatchingTypes(buckets, sourceCode)
 
         return (
             constructorTypes + methodTypes + castTypes +
@@ -184,7 +184,7 @@ internal object UsedTypeExtractor {
         return attributes + attributes.map { UsedType(name = it.name + "Attribute") }
     }
 
-    private fun extractIsTypeCheckTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
+    private fun extractPatternMatchingTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
         buckets[IS_PATTERN_EXPRESSION].orEmpty().mapNotNull { isExpr ->
             val declarationPattern = isExpr.children().firstOrNull { it.type == DECLARATION_PATTERN }
             if (declarationPattern != null) {
