@@ -425,7 +425,7 @@ class CSharpDependencyTest {
         }
 
         @Test
-        fun `should not extract nested declarations`() {
+        fun `should extract nested declarations with parentPath`() {
             // Arrange
             val code = """
                 namespace MyNamespace;
@@ -440,8 +440,13 @@ class CSharpDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
 
             // Assert
-            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations).hasSize(3)
             assertThat(result.declarations[0].name).isEqualTo("Outer")
+            assertThat(result.declarations[0].parentPath).containsExactly("MyNamespace")
+            assertThat(result.declarations[1].name).isEqualTo("Inner")
+            assertThat(result.declarations[1].parentPath).containsExactly("MyNamespace", "Outer")
+            assertThat(result.declarations[2].name).isEqualTo("InnerEnum")
+            assertThat(result.declarations[2].parentPath).containsExactly("MyNamespace", "Outer")
         }
 
         @Test
