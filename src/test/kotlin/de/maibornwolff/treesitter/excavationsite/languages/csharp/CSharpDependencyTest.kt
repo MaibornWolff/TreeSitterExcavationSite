@@ -450,6 +450,32 @@ class CSharpDependencyTest {
         }
 
         @Test
+        fun `should extract deeply nested declarations with full parentPath chain`() {
+            // Arrange
+            val code = """
+                namespace MyNamespace;
+
+                public class Outer {
+                    public class Middle {
+                        public class Inner {}
+                    }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(3)
+            assertThat(result.declarations[0].name).isEqualTo("Outer")
+            assertThat(result.declarations[0].parentPath).containsExactly("MyNamespace")
+            assertThat(result.declarations[1].name).isEqualTo("Middle")
+            assertThat(result.declarations[1].parentPath).containsExactly("MyNamespace", "Outer")
+            assertThat(result.declarations[2].name).isEqualTo("Inner")
+            assertThat(result.declarations[2].parentPath).containsExactly("MyNamespace", "Outer", "Middle")
+        }
+
+        @Test
         fun `should return empty declarations when no type declarations`() {
             // Arrange
             val code = """
