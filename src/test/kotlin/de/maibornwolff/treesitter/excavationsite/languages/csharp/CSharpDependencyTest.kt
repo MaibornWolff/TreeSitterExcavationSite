@@ -357,6 +357,11 @@ class CSharpDependencyTest {
             // Assert
             assertThat(result.declarations).hasSize(3)
             assertThat(result.declarations.map { it.name }).containsExactly("MyClass", "IMyInterface", "MyEnum")
+            assertThat(result.declarations.map { it.type }).containsExactly(
+                DeclarationType.CLASS,
+                DeclarationType.INTERFACE,
+                DeclarationType.ENUM
+            )
         }
 
         @Test
@@ -903,10 +908,10 @@ class CSharpDependencyTest {
 
             // Assert
             val usedTypes = result.declarations[0].usedTypes
-            assertThat(usedTypes).containsExactlyInAnyOrder(
+            assertThat(usedTypes).containsExactly(
                 UsedType("ParamType"),
-                UsedType("ReturnType"),
                 UsedType("ArgType"),
+                UsedType("ReturnType"),
                 UsedType("CastType"),
                 UsedType("AsType"),
                 UsedType("GenericArg"),
