@@ -121,12 +121,12 @@ Keep the JitPack repository (TSE has transitive dependencies there). **Revert th
 
 ## Lessons Learned
 
-- **Nested declarations**: Always use recursive traversal, never top-level-only filtering
+- **Nested declarations**: Always use recursive traversal (`findAllDescendantsOfType`), never top-level-only filtering. DC's legacy analyzers are inconsistent: Java/Kotlin/C++ extract nested declarations, while C#/TypeScript/Python/Go/PHP skip them. TSE normalizes this — languages that support nested type declarations (Java, Kotlin, C#, C++) should always extract them. This is an accepted improvement over DC legacy for C#.
 - **Concatenation order**: Must match DC legacy order exactly — affects levelization and cycle detection
 - **No TSQuery**: Direct tree traversal is simpler and avoids native GC crashes
 - **Defensive extraction**: Prefer skipping (`mapNotNull` + return null) over fallback defaults (`?: ""`, `?: emptyList()`) when an extractor can't resolve a name or path. DC's handling is inconsistent across languages (Go filters empties, Java/Kotlin don't), but empty-named Declarations or empty-path Imports are garbage data. Note: TSE's Java extractors have the same gap (no empty-name guard in DeclarationExtractor, `?: emptyList()` in ImportExtractor) — apply the same fix pattern when touching them.
 - **Generic types on qualified calls**: Always look for call suffix type arguments on the call expression node, regardless of whether the first child is a simple identifier or a navigation expression
 - **Inheritance extraction must be recursive**: Use `findAllDescendantsGroupedByType`, not direct children — DC's re-parsing leaks nested types' inheritance to the outer class (verify per language whether this leakage is intentional)
 - **Dotted type references**: Only extract the first type identifier segment — DC's resolver handles matching simple names to full qualified paths
-- **Nested type paths (parentPath)**: Some languages need hierarchical parent paths for nested declarations. Default `emptyList()` is backward-compatible — add when dc-compare reveals path mismatches.
+- **Nested type paths (parentPath)**: Languages with nested type declarations need hierarchical parent paths. `parentPath` combines the namespace path (from `findNamespacePath`) with the parent class chain (from `findParentClassPath`). For C#, file-scoped namespaces are AST siblings (not parents) of declarations, requiring a `compilation_unit` children check as fallback.
 - **Set up dc-compare early**: Run after basic extractors work, not just at the end. Iterate: fix, rebuild, re-compare.
