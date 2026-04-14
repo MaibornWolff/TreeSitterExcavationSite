@@ -483,7 +483,7 @@ class CSharpDependencyTest {
                 // Arrange
                 val code = """
                     namespace MyNamespace;
-                    public class MyClass(string name, IService service) { }
+                    public class MyClass(int id, ILogger logger) { }
                 """.trimIndent()
 
                 // Act
@@ -491,8 +491,8 @@ class CSharpDependencyTest {
 
                 // Assert
                 assertThat(result.declarations[0].usedTypes).containsExactlyInAnyOrder(
-                    UsedType("string"),
-                    UsedType("IService")
+                    UsedType("int"),
+                    UsedType("ILogger")
                 )
             }
         }
