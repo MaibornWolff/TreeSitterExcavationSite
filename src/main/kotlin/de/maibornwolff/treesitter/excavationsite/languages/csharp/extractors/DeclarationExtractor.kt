@@ -9,7 +9,7 @@ import org.treesitter.TSNode
 internal object DeclarationExtractor {
     private const val FILE_SCOPED_NAMESPACE = "file_scoped_namespace_declaration"
     private const val NAMESPACE_DECLARATION = "namespace_declaration"
-    private const val DECLARATION_LIST = "declaration_list"
+    private const val COMPILATION_UNIT = "compilation_unit"
     private const val QUALIFIED_NAME = "qualified_name"
     private const val IDENTIFIER = "identifier"
     private const val NAMESPACE_SEPARATOR = "."
@@ -24,41 +24,56 @@ internal object DeclarationExtractor {
     )
 
     fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> {
-        val fileScopedNamespace = extractFileScopedNamespace(rootNode, sourceCode)
-        val topLevelDeclarations = extractTopLevelDeclarations(rootNode, sourceCode, fileScopedNamespace)
-        val namespaceDeclarations = extractNamespaceDeclarations(rootNode, sourceCode)
-        return topLevelDeclarations + namespaceDeclarations
+        val allDeclarations = TreeTraversal
+            .findAllDescendantsOfType(rootNode, *DECLARATION_TYPES.toTypedArray())
+        val namesByStartByte = allDeclarations.associate { node ->
+            node.startByte to TreeTraversal.findChildByType(node, IDENTIFIER, sourceCode)
+        }
+        return allDeclarations.mapNotNull { declarationNode ->
+            val name = namesByStartByte[declarationNode.startByte] ?: return@mapNotNull null
+            val namespacePath = findNamespacePath(declarationNode, sourceCode)
+            val parentClassPath = findParentClassPath(declarationNode, namesByStartByte)
+            Declaration(
+                name = name,
+                type = mapDeclarationTypeToClosestEquivalent(declarationNode.type),
+                usedTypes = UsedTypeExtractor.extract(declarationNode, sourceCode),
+                parentPath = namespacePath + parentClassPath
+            )
+        }
     }
 
-    private fun extractTopLevelDeclarations(rootNode: TSNode, sourceCode: String, namespacePath: List<String>): List<Declaration> = rootNode
-        .children()
-        .filter { it.type in DECLARATION_TYPES }
-        .mapNotNull { toDeclaration(it, sourceCode, namespacePath) }
-        .toList()
-
-    private fun extractNamespaceDeclarations(rootNode: TSNode, sourceCode: String): List<Declaration> {
-        return rootNode
-            .children()
-            .filter { it.type == NAMESPACE_DECLARATION }
-            .flatMap { namespaceNode ->
-                val namespacePath = extractNamespacePath(namespaceNode, sourceCode)
-                val body = namespaceNode.children().firstOrNull { it.type == DECLARATION_LIST }
-                    ?: return@flatMap emptySequence()
-                body
+    private fun findNamespacePath(node: TSNode, sourceCode: String): List<String> {
+        var current = node.parent
+        while (!current.isNull) {
+            if (current.type == NAMESPACE_DECLARATION || current.type == FILE_SCOPED_NAMESPACE) {
+                return extractNamespacePath(current, sourceCode)
+            }
+            if (current.type == COMPILATION_UNIT) {
+                val fileScopedNamespace = current
                     .children()
-                    .filter { it.type in DECLARATION_TYPES }
-                    .mapNotNull { toDeclaration(it, sourceCode, namespacePath) }
-            }.toList()
+                    .firstOrNull { it.type == FILE_SCOPED_NAMESPACE }
+                if (fileScopedNamespace != null) {
+                    return extractNamespacePath(fileScopedNamespace, sourceCode)
+                }
+            }
+            current = current.parent
+        }
+        return emptyList()
     }
 
-    private fun toDeclaration(node: TSNode, sourceCode: String, namespacePath: List<String>): Declaration? {
-        val name = TreeTraversal.findChildByType(node, IDENTIFIER, sourceCode) ?: return null
-        return Declaration(
-            name = name,
-            type = mapDeclarationTypeToClosestEquivalent(node.type),
-            usedTypes = UsedTypeExtractor.extract(node, sourceCode),
-            parentPath = namespacePath
-        )
+    private fun findParentClassPath(node: TSNode, namesByStartByte: Map<Int, String?>): List<String> {
+        val parents = mutableListOf<String>()
+        var current = node.parent
+        while (!current.isNull) {
+            if (current.type in DECLARATION_TYPES) {
+                val parentName = namesByStartByte[current.startByte]
+                if (!parentName.isNullOrBlank()) {
+                    parents.add(0, parentName)
+                }
+            }
+            current = current.parent
+        }
+        return parents
     }
 
     private fun mapDeclarationTypeToClosestEquivalent(nodeType: String): DeclarationType = when (nodeType) {
@@ -67,12 +82,6 @@ internal object DeclarationExtractor {
         "interface_declaration", "delegate_declaration" -> DeclarationType.INTERFACE
         "enum_declaration" -> DeclarationType.ENUM
         else -> DeclarationType.UNKNOWN
-    }
-
-    private fun extractFileScopedNamespace(rootNode: TSNode, sourceCode: String): List<String> {
-        val namespaceNode = rootNode.children().firstOrNull { it.type == FILE_SCOPED_NAMESPACE }
-            ?: return emptyList()
-        return extractNamespacePath(namespaceNode, sourceCode)
     }
 
     private fun extractNamespacePath(node: TSNode, sourceCode: String): List<String> {
