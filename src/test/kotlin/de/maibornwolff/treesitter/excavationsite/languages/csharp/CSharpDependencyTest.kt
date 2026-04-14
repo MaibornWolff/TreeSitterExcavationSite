@@ -425,6 +425,28 @@ class CSharpDependencyTest {
         }
 
         @Test
+        fun `should extract nested declarations in traditional namespace with combined parentPath`() {
+            // Arrange
+            val code = """
+                namespace My.Traditional {
+                    public class Outer {
+                        public class Inner {}
+                    }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(2)
+            assertThat(result.declarations[0].name).isEqualTo("Outer")
+            assertThat(result.declarations[0].parentPath).containsExactly("My", "Traditional")
+            assertThat(result.declarations[1].name).isEqualTo("Inner")
+            assertThat(result.declarations[1].parentPath).containsExactly("My", "Traditional", "Outer")
+        }
+
+        @Test
         fun `should extract nested declarations with parentPath`() {
             // Arrange
             val code = """
