@@ -3,7 +3,6 @@ package de.maibornwolff.treesitter.excavationsite.languages.csharp.extractors
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
-import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import org.treesitter.TSNode
 
 internal object DeclarationExtractor {
@@ -49,11 +48,11 @@ internal object DeclarationExtractor {
                 return extractNamespacePath(current, sourceCode)
             }
             if (current.type == COMPILATION_UNIT) {
-                val fileScopedNamespace = current
-                    .children()
-                    .firstOrNull { it.type == FILE_SCOPED_NAMESPACE }
-                if (fileScopedNamespace != null) {
-                    return extractNamespacePath(fileScopedNamespace, sourceCode)
+                val namespaceNode = TreeTraversal
+                    .findAllDescendantsOfType(current, FILE_SCOPED_NAMESPACE, NAMESPACE_DECLARATION)
+                    .firstOrNull()
+                if (namespaceNode != null) {
+                    return extractNamespacePath(namespaceNode, sourceCode)
                 }
             }
             current = current.parent
