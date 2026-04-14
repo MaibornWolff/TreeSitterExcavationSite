@@ -72,7 +72,7 @@ class CSharpDependencyTest {
         }
 
         @Test
-        fun `should return empty package path for traditional namespace only`() {
+        fun `should extract traditional namespace as package path`() {
             // Arrange
             val code = """
                 namespace My.Traditional.Namespace {
@@ -84,7 +84,97 @@ class CSharpDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
 
             // Assert
-            assertThat(result.packagePath).isEmpty()
+            assertThat(result.packagePath).containsExactly("My", "Traditional", "Namespace")
+        }
+
+        @Test
+        fun `should extract file-scoped namespace inside preprocessor directive`() {
+            // Arrange
+            val code = """
+                #if NET6_0_OR_GREATER
+                namespace System.Threading;
+
+                public class Lock {}
+                #endif
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.packagePath).containsExactly("System", "Threading")
+        }
+
+        @Test
+        fun `should extract namespace and parentPath for declarations inside preprocessor directive`() {
+            // Arrange
+            val code = """
+                #if SOME_CONDITION
+                namespace My.Namespace;
+
+                public class MyClass {
+                    public void DoSomething() {}
+                }
+                #endif
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.packagePath).containsExactly("My", "Namespace")
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyClass")
+            assertThat(result.declarations[0].parentPath).containsExactly("My", "Namespace")
+        }
+
+        @Test
+        fun `should extract namespace for class with access modifier split across preprocessor directives`() {
+            // Arrange
+            val code = """
+                #if SOME_CONDITION
+                namespace My.Namespace;
+
+                #if OTHER_CONDITION
+                internal
+                #else
+                public
+                #endif
+                sealed class Outer {
+                    public class Inner { }
+                }
+                #endif
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.packagePath).containsExactly("My", "Namespace")
+            assertThat(result.declarations).hasSize(2)
+            assertThat(result.declarations[0].name).isEqualTo("Outer")
+            assertThat(result.declarations[0].parentPath).containsExactly("My", "Namespace")
+            assertThat(result.declarations[1].name).isEqualTo("Inner")
+            assertThat(result.declarations[1].parentPath).containsExactly("My", "Namespace", "Outer")
+        }
+
+        @Test
+        fun `should extract first traditional namespace when multiple exist`() {
+            // Arrange
+            val code = """
+                namespace NamespaceA {
+                    public class ClassA {}
+                }
+                namespace NamespaceB {
+                    public class ClassB {}
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.packagePath).containsExactly("NamespaceA")
         }
     }
 
