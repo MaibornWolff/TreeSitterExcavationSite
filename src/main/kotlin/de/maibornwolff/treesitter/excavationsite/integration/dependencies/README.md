@@ -169,6 +169,42 @@ A different concatenation order with the same types produces identical dependenc
 | **JavaScript** | N/A — imports only, no multi-category concatenation | `JavascriptAnalyzer.kt` |
 | **Vue** | script imports, template components | `VueAnalyzer.kt` |
 
+## Namespace models: single-namespace vs multi-namespace languages
+
+TSE's `DependencyResult` exposes two namespace-related fields: file-level `packagePath` (one list per file) and per-declaration `Declaration.parentPath`. How the two relate depends on the language, because DependaCharta (the sole consumer of the dependencies output) has two distinct models across its analyzers.
+
+### Class 1 — single-namespace languages
+
+One namespace per file. `packagePath` is authoritative; `parentPath` carries only in-file nesting (e.g., Kotlin inner classes) or is unused.
+
+| Language | `packagePath` source | `parentPath` content |
+|---|---|---|
+| Java | `package_declaration` | empty |
+| Kotlin | `package_header` | parent class chain only (package not duplicated) |
+| Go | package declaration or file path | empty (planned) |
+| PHP | `namespace` declaration or file path | empty (planned) |
+| Python / JavaScript / Vue | file path | empty (planned) |
+
+DC adapters for Class 1 build the node path as `packagePath + parentPath + name` (Kotlin) or `packagePath + name` (Java). The self-wildcard import is emitted once per file from `packagePath`.
+
+### Class 2 — multi-namespace languages
+
+Multiple top-level namespaces per file are legal, and nested namespaces scope their inner members. A single file-level `packagePath` cannot represent this — each declaration needs its own namespace chain.
+
+| Language | `packagePath` source | `parentPath` content |
+|---|---|---|
+| C# | first declared namespace (informational only) | full namespace chain + parent class chain |
+| C++ (planned) | first declared namespace (informational only) | full namespace chain + parent class chain |
+| TypeScript ambient modules (planned) | file path | ambient module path per declaration |
+
+DC's C# adapter (`CSharpAnalyzer` on `feat/tse-csharp-integration`) **ignores `result.packagePath`** and derives everything from `declaration.parentPath`: the node's `pathWithName` is `parentPath + name`, scoped imports match on `parentPath`, and the self-wildcard import is emitted **per declaration** from its own `parentPath`. C++ will follow the same pattern when migrated.
+
+### Guidance when adding a new language
+
+- If the language has one namespace per file (Class 1), populate `packagePath`; leave `parentPath` for in-file class nesting only.
+- If the language allows multiple or nested namespaces per file (Class 2), populate `parentPath` with the full namespace-plus-parent-class chain. `packagePath` may still be filled in as a best-effort first-namespace hint, but consumers should treat it as informational.
+- The DC adapter for a Class 2 language should read `declaration.parentPath` rather than `result.packagePath` for path construction and for emitting the per-declaration self-wildcard import.
+
 ## How DC consumes TSE output
 
 DC's `DependencyResolverService` takes the `DependencyResult` and:
