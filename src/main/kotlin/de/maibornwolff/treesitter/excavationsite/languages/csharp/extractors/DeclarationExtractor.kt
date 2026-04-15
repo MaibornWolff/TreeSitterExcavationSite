@@ -42,22 +42,27 @@ internal object DeclarationExtractor {
     }
 
     private fun findNamespacePath(node: TSNode, sourceCode: String): List<String> {
+        val ancestorSegments = mutableListOf<List<String>>()
         var current = node.parent
+        var compilationUnit: TSNode? = null
         while (!current.isNull) {
             if (current.type == NAMESPACE_DECLARATION || current.type == FILE_SCOPED_NAMESPACE) {
-                return extractNamespacePath(current, sourceCode)
+                ancestorSegments.add(0, extractNamespacePath(current, sourceCode))
             }
             if (current.type == COMPILATION_UNIT) {
-                val namespaceNode = TreeTraversal
-                    .findAllDescendantsOfType(current, FILE_SCOPED_NAMESPACE, NAMESPACE_DECLARATION)
-                    .firstOrNull()
-                if (namespaceNode != null) {
-                    return extractNamespacePath(namespaceNode, sourceCode)
-                }
+                compilationUnit = current
             }
             current = current.parent
         }
-        return emptyList()
+        if (ancestorSegments.isEmpty() && compilationUnit != null) {
+            val namespaceNode = TreeTraversal
+                .findAllDescendantsOfType(compilationUnit, FILE_SCOPED_NAMESPACE, NAMESPACE_DECLARATION)
+                .firstOrNull()
+            if (namespaceNode != null) {
+                ancestorSegments.add(extractNamespacePath(namespaceNode, sourceCode))
+            }
+        }
+        return ancestorSegments.flatten()
     }
 
     private fun findParentClassPath(node: TSNode, namesByStartByte: Map<Int, String?>): List<String> {
