@@ -129,6 +129,48 @@ class CSharpDependencyTest {
         }
 
         @Test
+        fun `should extract nested traditional namespaces as aggregated parentPath`() {
+            // Arrange
+            val code = """
+                namespace Outer {
+                    namespace Inner {
+                        public class MyClass {}
+                    }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyClass")
+            assertThat(result.declarations[0].parentPath).containsExactly("Outer", "Inner")
+        }
+
+        @Test
+        fun `should aggregate deeply nested traditional namespaces into parentPath`() {
+            // Arrange
+            val code = """
+                namespace A.B {
+                    namespace C {
+                        namespace D.E {
+                            public class MyClass {}
+                        }
+                    }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyClass")
+            assertThat(result.declarations[0].parentPath).containsExactly("A", "B", "C", "D", "E")
+        }
+
+        @Test
         fun `should extract namespace for class with access modifier split across preprocessor directives`() {
             // Arrange
             val code = """
