@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-04-17
+
 ### Added
 
-- C# dependency analysis including namespace extraction, using directives with namespace scoping, declarations, and used types (11 categories)
+- C# dependency analysis including namespace extraction, using directives with namespace scoping, declarations, and used types (11
+  categories)
 
 ## [0.5.0] - 2026-03-31
 
@@ -58,11 +61,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Metrics API: `TreeSitterMetrics.parse(code, language) -> MetricsResult`
 - Support for 14 languages
 
-[unreleased]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.6.0...HEAD
+
+[0.6.0]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.5.0...v0.6.0
 
 [0.5.0]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.4.1...v0.5.0
-
-[0.4.1]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.4.0...v0.4.1
 
 [0.4.1]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.4.0...v0.4.1
 
