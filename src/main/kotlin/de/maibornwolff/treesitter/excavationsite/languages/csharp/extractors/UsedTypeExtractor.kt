@@ -24,7 +24,6 @@ internal object UsedTypeExtractor {
     private const val VARIABLE_DECLARATION = "variable_declaration"
     private const val OBJECT_CREATION_EXPRESSION = "object_creation_expression"
     private const val MEMBER_ACCESS_EXPRESSION = "member_access_expression"
-    private const val INVOCATION_EXPRESSION = "invocation_expression"
     private const val ARRAY_TYPE = "array_type"
     private const val ATTRIBUTE = "attribute"
     private const val IMPLICIT_TYPE = "implicit_type"
@@ -37,7 +36,7 @@ internal object UsedTypeExtractor {
         TYPE_ARGUMENT_LIST, TYPE_PARAMETER_CONSTRAINTS_CLAUSE,
         BASE_LIST,
         FIELD_DECLARATION, LOCAL_DECLARATION_STATEMENT,
-        OBJECT_CREATION_EXPRESSION, MEMBER_ACCESS_EXPRESSION, INVOCATION_EXPRESSION,
+        OBJECT_CREATION_EXPRESSION, MEMBER_ACCESS_EXPRESSION,
         ATTRIBUTE, IS_PATTERN_EXPRESSION
     )
 
