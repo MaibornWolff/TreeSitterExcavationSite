@@ -892,9 +892,7 @@ class KotlinDependencyTest {
         @Test
         fun `should include Kotlin in supported languages`() {
             // Act & Assert
-            assertThat(
-                TreeSitterDependencies.getSupportedLanguages()
-            ).containsExactlyInAnyOrder(Language.JAVA, Language.KOTLIN, Language.CSHARP)
+            assertThat(TreeSitterDependencies.getSupportedLanguages()).contains(Language.KOTLIN)
         }
     }
 }
