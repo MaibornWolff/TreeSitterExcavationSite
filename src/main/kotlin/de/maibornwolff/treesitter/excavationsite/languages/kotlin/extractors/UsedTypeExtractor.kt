@@ -44,7 +44,6 @@ internal object UsedTypeExtractor {
     fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
         val buckets = TreeTraversal.findAllDescendantsGroupedByType(declaration, ALL_NODE_TYPES)
 
-        // DC concatenation order: inheritance, properties, parameters, returnTypes, annotations, constructorCalls, callExpressions
         val inheritanceTypes = extractInheritanceTypes(buckets, sourceCode)
         val propertyTypes = extractPropertyTypes(buckets, sourceCode)
         val parameterTypes = extractParameterTypes(buckets, sourceCode)

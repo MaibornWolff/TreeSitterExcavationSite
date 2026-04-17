@@ -2,7 +2,7 @@ package de.maibornwolff.treesitter.excavationsite.shared.domain
 
 data class DependencyResult(val packagePath: List<String>, val imports: List<ImportDeclaration>, val declarations: List<Declaration>)
 
-data class ImportDeclaration(val path: List<String>, val isWildcard: Boolean)
+data class ImportDeclaration(val path: List<String>, val isWildcard: Boolean, val namespacePath: List<String> = emptyList())
 
 enum class DeclarationType {
     CLASS,

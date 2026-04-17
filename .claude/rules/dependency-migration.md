@@ -9,13 +9,13 @@ DependaCharta/analysis/src/main/kotlin/de/maibornwolff/dependacharta/pipeline/an
 ├── LanguageAnalyzer.kt          # Interface all analyzers implement
 ├── LanguageAnalyzerFactory.kt   # Maps SupportedLanguage → analyzer class
 ├── java/JavaAnalyzer.kt         # ✅ MIGRATED — calls TreeSitterDependencies.analyze()
-├── kotlin/                      # ❌ Legacy — custom TSQuery extraction
+├── kotlin/KotlinAnalyzer.kt      # ✅ MIGRATED — calls TreeSitterDependencies.analyze()
 ├── typescript/                  # ❌ Legacy
 ├── javascript/                  # ❌ Legacy
 ├── python/                      # ❌ Legacy
 ├── golang/                      # ❌ Legacy
 ├── php/                         # ❌ Legacy
-├── csharp/                      # ❌ Legacy
+├── csharp/CSharpAnalyzer.kt      # ✅ MIGRATED — calls TreeSitterDependencies.analyze()
 ├── cpp/                         # ❌ Legacy
 └── vue/                         # ❌ Legacy
 ```
@@ -121,12 +121,14 @@ Keep the JitPack repository (TSE has transitive dependencies there). **Revert th
 
 ## Lessons Learned
 
-- **Nested declarations**: Always use recursive traversal, never top-level-only filtering
+- **Nested declarations**: Always use recursive traversal (`findAllDescendantsOfType`), never top-level-only filtering. DC's legacy analyzers are inconsistent: Java/Kotlin/C++ extract nested declarations, while C#/TypeScript/Python/Go/PHP skip them. TSE normalizes this — languages that support nested type declarations (Java, Kotlin, C#, C++) should always extract them. This is an accepted improvement over DC legacy for C#.
 - **Concatenation order**: Must match DC legacy order exactly — affects levelization and cycle detection
 - **No TSQuery**: Direct tree traversal is simpler and avoids native GC crashes
 - **Defensive extraction**: Prefer skipping (`mapNotNull` + return null) over fallback defaults (`?: ""`, `?: emptyList()`) when an extractor can't resolve a name or path. DC's handling is inconsistent across languages (Go filters empties, Java/Kotlin don't), but empty-named Declarations or empty-path Imports are garbage data. Note: TSE's Java extractors have the same gap (no empty-name guard in DeclarationExtractor, `?: emptyList()` in ImportExtractor) — apply the same fix pattern when touching them.
 - **Generic types on qualified calls**: Always look for call suffix type arguments on the call expression node, regardless of whether the first child is a simple identifier or a navigation expression
 - **Inheritance extraction must be recursive**: Use `findAllDescendantsGroupedByType`, not direct children — DC's re-parsing leaks nested types' inheritance to the outer class (verify per language whether this leakage is intentional)
 - **Dotted type references**: Only extract the first type identifier segment — DC's resolver handles matching simple names to full qualified paths
-- **Nested type paths (parentPath)**: Some languages need hierarchical parent paths for nested declarations. Default `emptyList()` is backward-compatible — add when dc-compare reveals path mismatches.
+- **Nested type paths (parentPath)**: Languages with nested type declarations need hierarchical parent paths. `parentPath` combines the namespace path (from `findNamespacePath`) with the parent class chain (from `findParentClassPath`). For C#, file-scoped namespaces are AST siblings (not parents) of declarations, requiring a `compilation_unit` descendants search as fallback. When namespaces are inside `#if` preprocessor directives, tree-sitter nests them inside `preproc_if` nodes — use `findAllDescendantsOfType` (not direct children check) to find namespaces at any depth below `compilation_unit`.
+- **Aggregate nested namespaces in `findNamespacePath`**: For languages where `namespace { namespace { ... } }` is legal (C#, C++), walk all ancestors of the declaration and collect every namespace segment — don't return on the first match. Prepend (`add(0, ...)`) as you walk up so the outer-to-inner order is preserved, then flatten. A declaration inside `namespace A.B { namespace C { namespace D.E { class X } } }` must produce `parentPath = [A, B, C, D, E]`, not `[E]` or `[D, E]`.
+- **Two namespace models across languages**: DC's legacy analyzers split into two classes. Class 1 (single namespace per file — Java, Kotlin, Go, PHP, Python, JS, Vue) is satisfied by `packagePath` alone; `parentPath` carries only in-file class nesting if any. Class 2 (multiple/nested namespaces per file — C#, C++, TypeScript ambient modules) requires the full namespace chain in `Declaration.parentPath`, because no single file-level value can represent it. DC's Class 2 adapters ignore `result.packagePath` entirely and derive per-declaration path, scoped imports, and per-declaration self-wildcard import from `declaration.parentPath`. See `integration/dependencies/README.md` section "Namespace models" for the per-language table. When migrating C++ next, apply the C# pattern: `parentPath = namespaceChain + parentClassChain`, and the DC adapter should mirror `CSharpAnalyzer` on `feat/tse-csharp-integration`, not `BaseLanguageAnalyzer`.
 - **Set up dc-compare early**: Run after basic extractors work, not just at the end. Iterate: fix, rebuild, re-compare.
