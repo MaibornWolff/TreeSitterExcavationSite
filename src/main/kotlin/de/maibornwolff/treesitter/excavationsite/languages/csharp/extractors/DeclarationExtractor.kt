@@ -56,7 +56,7 @@ internal object DeclarationExtractor {
         }
         if (ancestorSegments.isEmpty() && compilationUnit != null) {
             val namespaceNode = TreeTraversal
-                .findAllDescendantsOfType(compilationUnit, FILE_SCOPED_NAMESPACE, NAMESPACE_DECLARATION)
+                .findAllDescendantsOfType(compilationUnit, FILE_SCOPED_NAMESPACE)
                 .firstOrNull()
             if (namespaceNode != null) {
                 ancestorSegments.add(extractNamespacePath(namespaceNode, sourceCode))
