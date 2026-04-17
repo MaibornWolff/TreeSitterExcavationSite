@@ -218,6 +218,28 @@ class CSharpDependencyTest {
             // Assert
             assertThat(result.packagePath).containsExactly("NamespaceA")
         }
+
+        @Test
+        fun `should leave parentPath empty for global-scope declaration coexisting with traditional namespace`() {
+            // Arrange
+            val code = """
+                public class GlobalClass {}
+
+                namespace My.Namespace {
+                    public class ScopedClass {}
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.declarations).hasSize(2)
+            val global = result.declarations.first { it.name == "GlobalClass" }
+            val scoped = result.declarations.first { it.name == "ScopedClass" }
+            assertThat(global.parentPath).isEmpty()
+            assertThat(scoped.parentPath).containsExactly("My", "Namespace")
+        }
     }
 
     @Nested
@@ -359,6 +381,50 @@ class CSharpDependencyTest {
 
             // Assert
             assertThat(result.imports).isEmpty()
+        }
+
+        @Test
+        fun `should extract using directive inside nested namespace with aggregated namespacePath`() {
+            // Arrange
+            val code = """
+                namespace Outer {
+                    namespace Inner {
+                        using Microsoft.Extensions.Options;
+
+                        public class MyClass {}
+                    }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly("Microsoft", "Extensions", "Options")
+            assertThat(result.imports[0].namespacePath).containsExactly("Outer", "Inner")
+        }
+
+        @Test
+        fun `should extract using directive inside namespace wrapped in preprocessor directive`() {
+            // Arrange
+            val code = """
+                #if SOME_CONDITION
+                namespace My.Namespace {
+                    using Microsoft.Extensions.Options;
+
+                    public class MyClass {}
+                }
+                #endif
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CSHARP)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly("Microsoft", "Extensions", "Options")
+            assertThat(result.imports[0].namespacePath).containsExactly("My", "Namespace")
         }
     }
 
