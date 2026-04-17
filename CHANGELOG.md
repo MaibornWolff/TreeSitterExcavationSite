@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - C# dependency analysis including namespace extraction, using directives with namespace scoping, declarations, and used types (11
   categories)
+- Using directives inside nested namespaces or wrapped in preprocessor directives are now extracted with their full aggregated
+  namespace path (improvement over DC legacy, which only scans immediate children of the compilation unit and namespace bodies and
+  therefore misses these)
 
 ## [0.5.0] - 2026-03-31
 
