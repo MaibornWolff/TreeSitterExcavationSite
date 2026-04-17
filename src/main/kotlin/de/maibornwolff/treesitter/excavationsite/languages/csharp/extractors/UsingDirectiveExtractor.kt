@@ -8,36 +8,25 @@ import org.treesitter.TSNode
 internal object UsingDirectiveExtractor {
     private const val USING_DIRECTIVE = "using_directive"
     private const val NAMESPACE_DECLARATION = "namespace_declaration"
-    private const val DECLARATION_LIST = "declaration_list"
+    private const val FILE_SCOPED_NAMESPACE = "file_scoped_namespace_declaration"
     private const val QUALIFIED_NAME = "qualified_name"
     private const val IDENTIFIER = "identifier"
     private const val NAMESPACE_SEPARATOR = "."
 
-    fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> {
-        val globalDirectives = extractGlobalDirectives(rootNode, sourceCode)
-        val namespaceScopedDirectives = extractNamespaceScopedDirectives(rootNode, sourceCode)
-        return globalDirectives + namespaceScopedDirectives
-    }
+    fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
+        .findAllDescendantsOfType(rootNode, USING_DIRECTIVE)
+        .mapNotNull { toImportDeclaration(it, sourceCode, aggregateNamespacePath(it, sourceCode)) }
 
-    private fun extractGlobalDirectives(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = rootNode
-        .children()
-        .filter { it.type == USING_DIRECTIVE }
-        .mapNotNull { toImportDeclaration(it, sourceCode, namespacePath = emptyList()) }
-        .toList()
-
-    private fun extractNamespaceScopedDirectives(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> {
-        return rootNode
-            .children()
-            .filter { it.type == NAMESPACE_DECLARATION }
-            .flatMap { namespaceNode ->
-                val namespacePath = extractNamespacePath(namespaceNode, sourceCode)
-                val body = namespaceNode.children().firstOrNull { it.type == DECLARATION_LIST }
-                    ?: return@flatMap emptySequence()
-                body
-                    .children()
-                    .filter { it.type == USING_DIRECTIVE }
-                    .mapNotNull { toImportDeclaration(it, sourceCode, namespacePath) }
-            }.toList()
+    private fun aggregateNamespacePath(node: TSNode, sourceCode: String): List<String> {
+        val segments = mutableListOf<List<String>>()
+        var current = node.parent
+        while (!current.isNull) {
+            if (current.type == NAMESPACE_DECLARATION || current.type == FILE_SCOPED_NAMESPACE) {
+                segments.add(0, extractNamespacePath(current, sourceCode))
+            }
+            current = current.parent
+        }
+        return segments.flatten()
     }
 
     private fun toImportDeclaration(node: TSNode, sourceCode: String, namespacePath: List<String>): ImportDeclaration? {
