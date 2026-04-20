@@ -50,8 +50,23 @@ class TypescriptDependencyTest {
 
             // Assert
             assertThat(result.imports).hasSize(1)
-            assertThat(result.imports[0].path).containsExactly(".", "foo")
+            assertThat(result.imports[0].path).containsExactly(".", "foo", "Foo")
             assertThat(result.imports[0].isWildcard).isFalse()
+        }
+
+        @Test
+        fun `should extract multiple named ES6 imports as separate declarations`() {
+            // Arrange
+            val code = "import { A, B } from './foo'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(2)
+            val paths = result.imports.map { it.path }
+            assertThat(paths).containsExactlyInAnyOrder(listOf(".", "foo", "A"), listOf(".", "foo", "B"))
+            assertThat(result.imports).allMatch { !it.isWildcard }
         }
 
         @Test
@@ -64,7 +79,7 @@ class TypescriptDependencyTest {
 
             // Assert
             assertThat(result.imports).hasSize(1)
-            assertThat(result.imports[0].path).containsExactly(".", "foo")
+            assertThat(result.imports[0].path).containsExactly(".", "foo", "DEFAULT_EXPORT")
             assertThat(result.imports[0].isWildcard).isFalse()
         }
 
@@ -92,8 +107,22 @@ class TypescriptDependencyTest {
 
             // Assert
             assertThat(result.imports).hasSize(1)
-            assertThat(result.imports[0].path).containsExactly(".", "foo")
+            assertThat(result.imports[0].path).containsExactly(".", "foo", "DEFAULT_EXPORT")
             assertThat(result.imports[0].isWildcard).isFalse()
+        }
+
+        @Test
+        fun `should extract CommonJS destructuring require as separate declarations`() {
+            // Arrange
+            val code = "const { A, B } = require('./foo')"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(2)
+            val paths = result.imports.map { it.path }
+            assertThat(paths).containsExactlyInAnyOrder(listOf(".", "foo", "A"), listOf(".", "foo", "B"))
         }
 
         @Test
@@ -132,7 +161,7 @@ class TypescriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
 
             // Assert
-            assertThat(result.imports[0].path).containsExactly("@scope", "package")
+            assertThat(result.imports[0].path).containsExactly("@scope", "package", "Foo")
         }
 
         @Test
@@ -159,8 +188,35 @@ class TypescriptDependencyTest {
 
             // Assert
             assertThat(result.imports).hasSize(1)
-            assertThat(result.imports[0].path).containsExactly(".", "utils")
+            assertThat(result.imports[0].path).containsExactly(".", "utils", "Foo")
             assertThat(result.imports[0].isWildcard).isFalse()
+        }
+
+        @Test
+        fun `should extract multiple named re-exports as separate declarations`() {
+            // Arrange
+            val code = "export { A, B } from './utils'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(2)
+            val paths = result.imports.map { it.path }
+            assertThat(paths).containsExactlyInAnyOrder(listOf(".", "utils", "A"), listOf(".", "utils", "B"))
+        }
+
+        @Test
+        fun `should extract named re-export with alias preserving original name`() {
+            // Arrange
+            val code = "export { A as B } from './utils'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly(".", "utils", "A")
         }
 
         @Test
@@ -275,6 +331,20 @@ class TypescriptDependencyTest {
             // Assert
             assertThat(result.declarations).hasSize(1)
             assertThat(result.declarations[0].name).isEqualTo("greeting")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.VARIABLE)
+        }
+
+        @Test
+        fun `should extract var variable declaration`() {
+            // Arrange
+            val code = "var counter = 0"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("counter")
             assertThat(result.declarations[0].type).isEqualTo(DeclarationType.VARIABLE)
         }
 
@@ -518,6 +588,42 @@ class TypescriptDependencyTest {
             val byName = result.declarations.associateBy { it.name }
             assertThat(byName).containsKey("greet")
             assertThat(byName["greet"]?.type).isEqualTo(DeclarationType.FUNCTION)
+        }
+
+        @Test
+        fun `should not extract const declaration inside function body`() {
+            // Arrange
+            val code = """
+                function foo() {
+                    const x = 5
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val names = result.declarations.map { it.name }
+            assertThat(names).containsExactlyInAnyOrder("foo")
+        }
+
+        @Test
+        fun `should not extract const declaration inside class body`() {
+            // Arrange
+            val code = """
+                class Foo {
+                    doSomething() {
+                        const x = 5
+                    }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val names = result.declarations.map { it.name }
+            assertThat(names).containsExactlyInAnyOrder("Foo")
         }
     }
 

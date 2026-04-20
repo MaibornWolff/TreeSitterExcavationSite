@@ -168,6 +168,8 @@ When to run:
 - [x] Add named re-exports as imports (`export { Foo } from '...'`) to `ImportExtractor` (TDD)
 - [x] Add wildcard re-exports as imports (`export * from '...'`) to `ImportExtractor` (TDD)
 - [x] Add dynamic imports (`import('...')`) to `ImportExtractor` (TDD)
+- [x] Refine ImportExtractor: named ES6 → path+name, default ES6 → DEFAULT_EXPORT, CommonJS destructuring → per-name, CommonJS default → DEFAULT_EXPORT, named re-exports → per-specifier with original name (alias preserved)
+- [x] Refine DeclarationExtractor: add variable_declaration → VARIABLE, scope to direct children only (skip nested const inside class/function bodies)
 - [ ] Set up DC branch, run first dc-compare (TypeScript project) — iterate
 - [ ] Run first dc-compare (JavaScript project) — iterate
 - [ ] Final verification: full test suite + ktlintCheck + architecture tests
