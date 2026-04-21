@@ -143,6 +143,26 @@ class CppDependencyTest {
                     ImportDeclaration(path = listOf("my", "header.h"), isWildcard = false, kind = ImportKind.INCLUDE)
                 )
             }
+
+            @Test
+            fun `should extract multiple includes in source order`() {
+                // Arrange
+                val code = """
+                    #include <vector>
+                    #include "local.h"
+                    #include <memory>
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(path = listOf("vector"), isWildcard = false, kind = ImportKind.INCLUDE),
+                    ImportDeclaration(path = listOf("local.h"), isWildcard = false, kind = ImportKind.INCLUDE),
+                    ImportDeclaration(path = listOf("memory"), isWildcard = false, kind = ImportKind.INCLUDE)
+                )
+            }
         }
     }
 }
