@@ -472,5 +472,30 @@ class CppDependencyTest {
                 )
             )
         }
+
+        @Test
+        fun `should aggregate physically nested namespaces into parentPath chain`() {
+            // Arrange
+            val code = """
+                namespace Outer {
+                    namespace Middle::Inner {
+                        class Foo {};
+                    }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(
+                    name = "Foo",
+                    type = DeclarationType.CLASS,
+                    usedTypes = emptySet(),
+                    parentPath = listOf("Outer", "Middle", "Inner")
+                )
+            )
+        }
     }
 }
