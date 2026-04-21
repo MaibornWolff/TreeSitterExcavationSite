@@ -36,10 +36,17 @@ internal object ImportExtractor {
 
     private fun toUsingImport(node: TSNode, sourceCode: String): ImportDeclaration? {
         val hasNamespaceKeyword = node.children().any { it.type == NAMESPACE_KEYWORD }
-        if (!hasNamespaceKeyword) return null
-        val nameText = TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER, QUALIFIED_IDENTIFIER)
-            ?: return null
-        return ImportDeclaration(path = nameText.split(NAMESPACE_SEPARATOR), isWildcard = true)
+        val qualifiedName = TreeTraversal.findFirstChildTextByType(node, sourceCode, QUALIFIED_IDENTIFIER)
+        if (hasNamespaceKeyword) {
+            val nameText = qualifiedName
+                ?: TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER)
+                ?: return null
+            return ImportDeclaration(path = nameText.split(NAMESPACE_SEPARATOR), isWildcard = true)
+        }
+        if (qualifiedName != null) {
+            return ImportDeclaration(path = qualifiedName.split(NAMESPACE_SEPARATOR), isWildcard = false)
+        }
+        return null
     }
 
     private fun stripPathDelimiters(raw: String): String = raw.trim('<', '>', '"')

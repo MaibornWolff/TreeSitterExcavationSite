@@ -202,6 +202,22 @@ class CppDependencyTest {
             }
 
             @Test
+            fun `should extract qualified using declaration as non-wildcard import`() {
+                // Arrange
+                val code = """
+                    using A::B::Symbol;
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(path = listOf("A", "B", "Symbol"), isWildcard = false, kind = ImportKind.STANDARD)
+                )
+            }
+
+            @Test
             fun `should split using namespace qualified path on double colon`() {
                 // Arrange
                 val code = """
