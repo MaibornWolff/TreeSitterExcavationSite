@@ -44,6 +44,34 @@ class CppDependencyTest {
         }
 
         @Test
+        fun `should return empty package path for anonymous namespace`() {
+            // Arrange
+            val code = """
+                namespace {
+                    class Foo {};
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.packagePath).isEmpty()
+        }
+
+        @Test
+        fun `should return empty package path for file with no namespace`() {
+            // Arrange
+            val code = "class Foo {};"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.packagePath).isEmpty()
+        }
+
+        @Test
         fun `should split C++17 nested namespace into segments`() {
             // Arrange
             val code = """
