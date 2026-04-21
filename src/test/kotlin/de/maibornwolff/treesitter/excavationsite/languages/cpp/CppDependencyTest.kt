@@ -202,6 +202,22 @@ class CppDependencyTest {
             }
 
             @Test
+            fun `should extract qualified using enum declaration as non-wildcard import`() {
+                // Arrange
+                val code = """
+                    using enum Outer::Color;
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(path = listOf("Outer", "Color"), isWildcard = false, kind = ImportKind.STANDARD)
+                )
+            }
+
+            @Test
             fun `should extract qualified using declaration as non-wildcard import`() {
                 // Arrange
                 val code = """
