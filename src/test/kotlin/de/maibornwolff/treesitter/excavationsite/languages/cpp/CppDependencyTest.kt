@@ -621,5 +621,19 @@ class CppDependencyTest {
                 )
             )
         }
+
+        @Test
+        fun `should emit no declaration for a namespace alias`() {
+            // Arrange
+            val code = """
+                namespace Short = Long::Nested::Namespace;
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
     }
 }
