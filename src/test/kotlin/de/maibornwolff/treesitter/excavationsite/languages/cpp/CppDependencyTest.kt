@@ -599,5 +599,27 @@ class CppDependencyTest {
                 )
             )
         }
+
+        @Test
+        fun `should merge overloaded out-of-class methods into single declaration`() {
+            // Arrange
+            val code = """
+                void Foo::bar(int) {}
+                void Foo::bar(double) {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(
+                    name = "Foo",
+                    type = DeclarationType.CLASS,
+                    usedTypes = emptySet(),
+                    parentPath = emptyList()
+                )
+            )
+        }
     }
 }
