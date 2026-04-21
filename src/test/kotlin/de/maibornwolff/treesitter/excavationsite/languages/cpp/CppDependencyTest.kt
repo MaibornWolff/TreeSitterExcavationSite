@@ -360,5 +360,47 @@ class CppDependencyTest {
                 Declaration(name = "Variant", type = DeclarationType.CLASS, usedTypes = emptySet(), parentPath = emptyList())
             )
         }
+
+        @Test
+        fun `should extract plain enum as ENUM declaration`() {
+            // Arrange
+            val code = "enum Color { RED };"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(name = "Color", type = DeclarationType.ENUM, usedTypes = emptySet(), parentPath = emptyList())
+            )
+        }
+
+        @Test
+        fun `should extract enum class as ENUM declaration`() {
+            // Arrange
+            val code = "enum class Status { OK, ERROR };"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(name = "Status", type = DeclarationType.ENUM, usedTypes = emptySet(), parentPath = emptyList())
+            )
+        }
+
+        @Test
+        fun `should extract enum struct as ENUM declaration`() {
+            // Arrange
+            val code = "enum struct Phase { A, B };"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(name = "Phase", type = DeclarationType.ENUM, usedTypes = emptySet(), parentPath = emptyList())
+            )
+        }
     }
 }

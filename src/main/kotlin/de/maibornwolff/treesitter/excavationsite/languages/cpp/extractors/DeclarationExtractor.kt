@@ -9,9 +9,10 @@ internal object DeclarationExtractor {
     private const val CLASS_SPECIFIER = "class_specifier"
     private const val STRUCT_SPECIFIER = "struct_specifier"
     private const val UNION_SPECIFIER = "union_specifier"
+    private const val ENUM_SPECIFIER = "enum_specifier"
     private const val TYPE_IDENTIFIER = "type_identifier"
 
-    private val DECLARATION_NODE_TYPES = setOf(CLASS_SPECIFIER, STRUCT_SPECIFIER, UNION_SPECIFIER)
+    private val DECLARATION_NODE_TYPES = setOf(CLASS_SPECIFIER, STRUCT_SPECIFIER, UNION_SPECIFIER, ENUM_SPECIFIER)
 
     fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> = TreeTraversal
         .findAllDescendantsOfType(rootNode, *DECLARATION_NODE_TYPES.toTypedArray())
@@ -22,8 +23,13 @@ internal object DeclarationExtractor {
             ?: return null
         return Declaration(
             name = name,
-            type = DeclarationType.CLASS,
+            type = mapType(node.type),
             usedTypes = emptySet()
         )
+    }
+
+    private fun mapType(nodeType: String): DeclarationType = when (nodeType) {
+        ENUM_SPECIFIER -> DeclarationType.ENUM
+        else -> DeclarationType.CLASS
     }
 }
