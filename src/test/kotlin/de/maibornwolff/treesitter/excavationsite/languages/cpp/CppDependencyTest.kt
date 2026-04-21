@@ -6,6 +6,7 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportDeclaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportKind
+import de.maibornwolff.treesitter.excavationsite.shared.domain.UsedType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -674,6 +675,28 @@ class CppDependencyTest {
 
             // Assert
             assertThat(result.declarations).isEmpty()
+        }
+    }
+
+    @Nested
+    inner class UsedTypeExtraction {
+        @Nested
+        inner class Inheritance {
+            @Test
+            fun `should extract single public base class as used type`() {
+                // Arrange
+                val code = """
+                    class Parent {};
+                    class Child : public Parent {};
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val child = result.declarations.single { it.name == "Child" }
+                assertThat(child.usedTypes).containsExactly(UsedType(name = "Parent"))
+            }
         }
     }
 }

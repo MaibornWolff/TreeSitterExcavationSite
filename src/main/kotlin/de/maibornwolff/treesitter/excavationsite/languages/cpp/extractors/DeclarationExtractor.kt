@@ -78,7 +78,7 @@ internal object DeclarationExtractor {
         return Declaration(
             name = name,
             type = mapType(node.type),
-            usedTypes = emptySet(),
+            usedTypes = UsedTypeExtractor.extract(node, sourceCode),
             parentPath = findNamespacePath(node, sourceCode) + findParentClassPath(node, nameByStartByte)
         )
     }
