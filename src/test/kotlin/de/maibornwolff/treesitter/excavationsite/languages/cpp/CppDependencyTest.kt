@@ -553,5 +553,30 @@ class CppDependencyTest {
                 )
             )
         }
+
+        @Test
+        fun `should extract class wrapped in ifdef preprocessor directive`() {
+            // Arrange
+            val code = """
+                namespace MyApp {
+                    #ifdef ENABLE_FEATURE
+                    class Foo {};
+                    #endif
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(
+                    name = "Foo",
+                    type = DeclarationType.CLASS,
+                    usedTypes = emptySet(),
+                    parentPath = listOf("MyApp")
+                )
+            )
+        }
     }
 }

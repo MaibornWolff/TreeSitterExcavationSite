@@ -15,7 +15,7 @@ dc_branch: feat/cpp-dependency-integration
 | 1. `CppTypeHelper` | ⏸ deferred — grows in Task 5 | — |
 | 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
-| 4. `DeclarationExtractor` | ▶ in progress (11/16 cycles) | `db43ebf` → (cycle 11) |
+| 4. `DeclarationExtractor` | ▶ in progress (12/16 cycles) | `db43ebf` → (cycle 12) |
 | 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ⏳ pending | — |
 | 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
 | 7. Test consolidation | ⏳ pending | — |
@@ -420,7 +420,7 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
 - [ ] Complete Task 1: `CppTypeHelper` — **deferred**, will grow organically during Task 5 (matches C# pattern; no standalone `CSharpTypeHelperTest` exists)
 - [x] Complete Task 2: `PackageExtractor` — commits `88d5eff`, `1013230`, `6733139`, `fd14d62`, `c4dc5c4` (6 TDD cycles, pipeline bootstrapped via inline stubs for imports/declarations)
 - [x] Complete Task 3: `ImportExtractor` (includes + using directives) — commits `1a825e9` → `7f27773` (13 cycles: domain model, docs, 4 include forms, 7 using-directive forms)
-- [ ] Complete Task 4: `DeclarationExtractor` (incl. out-of-class methods with merge-on-dup) — **in progress, 11/16 cycles done**
+- [ ] Complete Task 4: `DeclarationExtractor` (incl. out-of-class methods with merge-on-dup) — **in progress, 12/16 cycles done**
   - [x] 1. Single `class_specifier` → CLASS — commit `db43ebf`
   - [x] 2. `struct_specifier` → CLASS — commit `cd69b52`
   - [x] 3. `union_specifier` → CLASS — commit `f66695c`
@@ -432,7 +432,7 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
   - [x] 9. Physically nested namespaces → aggregated chain — green on first write (ancestor walk prepends each namespace), `test(cpp):` only
   - [x] 10. Nested class inside class → `parentPath=[namespace..., OuterClass]` — added `findParentClassPath` ancestor walk with name memoization
   - [x] 11. `extern "C"` transparent pass-through — green on first write (`linkage_specification` is ignored by both walks), `test(cpp):` only
-  - [ ] 12. Preprocessor-wrapped declaration (mirrors C# fix `623fa5e`)
+  - [x] 12. Preprocessor-wrapped declaration — green on first write (`findAllDescendantsOfType` recurses through `preproc_if`/`preproc_ifdef`), `test(cpp):` only
   - [ ] 13. Out-of-class method `void A::B::bar() {}` → synthetic `Declaration(name=B, parentPath=[A])`
   - [ ] 14. Out-of-class overloads — merge-on-duplicate
   - [ ] 15. Namespace alias (`namespace Short = Long;`) → no Declaration emitted
