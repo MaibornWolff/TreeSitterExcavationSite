@@ -528,5 +528,30 @@ class CppDependencyTest {
                 )
             )
         }
+
+        @Test
+        fun `should treat extern C block as transparent for declarations`() {
+            // Arrange
+            val code = """
+                namespace MyApp {
+                    extern "C" {
+                        struct Bar {};
+                    }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(
+                    name = "Bar",
+                    type = DeclarationType.CLASS,
+                    usedTypes = emptySet(),
+                    parentPath = listOf("MyApp")
+                )
+            )
+        }
     }
 }
