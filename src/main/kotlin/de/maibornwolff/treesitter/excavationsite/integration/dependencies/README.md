@@ -32,7 +32,7 @@ Source code string
       → DependencyCollector parses AST via TreeSitterParser
         → LanguageDependencyMapping lambdas called:
           1. extractPackagePath()  → ["com", "example", "service"]
-          2. extractImports()      → [ImportDeclaration(path, isWildcard)]
+          2. extractImports()      → [ImportDeclaration(path, isWildcard, namespacePath, kind)]
           3. extractDeclarations() → [Declaration(name, type, usedTypes)]
   → DependencyResult
 ```
@@ -59,8 +59,14 @@ data class DependencyResult(
 data class ImportDeclaration(
     val path: List<String>,                 // ["java", "util", "List"]
     val isWildcard: Boolean,                // true for "import java.util.*"
-    val namespacePath: List<String> = []    // namespace scope: [] = global, ["My", "Namespace"] = scoped to that namespace
+    val namespacePath: List<String> = [],   // namespace scope: [] = global, ["My", "Namespace"] = scoped to that namespace
+    val kind: ImportKind = STANDARD         // INCLUDE for C++ #include; STANDARD for everything else (Java/Kotlin/C#/C++ `using`)
 )
+
+enum class ImportKind {
+    STANDARD,  // e.g., Java `import`, Kotlin `import`, C# `using`, C++ `using namespace`/`using X::Y`
+    INCLUDE    // C++ `#include` — downstream adapter applies path resolution + extension normalization
+}
 
 data class Declaration(
     val name: String,                       // "MyService"

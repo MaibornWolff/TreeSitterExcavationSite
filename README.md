@@ -104,7 +104,7 @@ val code = """
 val result = TreeSitterDependencies.analyze(code, Language.JAVA)
 
 println(result.packagePath)   // [com, example]
-println(result.imports)       // [ImportDeclaration(path=[java, util, List], isWildcard=false)]
+println(result.imports)       // [ImportDeclaration(path=[java, util, List], isWildcard=false, namespacePath=[], kind=STANDARD)]
 println(result.declarations)  // [Declaration(name=UserService, type=CLASS, usedTypes=[...])]
 
 // Check language support
