@@ -81,6 +81,19 @@ data class UsedType(
 )
 ```
 
+### Import kinds
+
+`ImportDeclaration.kind` distinguishes imports that share the same shape but require different downstream handling:
+
+| Kind | Source | Adapter handling |
+|---|---|---|
+| `STANDARD` (default) | Java `import`, Kotlin `import`, C# `using`, C++ `using namespace` / `using X::Y` | Consumed as-is — the `path` is already the canonical reference |
+| `INCLUDE` | C++ `#include "…"` or `#include <…>` only | Adapter resolves relative paths (`./`, `../`) against the file's physical path and rewrites the final segment's `.` → `_` to match DC's node-naming convention |
+
+Without this tag, a C++ DC adapter cannot tell `#include "foo"` (needs path normalization) from `using foo;` (must not be normalized) — both produce the same `(path, isWildcard, namespacePath)` triple. TSE extractors tag the AST source; adapters branch on `kind`.
+
+All non-C++ languages leave the field at its default (`STANDARD`), so adding the field is source- and binary-compatible with existing callers.
+
 ## Adding a new language
 
 ### 1. Create the dependency mapping
