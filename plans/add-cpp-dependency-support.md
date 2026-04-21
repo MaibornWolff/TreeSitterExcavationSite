@@ -15,7 +15,7 @@ dc_branch: feat/cpp-dependency-integration
 | 1. `CppTypeHelper` | ⏸ deferred — grows in Task 5 | — |
 | 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
-| 4. `DeclarationExtractor` | ▶ in progress (5/16 cycles) | `db43ebf` → (cycle 5) |
+| 4. `DeclarationExtractor` | ▶ in progress (6/16 cycles) | `db43ebf` → (cycle 6) |
 | 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ⏳ pending | — |
 | 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
 | 7. Test consolidation | ⏳ pending | — |
@@ -420,13 +420,14 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
 - [ ] Complete Task 1: `CppTypeHelper` — **deferred**, will grow organically during Task 5 (matches C# pattern; no standalone `CSharpTypeHelperTest` exists)
 - [x] Complete Task 2: `PackageExtractor` — commits `88d5eff`, `1013230`, `6733139`, `fd14d62`, `c4dc5c4` (6 TDD cycles, pipeline bootstrapped via inline stubs for imports/declarations)
 - [x] Complete Task 3: `ImportExtractor` (includes + using directives) — commits `1a825e9` → `7f27773` (13 cycles: domain model, docs, 4 include forms, 7 using-directive forms)
-- [ ] Complete Task 4: `DeclarationExtractor` (incl. out-of-class methods with merge-on-dup) — **in progress, 5/16 cycles done**
+- [ ] Complete Task 4: `DeclarationExtractor` (incl. out-of-class methods with merge-on-dup) — **in progress, 6/16 cycles done**
   - [x] 1. Single `class_specifier` → CLASS — commit `db43ebf`
   - [x] 2. `struct_specifier` → CLASS — commit `cd69b52`
   - [x] 3. `union_specifier` → CLASS — commit `f66695c`
   - [x] 4. `enum_specifier` / `enum class` / `enum struct` → ENUM — commit `0cea9e6`
   - [x] 5. Anonymous declaration → skipped — green on first write (existing `?: return null` guard), `test(cpp):` only
-  - [ ] 6. Forward declaration (no body) → skipped — **next**
+  - [x] 6. Forward declaration (no body) → skipped — added `hasBody` check on `field_declaration_list` / `enumerator_list`
+  - [ ] 7. Single namespace wrapping a class → `parentPath=[namespace]` — **next**
   - [ ] 7. Single namespace wrapping a class → `parentPath=[namespace]`
   - [ ] 8. Nested namespace (`A::B::C`) → `parentPath=[A,B,C]`
   - [ ] 9. Physically nested namespaces → aggregated chain

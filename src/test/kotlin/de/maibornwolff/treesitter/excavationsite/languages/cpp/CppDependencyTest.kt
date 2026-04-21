@@ -414,5 +414,17 @@ class CppDependencyTest {
             // Assert
             assertThat(result.declarations).isEmpty()
         }
+
+        @Test
+        fun `should skip forward class declaration without body`() {
+            // Arrange
+            val code = "class Foo;"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
     }
 }
