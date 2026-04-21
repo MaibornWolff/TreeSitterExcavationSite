@@ -427,7 +427,7 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
   - [x] 4. `enum_specifier` / `enum class` / `enum struct` → ENUM — commit `0cea9e6`
   - [x] 5. Anonymous declaration → skipped — green on first write (existing `?: return null` guard), `test(cpp):` only
   - [x] 6. Forward declaration (no body) → skipped — added `hasBody` check on `field_declaration_list` / `enumerator_list`
-  - [ ] 7. Single namespace wrapping a class → `parentPath=[namespace]` — **next**
+  - [x] 7. Single namespace wrapping a class → `parentPath=[namespace]` — added `findNamespacePath` ancestor walk
   - [ ] 7. Single namespace wrapping a class → `parentPath=[namespace]`
   - [ ] 8. Nested namespace (`A::B::C`) → `parentPath=[A,B,C]`
   - [ ] 9. Physically nested namespaces → aggregated chain

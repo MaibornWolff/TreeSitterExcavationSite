@@ -426,5 +426,28 @@ class CppDependencyTest {
             // Assert
             assertThat(result.declarations).isEmpty()
         }
+
+        @Test
+        fun `should set parentPath to namespace for class inside single namespace`() {
+            // Arrange
+            val code = """
+                namespace MyApp {
+                    class Foo {};
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(
+                    name = "Foo",
+                    type = DeclarationType.CLASS,
+                    usedTypes = emptySet(),
+                    parentPath = listOf("MyApp")
+                )
+            )
+        }
     }
 }
