@@ -86,5 +86,23 @@ class CppDependencyTest {
             // Assert
             assertThat(result.packagePath).containsExactly("Outer", "Middle", "Inner")
         }
+
+        @Test
+        fun `should find namespace wrapped in ifdef preprocessor directive`() {
+            // Arrange
+            val code = """
+                #ifdef ENABLE_FEATURE
+                namespace MyApp {
+                    class Foo {};
+                }
+                #endif
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.packagePath).containsExactly("MyApp")
+        }
     }
 }
