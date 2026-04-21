@@ -14,7 +14,7 @@ dc_branch: feat/cpp-dependency-integration
 | 0. Rename extraction-feature file | ✅ done | `7e678a1` |
 | 1. `CppTypeHelper` | ⏸ deferred — grows in Task 5 | — |
 | 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
-| 3. `ImportExtractor` + `ImportKind` | ▶ next | — |
+| 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
 | 4. `DeclarationExtractor` | ⏳ pending | — |
 | 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ⏳ pending | — |
 | 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
@@ -199,6 +199,20 @@ C++ `ImportExtractor` emits `kind = INCLUDE` for `preproc_include` nodes and `ki
 11. `using` inside a namespace — `namespacePath` populated
 12. `using` inside `base_class_clause` — skipped
 13. `using` inside class body — skipped (deferred to UsedTypeExtractor in Task 5)
+
+- [x] 1. `ImportKind` enum + field — commit `1a825e9`
+- [x] 2. Docs update — commits `cbab587`, `671e53c`
+- [x] 3. System `#include <…>` — commit `83b2ab5`
+- [x] 4. Quoted `#include "…"` — commit `82adb3b`
+- [x] 5. Multiple includes in source order — commit `ff6666e`
+- [x] 6. Preproc-wrapped includes — commit `e94d9eb`
+- [x] 7. `using namespace X;` wildcard — commit `1c30408`
+- [x] 8. `using namespace X::Y::Z;` qualified — commit `77afec6`
+- [x] 9. `using X::Y;` non-wildcard — commit `ee6e803`
+- [x] 10. `using enum X::Y;` qualified — commit `4ae6b35`
+- [x] 11. Scoped `using` inside namespace (namespacePath) — commit `8a35dbc`
+- [x] 12. Inheriting constructor `using Base::Base;` in class body — skipped — commit `77edd00`
+- [x] 13. `using enum X;` in class body — skipped — commit `7f27773`
 
 ### 4. TSE: `DeclarationExtractor`
 
@@ -405,8 +419,8 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
 - [x] Complete Task 0: Rename existing `DeclarationExtractor.kt` → `GenericDeclarationExtractor.kt` — commit `7e678a1`
 - [ ] Complete Task 1: `CppTypeHelper` — **deferred**, will grow organically during Task 5 (matches C# pattern; no standalone `CSharpTypeHelperTest` exists)
 - [x] Complete Task 2: `PackageExtractor` — commits `88d5eff`, `1013230`, `6733139`, `fd14d62`, `c4dc5c4` (6 TDD cycles, pipeline bootstrapped via inline stubs for imports/declarations)
-- [ ] Complete Task 3: `ImportExtractor` (includes + using directives) — **next**
-- [ ] Complete Task 4: `DeclarationExtractor` (incl. out-of-class methods with merge-on-dup)
+- [x] Complete Task 3: `ImportExtractor` (includes + using directives) — commits `1a825e9` → `7f27773` (13 cycles: domain model, docs, 4 include forms, 7 using-directive forms)
+- [ ] Complete Task 4: `DeclarationExtractor` (incl. out-of-class methods with merge-on-dup) — **next**
 - [ ] Complete Task 5: `UsedTypeExtractor` with local boundary-exclusion helper (14 categories); creates `CppTypeHelper` along the way
 - [ ] Complete Task 6: `CppDependencyMapping` wiring + `CppDefinition` update — **partially done**: mapping + override exist with stubs from Task 2; still need replacement of inline stubs as Tasks 3 and 4 land
 - [ ] Complete Task 7: `CppDependencyTest` with `@Nested` groups mirroring C#
