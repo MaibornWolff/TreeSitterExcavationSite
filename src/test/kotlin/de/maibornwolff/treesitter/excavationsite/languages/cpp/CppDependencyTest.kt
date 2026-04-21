@@ -637,6 +637,31 @@ class CppDependencyTest {
         }
 
         @Test
+        fun `should extract nested-class constructor destructor and method definitions inside namespace`() {
+            // Arrange — mirrors Catch2's catch_test_spec.cpp
+            val code = """
+                namespace Catch {
+                    TestSpec::Pattern::Pattern(std::string const& name) : m_name(name) {}
+                    TestSpec::Pattern::~Pattern() = default;
+                    std::string const& TestSpec::Pattern::name() const { return m_name; }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(
+                    name = "Pattern",
+                    type = DeclarationType.CLASS,
+                    usedTypes = emptySet(),
+                    parentPath = listOf("Catch", "TestSpec")
+                )
+            )
+        }
+
+        @Test
         fun `should emit no declaration for a C++20 concept definition`() {
             // Arrange
             val code = """
