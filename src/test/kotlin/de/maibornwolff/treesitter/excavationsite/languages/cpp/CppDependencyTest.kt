@@ -332,5 +332,19 @@ class CppDependencyTest {
                 Declaration(name = "Foo", type = DeclarationType.CLASS, usedTypes = emptySet(), parentPath = emptyList())
             )
         }
+
+        @Test
+        fun `should extract struct_specifier as CLASS declaration`() {
+            // Arrange
+            val code = "struct Bar {};"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(name = "Bar", type = DeclarationType.CLASS, usedTypes = emptySet(), parentPath = emptyList())
+            )
+        }
     }
 }
