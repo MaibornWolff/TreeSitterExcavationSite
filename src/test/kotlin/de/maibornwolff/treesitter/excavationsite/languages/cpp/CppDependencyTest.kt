@@ -402,5 +402,17 @@ class CppDependencyTest {
                 Declaration(name = "Phase", type = DeclarationType.ENUM, usedTypes = emptySet(), parentPath = emptyList())
             )
         }
+
+        @Test
+        fun `should skip anonymous struct declaration`() {
+            // Arrange
+            val code = "struct { int x; int y; } point;"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
     }
 }
