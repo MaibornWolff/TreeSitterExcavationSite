@@ -635,5 +635,20 @@ class CppDependencyTest {
             // Assert
             assertThat(result.declarations).isEmpty()
         }
+
+        @Test
+        fun `should emit no declaration for a C++20 concept definition`() {
+            // Arrange
+            val code = """
+                template<typename T>
+                concept Integral = std::is_integral_v<T>;
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
     }
 }
