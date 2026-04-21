@@ -20,6 +20,13 @@ internal object ImportExtractor {
     private const val NAMESPACE_SEPARATOR = "::"
     private const val PATH_SEPARATOR = "/"
 
+    private val NON_IMPORT_SCOPES = setOf(
+        "class_specifier",
+        "struct_specifier",
+        "union_specifier",
+        "base_class_clause"
+    )
+
     fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
         .findAllDescendantsOfType(rootNode, PREPROC_INCLUDE, USING_DECLARATION)
         .mapNotNull { node ->
@@ -38,6 +45,7 @@ internal object ImportExtractor {
     }
 
     private fun toUsingImport(node: TSNode, sourceCode: String): ImportDeclaration? {
+        if (TreeTraversal.hasAncestorOfTypes(node, *NON_IMPORT_SCOPES.toTypedArray())) return null
         val hasNamespaceKeyword = node.children().any { it.type == NAMESPACE_KEYWORD }
         val qualifiedName = TreeTraversal.findFirstChildTextByType(node, sourceCode, QUALIFIED_IDENTIFIER)
         val namespacePath = aggregateNamespacePath(node, sourceCode)

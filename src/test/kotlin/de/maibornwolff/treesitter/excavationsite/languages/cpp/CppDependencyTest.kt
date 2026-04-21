@@ -202,6 +202,28 @@ class CppDependencyTest {
             }
 
             @Test
+            fun `should skip inheriting constructor using directive inside class body`() {
+                // Arrange
+                val code = """
+                    class Base {
+                    public:
+                        Base(int);
+                    };
+
+                    class Derived : public Base {
+                    public:
+                        using Base::Base;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).isEmpty()
+            }
+
+            @Test
             fun `should populate namespacePath for using directive inside a namespace`() {
                 // Arrange
                 val code = """
