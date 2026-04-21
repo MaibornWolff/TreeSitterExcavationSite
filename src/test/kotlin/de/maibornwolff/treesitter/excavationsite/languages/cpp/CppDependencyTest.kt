@@ -182,5 +182,24 @@ class CppDependencyTest {
                 )
             }
         }
+
+        @Nested
+        inner class UsingDirectives {
+            @Test
+            fun `should extract using namespace as wildcard STANDARD import`() {
+                // Arrange
+                val code = """
+                    using namespace std;
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(path = listOf("std"), isWildcard = true, kind = ImportKind.STANDARD)
+                )
+            }
+        }
     }
 }
