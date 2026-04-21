@@ -1,11 +1,27 @@
 ---
 name: add-cpp-dependency-support
 issue: TBD
-state: todo
+state: progress
 version: 1
 tse_branch: feat/cpp-dependency-support
 dc_branch: feat/cpp-dependency-integration
 ---
+
+## Progress
+
+| Task | Status | Commits |
+|---|---|---|
+| 0. Rename extraction-feature file | ✅ done | `7e678a1` |
+| 1. `CppTypeHelper` | ⏸ deferred — grows in Task 5 | — |
+| 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
+| 3. `ImportExtractor` + `ImportKind` | ▶ next | — |
+| 4. `DeclarationExtractor` | ⏳ pending | — |
+| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ⏳ pending | — |
+| 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
+| 7. Test consolidation | ⏳ pending | — |
+| 8. dc-compare iteration on Catch2 | ⏳ interleaved with 3–5 | — |
+| 9. DC adapter (`feat/cpp-dependency-integration`) | ⏳ pending | — |
+| 10. Release + integrate | ⏳ pending | — |
 
 ## Goal
 
@@ -65,6 +81,8 @@ Prerequisite rename to avoid the dependency `DeclarationExtractor.kt` collision.
 
 **Commit checkpoint** — 1 commit: `refactor(cpp): rename DeclarationExtractor to GenericDeclarationExtractor to free conventional name for dependency slice`
 
+- [x] Rename file, verify clean build, commit (`7e678a1`)
+
 ### 1. TSE: `CppTypeHelper`
 
 New `languages/cpp/extractors/CppTypeHelper.kt` — mirrors `CSharpTypeHelper` but for C++ type nodes.
@@ -103,12 +121,12 @@ New `languages/cpp/extractors/PackageExtractor.kt`. Class-2 language, so `packag
 - Return the segments as `List<String>`
 
 **TDD cycles & commit checkpoints**:
-1. `test(cpp): add failing test for simple namespace package path` → `feat(cpp): add PackageExtractor for simple namespace`
-2. Nested namespace (C++17 `A::B::C`)
-3. Physically nested (`namespace A { namespace B { } }`) — first one wins
-4. Anonymous namespace → empty
-5. No namespace → empty
-6. `#ifdef`-wrapped namespace (preproc_if ancestor)
+- [x] 1. Simple single namespace — commit `88d5eff` (also bootstrapped `CppDependencyMapping` + `CppDefinition` override with inline stubs for imports/declarations)
+- [x] 2. Nested namespace (C++17 `A::B::C`) — commit `1013230`
+- [x] 3. Physically nested (`namespace A { namespace B { } }`) — outermost wins; green on first write, `test(cpp):` only — commit `6733139`
+- [x] 4. Anonymous namespace → empty — green on first write — commit `fd14d62`
+- [x] 5. No namespace → empty — same commit as #4 — commit `fd14d62`
+- [x] 6. `#ifdef`-wrapped namespace — green on first write (`findAllDescendantsOfType` recurses through `preproc_if` naturally) — commit `c4dc5c4`
 
 ### 3. TSE: `ImportExtractor`
 
@@ -384,13 +402,13 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
 
 ## Steps
 
-- [ ] Complete Task 0: Rename existing `DeclarationExtractor.kt` → `GenericDeclarationExtractor.kt`
-- [ ] Complete Task 1: `CppTypeHelper`
-- [ ] Complete Task 2: `PackageExtractor`
-- [ ] Complete Task 3: `ImportExtractor` (includes + using directives)
+- [x] Complete Task 0: Rename existing `DeclarationExtractor.kt` → `GenericDeclarationExtractor.kt` — commit `7e678a1`
+- [ ] Complete Task 1: `CppTypeHelper` — **deferred**, will grow organically during Task 5 (matches C# pattern; no standalone `CSharpTypeHelperTest` exists)
+- [x] Complete Task 2: `PackageExtractor` — commits `88d5eff`, `1013230`, `6733139`, `fd14d62`, `c4dc5c4` (6 TDD cycles, pipeline bootstrapped via inline stubs for imports/declarations)
+- [ ] Complete Task 3: `ImportExtractor` (includes + using directives) — **next**
 - [ ] Complete Task 4: `DeclarationExtractor` (incl. out-of-class methods with merge-on-dup)
-- [ ] Complete Task 5: `UsedTypeExtractor` with local boundary-exclusion helper (14 categories)
-- [ ] Complete Task 6: `CppDependencyMapping` wiring + `CppDefinition` update
+- [ ] Complete Task 5: `UsedTypeExtractor` with local boundary-exclusion helper (14 categories); creates `CppTypeHelper` along the way
+- [ ] Complete Task 6: `CppDependencyMapping` wiring + `CppDefinition` update — **partially done**: mapping + override exist with stubs from Task 2; still need replacement of inline stubs as Tasks 3 and 4 land
 - [ ] Complete Task 7: `CppDependencyTest` with `@Nested` groups mirroring C#
 - [ ] Complete Task 8: dc-compare iteration against Catch2 v3 (interleaved with Tasks 3–5)
 - [ ] Complete Task 9: DC `CppAnalyzer` adapter + include-path normalization + legacy deletion + test updates
