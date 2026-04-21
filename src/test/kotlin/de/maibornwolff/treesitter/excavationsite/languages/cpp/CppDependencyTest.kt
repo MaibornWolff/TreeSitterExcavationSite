@@ -24,5 +24,21 @@ class CppDependencyTest {
             // Assert
             assertThat(result.packagePath).containsExactly("MyApp")
         }
+
+        @Test
+        fun `should split C++17 nested namespace into segments`() {
+            // Arrange
+            val code = """
+                namespace Outer::Middle::Inner {
+                    class Foo {};
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.packagePath).containsExactly("Outer", "Middle", "Inner")
+        }
     }
 }
