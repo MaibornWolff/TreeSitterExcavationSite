@@ -18,6 +18,9 @@ internal object DeclarationExtractor {
     private const val NAMESPACE_IDENTIFIER = "namespace_identifier"
     private const val NESTED_NAMESPACE_SPECIFIER = "nested_namespace_specifier"
     private const val NAMESPACE_SEPARATOR = "::"
+    private const val FUNCTION_DEFINITION = "function_definition"
+    private const val FUNCTION_DECLARATOR = "function_declarator"
+    private const val QUALIFIED_IDENTIFIER = "qualified_identifier"
 
     private val DECLARATION_NODE_TYPES = setOf(CLASS_SPECIFIER, STRUCT_SPECIFIER, UNION_SPECIFIER, ENUM_SPECIFIER)
 
@@ -27,7 +30,46 @@ internal object DeclarationExtractor {
         val nameByStartByte = allDeclarationNodes.associate { node ->
             node.startByte to TreeTraversal.findFirstChildTextByType(node, sourceCode, TYPE_IDENTIFIER)
         }
-        return allDeclarationNodes.mapNotNull { toDeclaration(it, sourceCode, nameByStartByte) }
+        val explicit = allDeclarationNodes.mapNotNull { toDeclaration(it, sourceCode, nameByStartByte) }
+        val outOfClass = extractOutOfClassDeclarations(rootNode, sourceCode)
+        return mergeDeclarations(explicit + outOfClass)
+    }
+
+    private fun extractOutOfClassDeclarations(rootNode: TSNode, sourceCode: String): List<Declaration> = TreeTraversal
+        .findAllDescendantsOfType(rootNode, FUNCTION_DEFINITION)
+        .mapNotNull { toOutOfClassDeclaration(it, sourceCode) }
+
+    private fun toOutOfClassDeclaration(functionDef: TSNode, sourceCode: String): Declaration? {
+        val qualifiedDeclarator = findQualifiedDeclarator(functionDef) ?: return null
+        val segments = TreeTraversal
+            .getNodeText(qualifiedDeclarator, sourceCode)
+            .split(NAMESPACE_SEPARATOR)
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        if (segments.size < 2) return null
+        val className = segments[segments.size - 2]
+        val classPathPrefix = segments.dropLast(2)
+        return Declaration(
+            name = className,
+            type = DeclarationType.CLASS,
+            usedTypes = emptySet(),
+            parentPath = findNamespacePath(functionDef, sourceCode) + classPathPrefix
+        )
+    }
+
+    private fun findQualifiedDeclarator(functionDef: TSNode): TSNode? {
+        val fnDeclarator = functionDef.children().firstOrNull { it.type == FUNCTION_DECLARATOR } ?: return null
+        return fnDeclarator.children().firstOrNull { it.type == QUALIFIED_IDENTIFIER }
+    }
+
+    private fun mergeDeclarations(declarations: List<Declaration>): List<Declaration> {
+        val merged = linkedMapOf<Pair<List<String>, String>, Declaration>()
+        for (decl in declarations) {
+            val key = decl.parentPath to decl.name
+            val existing = merged[key]
+            merged[key] = if (existing == null) decl else existing.copy(usedTypes = existing.usedTypes + decl.usedTypes)
+        }
+        return merged.values.toList()
     }
 
     private fun toDeclaration(node: TSNode, sourceCode: String, nameByStartByte: Map<Int, String?>): Declaration? {

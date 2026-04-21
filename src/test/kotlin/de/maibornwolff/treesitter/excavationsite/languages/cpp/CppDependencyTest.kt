@@ -578,5 +578,26 @@ class CppDependencyTest {
                 )
             )
         }
+
+        @Test
+        fun `should emit synthetic declaration for out-of-class method definition`() {
+            // Arrange
+            val code = """
+                void Foo::bar() {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(
+                    name = "Foo",
+                    type = DeclarationType.CLASS,
+                    usedTypes = emptySet(),
+                    parentPath = emptyList()
+                )
+            )
+        }
     }
 }
