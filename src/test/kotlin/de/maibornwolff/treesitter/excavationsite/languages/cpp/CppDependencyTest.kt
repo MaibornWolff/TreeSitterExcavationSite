@@ -26,6 +26,24 @@ class CppDependencyTest {
         }
 
         @Test
+        fun `should use outermost namespace when physically nested`() {
+            // Arrange
+            val code = """
+                namespace Outer {
+                    namespace Inner {
+                        class Foo {};
+                    }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.packagePath).containsExactly("Outer")
+        }
+
+        @Test
         fun `should split C++17 nested namespace into segments`() {
             // Arrange
             val code = """
