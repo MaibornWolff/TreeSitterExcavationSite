@@ -2,6 +2,8 @@ package de.maibornwolff.treesitter.excavationsite.languages.cpp
 
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
+import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
+import de.maibornwolff.treesitter.excavationsite.shared.domain.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportDeclaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportKind
 import org.assertj.core.api.Assertions.assertThat
@@ -312,6 +314,23 @@ class CppDependencyTest {
                     ImportDeclaration(path = listOf("A", "B", "C"), isWildcard = true, kind = ImportKind.STANDARD)
                 )
             }
+        }
+    }
+
+    @Nested
+    inner class DeclarationExtraction {
+        @Test
+        fun `should extract single class_specifier as CLASS declaration`() {
+            // Arrange
+            val code = "class Foo {};"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(name = "Foo", type = DeclarationType.CLASS, usedTypes = emptySet(), parentPath = emptyList())
+            )
         }
     }
 }
