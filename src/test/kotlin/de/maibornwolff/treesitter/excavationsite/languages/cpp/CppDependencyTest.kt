@@ -736,6 +736,23 @@ class CppDependencyTest {
                     UsedType(name = "Other")
                 )
             }
+
+            @Test
+            fun `should extract trailing return type`() {
+                // Arrange
+                val code = """
+                    class Service {
+                        auto doWork() -> Foo {}
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val svc = result.declarations.single { it.name == "Service" }
+                assertThat(svc.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
         }
     }
 }
