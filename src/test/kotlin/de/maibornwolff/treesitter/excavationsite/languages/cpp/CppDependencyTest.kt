@@ -346,5 +346,19 @@ class CppDependencyTest {
                 Declaration(name = "Bar", type = DeclarationType.CLASS, usedTypes = emptySet(), parentPath = emptyList())
             )
         }
+
+        @Test
+        fun `should extract union_specifier as CLASS declaration`() {
+            // Arrange
+            val code = "union Variant {};"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(name = "Variant", type = DeclarationType.CLASS, usedTypes = emptySet(), parentPath = emptyList())
+            )
+        }
     }
 }

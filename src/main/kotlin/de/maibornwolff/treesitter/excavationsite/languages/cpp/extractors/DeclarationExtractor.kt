@@ -8,9 +8,10 @@ import org.treesitter.TSNode
 internal object DeclarationExtractor {
     private const val CLASS_SPECIFIER = "class_specifier"
     private const val STRUCT_SPECIFIER = "struct_specifier"
+    private const val UNION_SPECIFIER = "union_specifier"
     private const val TYPE_IDENTIFIER = "type_identifier"
 
-    private val DECLARATION_NODE_TYPES = setOf(CLASS_SPECIFIER, STRUCT_SPECIFIER)
+    private val DECLARATION_NODE_TYPES = setOf(CLASS_SPECIFIER, STRUCT_SPECIFIER, UNION_SPECIFIER)
 
     fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> = TreeTraversal
         .findAllDescendantsOfType(rootNode, *DECLARATION_NODE_TYPES.toTypedArray())
