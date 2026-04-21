@@ -14,6 +14,7 @@ internal object ImportExtractor {
     private const val IDENTIFIER = "identifier"
     private const val QUALIFIED_IDENTIFIER = "qualified_identifier"
     private const val NAMESPACE_KEYWORD = "namespace"
+    private const val NAMESPACE_SEPARATOR = "::"
     private const val PATH_SEPARATOR = "/"
 
     fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
@@ -38,7 +39,7 @@ internal object ImportExtractor {
         if (!hasNamespaceKeyword) return null
         val nameText = TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER, QUALIFIED_IDENTIFIER)
             ?: return null
-        return ImportDeclaration(path = listOf(nameText), isWildcard = true)
+        return ImportDeclaration(path = nameText.split(NAMESPACE_SEPARATOR), isWildcard = true)
     }
 
     private fun stripPathDelimiters(raw: String): String = raw.trim('<', '>', '"')

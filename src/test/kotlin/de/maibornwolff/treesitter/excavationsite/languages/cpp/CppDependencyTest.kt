@@ -200,6 +200,22 @@ class CppDependencyTest {
                     ImportDeclaration(path = listOf("std"), isWildcard = true, kind = ImportKind.STANDARD)
                 )
             }
+
+            @Test
+            fun `should split using namespace qualified path on double colon`() {
+                // Arrange
+                val code = """
+                    using namespace A::B::C;
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(path = listOf("A", "B", "C"), isWildcard = true, kind = ImportKind.STANDARD)
+                )
+            }
         }
     }
 }
