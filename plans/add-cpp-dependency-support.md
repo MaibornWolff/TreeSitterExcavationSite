@@ -15,7 +15,7 @@ dc_branch: feat/cpp-dependency-integration
 | 1. `CppTypeHelper` | ⏸ deferred — grows in Task 5 | — |
 | 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
-| 4. `DeclarationExtractor` | ⏳ pending | — |
+| 4. `DeclarationExtractor` | ▶ in progress (4/16 cycles) | `db43ebf` → `0cea9e6` |
 | 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ⏳ pending | — |
 | 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
 | 7. Test consolidation | ⏳ pending | — |
@@ -420,7 +420,30 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
 - [ ] Complete Task 1: `CppTypeHelper` — **deferred**, will grow organically during Task 5 (matches C# pattern; no standalone `CSharpTypeHelperTest` exists)
 - [x] Complete Task 2: `PackageExtractor` — commits `88d5eff`, `1013230`, `6733139`, `fd14d62`, `c4dc5c4` (6 TDD cycles, pipeline bootstrapped via inline stubs for imports/declarations)
 - [x] Complete Task 3: `ImportExtractor` (includes + using directives) — commits `1a825e9` → `7f27773` (13 cycles: domain model, docs, 4 include forms, 7 using-directive forms)
-- [ ] Complete Task 4: `DeclarationExtractor` (incl. out-of-class methods with merge-on-dup) — **next**
+- [ ] Complete Task 4: `DeclarationExtractor` (incl. out-of-class methods with merge-on-dup) — **in progress, 4/16 cycles done**
+  - [x] 1. Single `class_specifier` → CLASS — commit `db43ebf`
+  - [x] 2. `struct_specifier` → CLASS — commit `cd69b52`
+  - [x] 3. `union_specifier` → CLASS — commit `f66695c`
+  - [x] 4. `enum_specifier` / `enum class` / `enum struct` → ENUM — commit `0cea9e6`
+  - [ ] 5. Anonymous declaration → skipped — **next**
+  - [ ] 6. Forward declaration (no body) → skipped
+  - [ ] 7. Single namespace wrapping a class → `parentPath=[namespace]`
+  - [ ] 8. Nested namespace (`A::B::C`) → `parentPath=[A,B,C]`
+  - [ ] 9. Physically nested namespaces → aggregated chain
+  - [ ] 10. Nested class inside class → `parentPath=[namespace..., OuterClass]`
+  - [ ] 11. `extern "C"` transparent pass-through
+  - [ ] 12. Preprocessor-wrapped declaration (mirrors C# fix `623fa5e`)
+  - [ ] 13. Out-of-class method `void A::B::bar() {}` → synthetic `Declaration(name=B, parentPath=[A])`
+  - [ ] 14. Out-of-class overloads — merge-on-duplicate
+  - [ ] 15. Namespace alias (`namespace Short = Long;`) → no Declaration emitted
+  - [ ] 16. C++20 concept definition → no Declaration emitted
+
+  **Resume notes for next session:**
+  - Current skeleton in `languages/cpp/extractors/DeclarationExtractor.kt` — handles `class_specifier`/`struct_specifier`/`union_specifier`/`enum_specifier` with `type_identifier` name. `usedTypes = emptySet()` as a placeholder until Task 5 adds `UsedTypeExtractor`.
+  - No parent-path logic yet — cycles 7+ require `findNamespacePath` + `findParentClassPath` ancestor walks (mirror C# pattern in `csharp/extractors/DeclarationExtractor.kt`).
+  - Cycle 5 should produce a failing test for `class {}` (anonymous). Current code already does `?: return null` when no `type_identifier` found, so the test may be green on first write — verify empirically.
+  - Cycle 6 (forward declaration `class Foo;`) — current code likely already skips these because tree-sitter-cpp still parses the stub as a `class_specifier` child inside a `declaration` node, but without a `field_declaration_list` body. Need to decide: explicitly require body child, or rely on the stub not having a `type_identifier` (it does have one). Plan says "skip if no body child" — implement explicitly.
+  - Cycles 13–14 (out-of-class methods) are the biggest jump — require a separate `findAllDescendantsOfType(root, "function_definition")` pass and `qualified_identifier`-declarator parsing, plus merge-on-dup. Handle last.
 - [ ] Complete Task 5: `UsedTypeExtractor` with local boundary-exclusion helper (14 categories); creates `CppTypeHelper` along the way
 - [ ] Complete Task 6: `CppDependencyMapping` wiring + `CppDefinition` update — **partially done**: mapping + override exist with stubs from Task 2; still need replacement of inline stubs as Tasks 3 and 4 land
 - [ ] Complete Task 7: `CppDependencyTest` with `@Nested` groups mirroring C#
