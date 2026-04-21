@@ -713,5 +713,29 @@ class CppDependencyTest {
                 assertThat(child.usedTypes).containsExactly(UsedType(name = "Base"))
             }
         }
+
+        @Nested
+        inner class MethodReturnAndParameterTypes {
+            @Test
+            fun `should extract method return type and parameter types`() {
+                // Arrange
+                val code = """
+                    class Service {
+                        Result doWork(Input arg, Other o) {}
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val svc = result.declarations.single { it.name == "Service" }
+                assertThat(svc.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Result"),
+                    UsedType(name = "Input"),
+                    UsedType(name = "Other")
+                )
+            }
+        }
     }
 }
