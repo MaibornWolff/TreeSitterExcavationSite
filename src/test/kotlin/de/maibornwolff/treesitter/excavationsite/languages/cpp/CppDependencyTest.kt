@@ -449,5 +449,28 @@ class CppDependencyTest {
                 )
             )
         }
+
+        @Test
+        fun `should split C++17 nested namespace into parentPath segments`() {
+            // Arrange
+            val code = """
+                namespace Outer::Middle::Inner {
+                    class Foo {};
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(
+                    name = "Foo",
+                    type = DeclarationType.CLASS,
+                    usedTypes = emptySet(),
+                    parentPath = listOf("Outer", "Middle", "Inner")
+                )
+            )
+        }
     }
 }
