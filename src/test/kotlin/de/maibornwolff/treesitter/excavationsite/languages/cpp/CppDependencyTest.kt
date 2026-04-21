@@ -145,6 +145,24 @@ class CppDependencyTest {
             }
 
             @Test
+            fun `should extract include wrapped in ifdef preprocessor directive`() {
+                // Arrange
+                val code = """
+                    #ifdef ENABLE_FEATURE
+                    #include "feature.h"
+                    #endif
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(path = listOf("feature.h"), isWildcard = false, kind = ImportKind.INCLUDE)
+                )
+            }
+
+            @Test
             fun `should extract multiple includes in source order`() {
                 // Arrange
                 val code = """
