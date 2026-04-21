@@ -202,6 +202,29 @@ class CppDependencyTest {
             }
 
             @Test
+            fun `should populate namespacePath for using directive inside a namespace`() {
+                // Arrange
+                val code = """
+                    namespace Outer::Middle {
+                        using namespace Utils;
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(
+                        path = listOf("Utils"),
+                        isWildcard = true,
+                        namespacePath = listOf("Outer", "Middle"),
+                        kind = ImportKind.STANDARD
+                    )
+                )
+            }
+
+            @Test
             fun `should extract qualified using enum declaration as non-wildcard import`() {
                 // Arrange
                 val code = """
