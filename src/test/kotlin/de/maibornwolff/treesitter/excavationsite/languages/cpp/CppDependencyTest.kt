@@ -127,6 +127,22 @@ class CppDependencyTest {
                     ImportDeclaration(path = listOf("vector"), isWildcard = false, kind = ImportKind.INCLUDE)
                 )
             }
+
+            @Test
+            fun `should extract quoted include as INCLUDE-kind import`() {
+                // Arrange
+                val code = """
+                    #include "my/header.h"
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(path = listOf("my", "header.h"), isWildcard = false, kind = ImportKind.INCLUDE)
+                )
+            }
         }
     }
 }
