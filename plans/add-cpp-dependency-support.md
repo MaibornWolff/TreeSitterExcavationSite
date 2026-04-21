@@ -16,11 +16,11 @@ dc_branch: feat/cpp-dependency-integration
 | 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
 | 4. `DeclarationExtractor` | ✅ done (16/16 cycles) | `db43ebf` → (cycle 16) |
-| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ⏳ pending | — |
+| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (2/14 cats) | `7d5bc19` → `9b2847f` |
 | 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
 | 7. Test consolidation | ⏳ pending | — |
-| 8. dc-compare iteration on Catch2 | ⏳ interleaved with 3–5 | — |
-| 9. DC adapter (`feat/cpp-dependency-integration`) | ⏳ pending | — |
+| 8. dc-compare iteration on Catch2 | ▶ round 1 done (structure OK, deps blocked on Task 5) | `7288351` (DC), local composite build |
+| 9. DC adapter (`feat/cpp-dependency-integration`) | 🔶 partial — analyzer rewrite committed, legacy files still on disk | DC: `7288351` |
 | 10. Release + integrate | ⏳ pending | — |
 
 ## Goal
@@ -444,12 +444,50 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
   - Cycle 5 should produce a failing test for `class {}` (anonymous). Current code already does `?: return null` when no `type_identifier` found, so the test may be green on first write — verify empirically.
   - Cycle 6 (forward declaration `class Foo;`) — current code likely already skips these because tree-sitter-cpp still parses the stub as a `class_specifier` child inside a `declaration` node, but without a `field_declaration_list` body. Need to decide: explicitly require body child, or rely on the stub not having a `type_identifier` (it does have one). Plan says "skip if no body child" — implement explicitly.
   - Cycles 13–14 (out-of-class methods) are the biggest jump — require a separate `findAllDescendantsOfType(root, "function_definition")` pass and `qualified_identifier`-declarator parsing, plus merge-on-dup. Handle last.
-- [ ] Complete Task 5: `UsedTypeExtractor` with local boundary-exclusion helper (14 categories); creates `CppTypeHelper` along the way
+- [ ] Complete Task 5: `UsedTypeExtractor` with local boundary-exclusion helper (14 categories); creates `CppTypeHelper` along the way — **in progress, 2/14 categories done**
+  - [x] 1. Inheritance (incl. template specialization as base) — commits `7d5bc19`, `34990ab`
+  - [x] 2. Method return + parameter types + trailing return type — commits `37570c4`, `9b2847f`
+  - [ ] 3. Constructor initializer types — **next**
+  - [ ] 4. Typedef types
+  - [ ] 5. Alias declaration types
+  - [ ] 6. Template constraint types (C++20 requires)
+  - [ ] 7. Field types
+  - [ ] 8. Variable types
+  - [ ] 9. Cast types (incl. static_cast/dynamic_cast/reinterpret_cast/const_cast)
+  - [ ] 10. New expression types
+  - [ ] 11. Call expression types
+  - [ ] 12. Friend declaration types
+  - [ ] 13. In-class using directive types
+  - [ ] 14. Type operands (sizeof/noexcept/alignof/typeid)
+  - [ ] Boundary exclusion helper (category 15)
+  - [ ] `extractFromFunctionBody` secondary entry point (category 16)
+  - [ ] Pin concatenation order (category 17)
+
+  **Resume notes for next session:**
+  - `UsedTypeExtractor` + `CppTypeHelper` scaffolding lives in `languages/cpp/extractors/`. `DeclarationExtractor` calls `UsedTypeExtractor.extract(declarationNode, sourceCode)` (cycle 1 wired it in place of the earlier `emptySet()` stub).
+  - `CppTypeHelper.isTypeNode` currently recognizes `type_identifier` + `template_type` only. `primitive_type` and `sized_type_specifier` are intentionally out until they matter for a category (method param types with primitives are skipped for now — DC legacy does the same for their own primitive-stripping logic).
+  - `TYPE_DESCRIPTOR` unwrap pattern is already in two places (`extractTrailingReturnType` and `extractGenericArgument`). Future categories that reference `type_descriptor` should share a helper if a third use appears.
+  - Out-of-class method declarations currently get `usedTypes = emptySet()` because `extractOutOfClassDeclarations` does not call `UsedTypeExtractor` yet. Category 16 (`extractFromFunctionBody`) will change that — scope the walk to the function's params + return + body.
+  - `extractOutOfClassDeclarations` passes individual declarations through `UsedTypeExtractor.extract(declarationNode, ...)` implicitly for *explicit* class/struct decls; synthetic decls from out-of-class methods bypass it and will need category 16 routing.
+  - Boundary exclusion: needs a local private helper in `UsedTypeExtractor` that recurses like `TreeTraversal.findAllDescendantsGroupedByType` but stops at nested `class_specifier`/`struct_specifier`/`union_specifier`/`enum_specifier` — so types referenced *inside* a nested class body don't leak upward into the outer class's `usedTypes`. Keep the helper local until a second TSE caller appears.
+
 - [ ] Complete Task 6: `CppDependencyMapping` wiring + `CppDefinition` update — **partially done**: mapping + override exist with stubs from Task 2; still need replacement of inline stubs as Tasks 3 and 4 land
 - [ ] Complete Task 7: `CppDependencyTest` with `@Nested` groups mirroring C#
 - [ ] Complete Task 8: dc-compare iteration against Catch2 v3 (interleaved with Tasks 3–5)
-- [ ] Complete Task 9: DC `CppAnalyzer` adapter + include-path normalization + legacy deletion + test updates
+  - **Round 1 (2026-04-21)**: ran composite build against `../Catch2` (depth-1 clone). Output in `../dc-compare/main/` (golden) and `../dc-compare/feature/`. Structural parity confirmed after adding physical-path prefix for file-scope decls in the DC adapter (`fullyQualify` equivalent). Remaining diffs: +150 feature-only nodes (files DC legacy errored on — accepted improvement), ~20 main-only nodes (DC legacy namespace-loss duplicates — accepted improvement), ~5 genuine gaps (template-specialized struct/class names like `Catch.StringMaker<std::string>` and typedef-like decls — will re-check after Task 5 lands alias/typedef + richer template_type handling). Dependencies empty on C++ nodes because `usedTypes` was empty at round time — rerun after Task 5 to unblock dep/cycle comparison.
+- [ ] Complete Task 9: DC `CppAnalyzer` adapter + include-path normalization + legacy deletion + test updates — **partially done**: adapter rewritten on DC `feat/cpp-dependency-integration` (commit `7288351`); legacy `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `CppUtils.kt`, `CppQueryFactory.kt`, `FunctionArgumentParser.kt`, `TypeExtractionService.kt` still on disk per user request. Composite-build wiring lives in the DC working tree uncommitted (`analysis/settings.gradle.kts` + `analysis/build.gradle.kts`) — revert before DC merge.
 - [ ] Complete Task 10: Release TSE, update DC JitPack dep, merge DC
+
+## How to resume the composite build + dc-compare loop
+
+1. From TSE: `./gradlew ktlintFormat build` — confirm green.
+2. DC working tree should already contain the composite-build overrides:
+   - `DependaCharta/analysis/settings.gradle.kts` ends with `includeBuild("../../TreeSitterExcavationSite")`
+   - `DependaCharta/analysis/build.gradle.kts` uses `implementation("de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite")` instead of the JitPack coordinate
+   If missing (after a checkout or cleanup), restore them manually.
+3. `cd ../DependaCharta/analysis && ./gradlew fatJar && java -jar build/libs/dependacharta.jar -d ../../Catch2 -o ../../dc-compare/feature -f analysis`
+4. Compare via the `/dc-compare` skill or directly: `node` script in `plans/add-cpp-dependency-support.md` ecosystem — normalized JSON diff in `../dc-compare/{main,feature}/analysis.cg.json.normalized.json`.
+5. Golden standard at `../dc-compare/main/` is valid for Catch2 v3 @ devel (depth-1 clone 2026-04-21). Regenerate with `--regen-main` semantics if Catch2 is re-cloned.
 
 ## Review Feedback Addressed
 
