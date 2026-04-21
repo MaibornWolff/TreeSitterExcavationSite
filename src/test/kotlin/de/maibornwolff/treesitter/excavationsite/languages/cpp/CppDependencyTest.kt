@@ -697,6 +697,21 @@ class CppDependencyTest {
                 val child = result.declarations.single { it.name == "Child" }
                 assertThat(child.usedTypes).containsExactly(UsedType(name = "Parent"))
             }
+
+            @Test
+            fun `should extract template specialization as base class`() {
+                // Arrange
+                val code = """
+                    class Child : public Base<int> {};
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val child = result.declarations.single { it.name == "Child" }
+                assertThat(child.usedTypes).containsExactly(UsedType(name = "Base"))
+            }
         }
     }
 }
