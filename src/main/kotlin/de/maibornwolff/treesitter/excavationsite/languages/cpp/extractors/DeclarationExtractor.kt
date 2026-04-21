@@ -21,19 +21,23 @@ internal object DeclarationExtractor {
 
     private val DECLARATION_NODE_TYPES = setOf(CLASS_SPECIFIER, STRUCT_SPECIFIER, UNION_SPECIFIER, ENUM_SPECIFIER)
 
-    fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> = TreeTraversal
-        .findAllDescendantsOfType(rootNode, *DECLARATION_NODE_TYPES.toTypedArray())
-        .mapNotNull { toDeclaration(it, sourceCode) }
+    fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> {
+        val allDeclarationNodes = TreeTraversal
+            .findAllDescendantsOfType(rootNode, *DECLARATION_NODE_TYPES.toTypedArray())
+        val nameByStartByte = allDeclarationNodes.associate { node ->
+            node.startByte to TreeTraversal.findFirstChildTextByType(node, sourceCode, TYPE_IDENTIFIER)
+        }
+        return allDeclarationNodes.mapNotNull { toDeclaration(it, sourceCode, nameByStartByte) }
+    }
 
-    private fun toDeclaration(node: TSNode, sourceCode: String): Declaration? {
+    private fun toDeclaration(node: TSNode, sourceCode: String, nameByStartByte: Map<Int, String?>): Declaration? {
         if (!hasBody(node)) return null
-        val name = TreeTraversal.findFirstChildTextByType(node, sourceCode, TYPE_IDENTIFIER)
-            ?: return null
+        val name = nameByStartByte[node.startByte] ?: return null
         return Declaration(
             name = name,
             type = mapType(node.type),
             usedTypes = emptySet(),
-            parentPath = findNamespacePath(node, sourceCode)
+            parentPath = findNamespacePath(node, sourceCode) + findParentClassPath(node, nameByStartByte)
         )
     }
 
@@ -52,6 +56,21 @@ internal object DeclarationExtractor {
             current = current.parent
         }
         return segments.flatten()
+    }
+
+    private fun findParentClassPath(node: TSNode, nameByStartByte: Map<Int, String?>): List<String> {
+        val parents = mutableListOf<String>()
+        var current = node.parent
+        while (current != null && !current.isNull) {
+            if (current.type in DECLARATION_NODE_TYPES) {
+                val parentName = nameByStartByte[current.startByte]
+                if (!parentName.isNullOrBlank()) {
+                    parents.add(0, parentName)
+                }
+            }
+            current = current.parent
+        }
+        return parents
     }
 
     private fun extractNamespaceSegments(namespaceNode: TSNode, sourceCode: String): List<String> {

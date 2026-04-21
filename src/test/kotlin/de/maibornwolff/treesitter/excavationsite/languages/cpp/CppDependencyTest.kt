@@ -497,5 +497,36 @@ class CppDependencyTest {
                 )
             )
         }
+
+        @Test
+        fun `should set parentPath for nested class inside outer class and namespace`() {
+            // Arrange
+            val code = """
+                namespace MyApp {
+                    class Outer {
+                        class Inner {};
+                    };
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.declarations).containsExactly(
+                Declaration(
+                    name = "Outer",
+                    type = DeclarationType.CLASS,
+                    usedTypes = emptySet(),
+                    parentPath = listOf("MyApp")
+                ),
+                Declaration(
+                    name = "Inner",
+                    type = DeclarationType.CLASS,
+                    usedTypes = emptySet(),
+                    parentPath = listOf("MyApp", "Outer")
+                )
+            )
+        }
     }
 }
