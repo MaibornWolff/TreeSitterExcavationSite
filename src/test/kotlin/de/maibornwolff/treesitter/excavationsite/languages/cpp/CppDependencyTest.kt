@@ -202,6 +202,25 @@ class CppDependencyTest {
             }
 
             @Test
+            fun `should skip in-class using enum directive`() {
+                // Arrange
+                val code = """
+                    enum class Color { RED, GREEN, BLUE };
+
+                    class Widget {
+                    public:
+                        using enum Color;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).isEmpty()
+            }
+
+            @Test
             fun `should skip inheriting constructor using directive inside class body`() {
                 // Arrange
                 val code = """
