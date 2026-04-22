@@ -52,7 +52,7 @@ internal object DeclarationExtractor {
         return Declaration(
             name = className,
             type = DeclarationType.CLASS,
-            usedTypes = emptySet(),
+            usedTypes = UsedTypeExtractor.extract(functionDef, sourceCode),
             parentPath = findNamespacePath(functionDef, sourceCode) + classPathPrefix
         )
     }

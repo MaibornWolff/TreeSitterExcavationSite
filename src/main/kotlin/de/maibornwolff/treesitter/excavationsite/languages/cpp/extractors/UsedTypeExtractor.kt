@@ -273,6 +273,9 @@ internal object UsedTypeExtractor {
 
     private fun groupDescendantsStoppingAtNestedDeclarations(root: TSNode, targetTypes: Set<String>): Map<String, List<TSNode>> {
         val buckets = mutableMapOf<String, MutableList<TSNode>>()
+        if (!root.isNull && root.type in targetTypes) {
+            buckets.getOrPut(root.type) { mutableListOf() }.add(root)
+        }
         val stack = ArrayDeque<TSNode>()
         root.children().forEach(stack::addLast)
         while (stack.isNotEmpty()) {

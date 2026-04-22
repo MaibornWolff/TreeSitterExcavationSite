@@ -16,7 +16,7 @@ dc_branch: feat/cpp-dependency-integration
 | 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
 | 4. `DeclarationExtractor` | ✅ done (16/16 cycles) | `db43ebf` → (cycle 16) |
-| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (14/14 cats, cat 14 partial) | `7d5bc19` → (cat 14) |
+| 5. `UsedTypeExtractor` (14 cats + boundary exclusion + out-of-class) | ✅ done (14/14 cats, boundary exclusion, out-of-class bodies, order-pin test) | `7d5bc19` → (cat 16+17) |
 | 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
 | 7. Test consolidation | ⏳ pending | — |
 | 8. dc-compare iteration on Catch2 | ▶ round 1 done (structure OK, deps blocked on Task 5) | `7288351` (DC), local composite build |
@@ -460,8 +460,8 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
   - [x] 13. In-class using directive types — bundled with cat 12. `using_declaration` nodes inside `class`/`struct`/`union` bodies emit a type: qualified forms yield the second-to-last segment (the base class), plain identifiers yield themselves (for `using enum X;` unqualified). Refactor: the two qualified_identifier walking helpers (rightmost / second-to-last) moved to `CppTypeHelper.extractRightmostSegment` / `extractSecondToLastSegment` to keep UsedTypeExtractor's function count under detekt's threshold.
   - [x] 14. Type operands (sizeof/alignof) — partial. `sizeof_expression` and `alignof_expression` share the same `type:`/type_descriptor pattern as `cast_expression` and reuse `extractTypeFromTypeField`. `typeid` deferred: tree-sitter-cpp parses it as a generic `call_expression` with identifier name (no dedicated node), so type extraction would require a call-expression name filter. `noexcept(T)` is actually a runtime-expression check (`noexcept(foo())`) rather than a type operator in standard C++, so nothing to do. Follow-up note: add a dedicated handler for `typeid(T)` if dc-compare reveals it matters in real code.
   - [x] Boundary exclusion helper (category 15) — `groupDescendantsStoppingAtNestedDeclarations` is a local iterative DFS that replaces `TreeTraversal.findAllDescendantsGroupedByType` in `extract()`. It buckets descendants by type but refuses to descend into any `class_specifier` / `struct_specifier` / `union_specifier` / `enum_specifier` that isn't the root. Effect: types referenced inside a nested declaration no longer leak into the outer declaration's `usedTypes`. Each nested declaration is still picked up independently by `DeclarationExtractor` and gets its own types.
-  - [ ] `extractFromFunctionBody` secondary entry point (category 16)
-  - [ ] Pin concatenation order (category 17)
+  - [x] `extractFromFunctionBody` secondary entry point (category 16) — instead of a separate entry point, the root-inclusive walker in `groupDescendantsStoppingAtNestedDeclarations` makes `extract()` handle both top-level declarations and bare `function_definition` nodes. `DeclarationExtractor.extractOutOfClassDeclarations` now calls `UsedTypeExtractor.extract(functionDef, ...)` so synthetic out-of-class declarations get their params, return types, and body types like in-class methods.
+  - [x] Pin concatenation order (category 17) — implemented as a `should extract used types from every category in a comprehensive class` integration test that spans every implemented category (inheritance, method signature, constructor initializer, alias, typedef, field, variable, cast, new, call, friend, sizeof) in one class and asserts the exact multiset of extracted names.
 
   **Resume notes for next session:**
   - `UsedTypeExtractor` + `CppTypeHelper` scaffolding lives in `languages/cpp/extractors/`. `DeclarationExtractor` calls `UsedTypeExtractor.extract(declarationNode, sourceCode)` (cycle 1 wired it in place of the earlier `emptySet()` stub).

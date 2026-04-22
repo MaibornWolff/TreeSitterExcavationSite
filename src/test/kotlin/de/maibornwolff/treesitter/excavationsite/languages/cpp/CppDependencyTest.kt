@@ -1326,6 +1326,63 @@ class CppDependencyTest {
         }
 
         @Nested
+        inner class OutOfClassMethodBodies {
+            @Test
+            fun `should extract parameter types from out-of-class method`() {
+                // Arrange
+                val code = """
+                    void Container::doWork(Foo f, Bar b) {}
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "Bar")
+                )
+            }
+
+            @Test
+            fun `should extract local variable types from out-of-class method body`() {
+                // Arrange
+                val code = """
+                    void Container::doWork() {
+                        Foo local;
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+
+            @Test
+            fun `should merge used types across overloaded out-of-class methods`() {
+                // Arrange
+                val code = """
+                    void Container::doWork(Foo f) {}
+                    void Container::doWork(Bar b) {}
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "Bar")
+                )
+            }
+        }
+
+        @Nested
         inner class BoundaryExclusion {
             @Test
             fun `should not leak nested class types into outer used types`() {
@@ -1348,6 +1405,50 @@ class CppDependencyTest {
                 assertThat(outer.usedTypes).containsExactly(UsedType(name = "Bar"))
                 assertThat(inner.usedTypes).containsExactly(UsedType(name = "Foo"))
             }
+        }
+
+        @Test
+        fun `should extract used types from every category in a comprehensive class`() {
+            // Arrange
+            val code = """
+                class Widget : public Base {
+                    using BaseAlias = Wrapped;
+                    typedef Counter Count;
+                    Field field_;
+                    friend class Friend;
+
+                    Widget() : field_{Init::Value} {}
+
+                    Result doWork(Param p) {
+                        Local local;
+                        auto casted = static_cast<Casted>(local);
+                        auto created = new Created();
+                        Namespace::helper();
+                        auto s = sizeof(Sized*);
+                    }
+                };
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            val widget = result.declarations.single { it.name == "Widget" }
+            assertThat(widget.usedTypes.map { it.name }.toSet()).containsExactlyInAnyOrder(
+                "Base",
+                "Wrapped",
+                "Counter",
+                "Field",
+                "Friend",
+                "Result",
+                "Param",
+                "Local",
+                "Casted",
+                "Created",
+                "helper",
+                "Sized",
+                "Init"
+            )
         }
     }
 }
