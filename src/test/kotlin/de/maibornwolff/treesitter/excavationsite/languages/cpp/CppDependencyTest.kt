@@ -921,5 +921,67 @@ class CppDependencyTest {
                 )
             }
         }
+
+        @Nested
+        inner class TemplateConstraints {
+            @Test
+            fun `should extract type from requires clause on template class`() {
+                // Arrange
+                val code = """
+                    template<typename T>
+                    requires Foo<T>
+                    class Container {};
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(name = "Foo", genericTypes = listOf(UsedType(name = "T")))
+                )
+            }
+
+            @Test
+            fun `should extract both sides of constraint conjunction`() {
+                // Arrange
+                val code = """
+                    template<typename T>
+                    requires Foo<T> && Bar<T>
+                    class Container {};
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo", genericTypes = listOf(UsedType(name = "T"))),
+                    UsedType(name = "Bar", genericTypes = listOf(UsedType(name = "T")))
+                )
+            }
+
+            @Test
+            fun `should extract both sides of constraint disjunction`() {
+                // Arrange
+                val code = """
+                    template<typename T>
+                    requires Foo<T> || Bar<T>
+                    class Container {};
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo", genericTypes = listOf(UsedType(name = "T"))),
+                    UsedType(name = "Bar", genericTypes = listOf(UsedType(name = "T")))
+                )
+            }
+        }
     }
 }

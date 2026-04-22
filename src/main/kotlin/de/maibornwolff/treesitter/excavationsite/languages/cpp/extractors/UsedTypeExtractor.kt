@@ -25,6 +25,13 @@ internal object UsedTypeExtractor {
     private const val TYPE_FIELD = "type"
     private const val TYPE_DEFINITION = "type_definition"
     private const val ALIAS_DECLARATION = "alias_declaration"
+    private const val TEMPLATE_DECLARATION = "template_declaration"
+    private const val REQUIRES_CLAUSE = "requires_clause"
+    private const val CONSTRAINT_FIELD = "constraint"
+    private const val CONSTRAINT_DISJUNCTION = "constraint_disjunction"
+    private const val CONSTRAINT_CONJUNCTION = "constraint_conjunction"
+    private const val LEFT_FIELD = "left"
+    private const val RIGHT_FIELD = "right"
 
     private val ALL_NODE_TYPES =
         setOf(BASE_CLASS_CLAUSE, FUNCTION_DEFINITION, FIELD_INITIALIZER_LIST, TYPE_DEFINITION, ALIAS_DECLARATION)
@@ -35,7 +42,8 @@ internal object UsedTypeExtractor {
         val methodTypes = extractMethodReturnAndParamTypes(buckets, sourceCode)
         val initializerTypes = extractConstructorInitializerTypes(buckets, sourceCode)
         val aliasTypes = extractTypeAliasTypes(buckets, sourceCode)
-        return (inheritance + methodTypes + initializerTypes + aliasTypes).toSet()
+        val constraintTypes = extractTemplateConstraintTypes(declaration, sourceCode)
+        return (inheritance + methodTypes + initializerTypes + aliasTypes + constraintTypes).toSet()
     }
 
     private fun extractInheritanceTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
@@ -126,6 +134,30 @@ internal object UsedTypeExtractor {
             typeField.takeIf { CppTypeHelper.isTypeNode(it) }
         } ?: return null
         return CppTypeHelper.extractType(unwrapped, sourceCode)
+    }
+
+    private fun extractTemplateConstraintTypes(declaration: TSNode, sourceCode: String): List<UsedType> {
+        val parent = declaration.parent
+        if (parent.isNull || parent.type != TEMPLATE_DECLARATION) return emptyList()
+        val requiresClause = parent.children().firstOrNull { it.type == REQUIRES_CLAUSE } ?: return emptyList()
+        val constraint = requiresClause.getChildByFieldName(CONSTRAINT_FIELD).takeIf { !it.isNull } ?: return emptyList()
+        return collectConstraintTypes(constraint, sourceCode)
+    }
+
+    private fun collectConstraintTypes(node: TSNode, sourceCode: String): List<UsedType> {
+        if (node.type == CONSTRAINT_DISJUNCTION || node.type == CONSTRAINT_CONJUNCTION) {
+            val left = node.getChildByFieldName(LEFT_FIELD).takeIf { !it.isNull }
+            val right = node.getChildByFieldName(RIGHT_FIELD).takeIf { !it.isNull }
+            return listOfNotNull(left, right).flatMap { collectConstraintTypes(it, sourceCode) }
+        }
+        if (CppTypeHelper.isTypeNode(node)) {
+            return listOfNotNull(CppTypeHelper.extractType(node, sourceCode))
+        }
+        return node
+            .namedChildren()
+            .filter { CppTypeHelper.isTypeNode(it) }
+            .mapNotNull { CppTypeHelper.extractType(it, sourceCode) }
+            .toList()
     }
 
     private fun extractInitializerTypeFromQualifiedIdentifier(qualifiedId: TSNode, sourceCode: String): UsedType? {
