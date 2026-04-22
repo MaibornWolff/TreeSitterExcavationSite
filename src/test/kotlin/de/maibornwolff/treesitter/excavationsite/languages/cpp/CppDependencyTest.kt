@@ -1226,5 +1226,62 @@ class CppDependencyTest {
                 assertThat(container.usedTypes).containsExactly(UsedType(name = "registerTest"))
             }
         }
+
+        @Nested
+        inner class FriendDeclarations {
+            @Test
+            fun `should extract friend class type`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        friend class Tester;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Tester"))
+            }
+
+            @Test
+            fun `should extract qualified friend class type`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        friend class Outer::Tester;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Tester"))
+            }
+        }
+
+        @Nested
+        inner class InClassUsingDirectives {
+            @Test
+            fun `should extract base class from using declaration inside class body`() {
+                // Arrange
+                val code = """
+                    class Derived : public Base {
+                        using Base::method;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val derived = result.declarations.single { it.name == "Derived" }
+                assertThat(derived.usedTypes).containsExactly(UsedType(name = "Base"))
+            }
+        }
     }
 }

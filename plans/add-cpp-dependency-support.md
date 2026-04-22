@@ -16,7 +16,7 @@ dc_branch: feat/cpp-dependency-integration
 | 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
 | 4. `DeclarationExtractor` | ✅ done (16/16 cycles) | `db43ebf` → (cycle 16) |
-| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (11/14 cats) | `7d5bc19` → (cat 10+11) |
+| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (13/14 cats) | `7d5bc19` → (cat 12+13) |
 | 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
 | 7. Test consolidation | ⏳ pending | — |
 | 8. dc-compare iteration on Catch2 | ▶ round 1 done (structure OK, deps blocked on Task 5) | `7288351` (DC), local composite build |
@@ -456,8 +456,8 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
   - [x] 9. Cast types (incl. static_cast/dynamic_cast/reinterpret_cast/const_cast) — `extractCastTypes` handles C-style `cast_expression` via `extractTypeFromTypeField`; the four explicit-cast forms are recognized as `call_expression` whose `function:` is a `template_function` with one of four fixed names, extracting from the `arguments` template_argument_list.
   - [x] 10. New expression types — bundled with cat 11. `new_expression` emits type via `extractTypeFromTypeField`. Pointer/ref declarators on the new-type are handled by CppTypeHelper's generic-argument unwrap.
   - [x] 11. Call expression types — bundled with cat 10. `extractInstantiationTypes` processes `call_expression`: template_function callees yield their template arguments (subsumes the explicit-cast handling from cat 9 — `EXPLICIT_CAST_NAMES` filter removed since generic template-function extraction catches static_cast/etc. by design); qualified_identifier callees yield the rightmost segment (matching DC's `extractTypeWithFoundNamespacesAsDependencies` behavior for static/method calls, even when that emits a function name rather than a class).
-  - [ ] 12. Friend declaration types
-  - [ ] 13. In-class using directive types
+  - [x] 12. Friend declaration types — bundled with cat 13. `friend_declaration` children are inspected; type_identifiers/template_types pass through `CppTypeHelper.extractType`, `qualified_identifier` yields its rightmost segment (matching DC's fallback behavior).
+  - [x] 13. In-class using directive types — bundled with cat 12. `using_declaration` nodes inside `class`/`struct`/`union` bodies emit a type: qualified forms yield the second-to-last segment (the base class), plain identifiers yield themselves (for `using enum X;` unqualified). Refactor: the two qualified_identifier walking helpers (rightmost / second-to-last) moved to `CppTypeHelper.extractRightmostSegment` / `extractSecondToLastSegment` to keep UsedTypeExtractor's function count under detekt's threshold.
   - [ ] 14. Type operands (sizeof/noexcept/alignof/typeid)
   - [ ] Boundary exclusion helper (category 15)
   - [ ] `extractFromFunctionBody` secondary entry point (category 16)

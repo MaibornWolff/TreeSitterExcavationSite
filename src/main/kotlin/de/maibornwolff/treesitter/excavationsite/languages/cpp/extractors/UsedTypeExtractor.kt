@@ -20,8 +20,6 @@ internal object UsedTypeExtractor {
     private const val INITIALIZER_LIST = "initializer_list"
     private const val QUALIFIED_IDENTIFIER = "qualified_identifier"
     private const val CALL_EXPRESSION = "call_expression"
-    private const val SCOPE_FIELD = "scope"
-    private const val NAME_FIELD = "name"
     private const val TYPE_FIELD = "type"
     private const val TYPE_DEFINITION = "type_definition"
     private const val ALIAS_DECLARATION = "alias_declaration"
@@ -40,6 +38,13 @@ internal object UsedTypeExtractor {
     private const val TEMPLATE_ARGUMENT_LIST = "template_argument_list"
     private const val ARGUMENTS_FIELD = "arguments"
     private const val FUNCTION_FIELD = "function"
+    private const val FRIEND_DECLARATION = "friend_declaration"
+    private const val USING_DECLARATION = "using_declaration"
+    private const val CLASS_SPECIFIER = "class_specifier"
+    private const val STRUCT_SPECIFIER = "struct_specifier"
+    private const val UNION_SPECIFIER = "union_specifier"
+    private const val IDENTIFIER = "identifier"
+    private const val TYPE_IDENTIFIER = "type_identifier"
 
     private val ALL_NODE_TYPES = setOf(
         BASE_CLASS_CLAUSE,
@@ -51,8 +56,12 @@ internal object UsedTypeExtractor {
         DECLARATION,
         CAST_EXPRESSION,
         CALL_EXPRESSION,
-        NEW_EXPRESSION
+        NEW_EXPRESSION,
+        FRIEND_DECLARATION,
+        USING_DECLARATION
     )
+
+    private val CLASS_BODY_TYPES = setOf(CLASS_SPECIFIER, STRUCT_SPECIFIER, UNION_SPECIFIER)
 
     fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
         val buckets = TreeTraversal.findAllDescendantsGroupedByType(declaration, ALL_NODE_TYPES)
@@ -68,9 +77,11 @@ internal object UsedTypeExtractor {
                 .mapNotNull { extractTypeFromTypeField(it, sourceCode) }
         val cStyleCasts = buckets[CAST_EXPRESSION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
         val instantiationTypes = extractInstantiationTypes(buckets, sourceCode)
+        val friendAndUsingTypes = extractClassScopeUsageTypes(buckets, sourceCode)
         return (
             inheritance + methodTypes + initializerTypes + aliasTypes +
-                constraintTypes + fieldAndVariableTypes + cStyleCasts + instantiationTypes
+                constraintTypes + fieldAndVariableTypes + cStyleCasts +
+                instantiationTypes + friendAndUsingTypes
         ).toSet()
     }
 
@@ -130,7 +141,7 @@ internal object UsedTypeExtractor {
         return argList.namedChildren().flatMap { arg ->
             when (arg.type) {
                 QUALIFIED_IDENTIFIER ->
-                    listOfNotNull(extractInitializerTypeFromQualifiedIdentifier(arg, sourceCode)).asSequence()
+                    listOfNotNull(CppTypeHelper.extractSecondToLastSegment(arg, sourceCode)).asSequence()
                 CALL_EXPRESSION ->
                     if (isBraceInit) {
                         emptySequence()
@@ -138,7 +149,7 @@ internal object UsedTypeExtractor {
                         arg
                             .children()
                             .filter { it.type == QUALIFIED_IDENTIFIER }
-                            .mapNotNull { extractInitializerTypeFromQualifiedIdentifier(it, sourceCode) }
+                            .mapNotNull { CppTypeHelper.extractSecondToLastSegment(it, sourceCode) }
                     }
                 else -> emptySequence()
             }
@@ -188,7 +199,7 @@ internal object UsedTypeExtractor {
             val function = call.getChildByFieldName(FUNCTION_FIELD).takeIf { !it.isNull } ?: return@flatMap emptyList()
             when (function.type) {
                 TEMPLATE_FUNCTION -> extractTemplateArgumentTypes(function, sourceCode)
-                QUALIFIED_IDENTIFIER -> listOfNotNull(extractRightmostTypeFromQualifiedIdentifier(function, sourceCode))
+                QUALIFIED_IDENTIFIER -> listOfNotNull(CppTypeHelper.extractRightmostSegment(function, sourceCode))
                 else -> emptyList()
             }
         }
@@ -212,29 +223,42 @@ internal object UsedTypeExtractor {
             }.toList()
     }
 
-    private fun extractRightmostTypeFromQualifiedIdentifier(qualifiedId: TSNode, sourceCode: String): UsedType? {
-        var node = qualifiedId
-        while (node.type == QUALIFIED_IDENTIFIER) {
-            val nameField = node.getChildByFieldName(NAME_FIELD)
-            if (nameField.isNull) return null
-            node = nameField
+    private fun extractClassScopeUsageTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
+        val friendTypes = buckets[FRIEND_DECLARATION].orEmpty().flatMap { friend ->
+            friend
+                .namedChildren()
+                .mapNotNull { child ->
+                    when {
+                        CppTypeHelper.isTypeNode(child) -> CppTypeHelper.extractType(child, sourceCode)
+                        child.type == QUALIFIED_IDENTIFIER -> CppTypeHelper.extractRightmostSegment(child, sourceCode)
+                        else -> null
+                    }
+                }.toList()
         }
-        val text = TreeTraversal.getNodeText(node, sourceCode).trim()
-        if (text.isEmpty()) return null
-        return UsedType(name = text)
+        val inClassUsingTypes = buckets[USING_DECLARATION]
+            .orEmpty()
+            .filter { isInsideClassBody(it) }
+            .mapNotNull { usingDecl ->
+                val qualified = usingDecl.namedChildren().firstOrNull { it.type == QUALIFIED_IDENTIFIER }
+                if (qualified != null) {
+                    CppTypeHelper.extractSecondToLastSegment(qualified, sourceCode)
+                } else {
+                    val plain = usingDecl.namedChildren().firstOrNull { it.type == IDENTIFIER || it.type == TYPE_IDENTIFIER }
+                    plain?.let {
+                        val text = TreeTraversal.getNodeText(it, sourceCode).trim()
+                        if (text.isEmpty()) null else UsedType(name = text)
+                    }
+                }
+            }
+        return friendTypes + inClassUsingTypes
     }
 
-    private fun extractInitializerTypeFromQualifiedIdentifier(qualifiedId: TSNode, sourceCode: String): UsedType? {
-        val scopeSegments = mutableListOf<String>()
-        var node = qualifiedId
-        while (node.type == QUALIFIED_IDENTIFIER) {
-            val scope = node.getChildByFieldName(SCOPE_FIELD)
-            if (!scope.isNull) {
-                scopeSegments.add(TreeTraversal.getNodeText(scope, sourceCode).trim())
-            }
-            node = node.getChildByFieldName(NAME_FIELD)
-            if (node.isNull) break
+    private fun isInsideClassBody(node: TSNode): Boolean {
+        var current = node.parent
+        while (current != null && !current.isNull) {
+            if (current.type in CLASS_BODY_TYPES) return true
+            current = current.parent
         }
-        return scopeSegments.lastOrNull()?.let { UsedType(name = it) }
+        return false
     }
 }
