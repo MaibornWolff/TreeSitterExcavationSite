@@ -36,6 +36,9 @@ TypeScript/JavaScript imports use file paths (`'./utils/helper'`, `'react'`, `'@
 ### Shared ImportExtractor
 TypeScript is a superset of JavaScript — both share identical import grammar. A single `ImportExtractor` in `languages/javascript/extractors/` serves both `TypescriptDependencyMapping` and `JavascriptDependencyMapping`.
 
+### JavaScript — full extraction (correction)
+Initial assumption "JavaScript: imports only" was wrong. DC's `JavascriptAnalyzer` produces nodes for exported declarations (classes, functions, constants). `JavascriptDependencyMapping` must use `DeclarationExtractor::extract` — identical to `TypescriptDependencyMapping`. `DeclarationExtractor` and `UsedTypeExtractor` already work for JavaScript since JS is a subset of the TypeScript grammar.
+
 ### No boundary exclusion (TypeScript)
 Start without boundary exclusion — match DC's re-parsing type leakage behavior. Add only if dc-compare reveals issues.
 
@@ -167,6 +170,18 @@ When to run:
   - `const { myMethod: alias } = require('myModule')` → `ImportDeclaration(path=["myModule", "myMethod"], isWildcard=false)`
 - In `ImportExtractor.extractCommonJsImports`: also filter `pair_pattern` children of `OBJECT_PATTERN`; extract first child text as import name
 
+### 12b. Fix: JavaScript declaration extraction (TDD)
+
+`JavascriptDependencyMapping` incorrectly used `{ _, _ -> emptyList() }` for declarations, based on the wrong assumption that DC's JavascriptAnalyzer is imports-only. DC actually extracts exported declarations (classes, functions, constants), so 0/22 DC JavascriptAnalyzer tests pass after migration.
+
+- Write failing test in `JavascriptDependencyTest.DeclarationExtraction`:
+  - `export class Foo {}` → `Declaration(name="Foo", type=CLASS)`
+  - `export function bar() {}` → `Declaration(name="bar", type=FUNCTION)`
+  - `export const baz = 42` → `Declaration(name="baz", type=VARIABLE)`
+- Remove existing `should return empty declarations` test (was asserting wrong behavior)
+- Update `JavascriptDependencyMapping`: replace `{ _, _ -> emptyList() }` with `DeclarationExtractor::extract`
+- Add missing `DeclarationExtractor` import
+
 ### 13. Fix: REEXPORT declarations (TDD)
 
 `export { A } from './foo'` should produce `Declaration` objects in addition to imports. Currently `DeclarationExtractor` ignores `export_statement` nodes with a source string.
@@ -240,6 +255,7 @@ DC already supported JSX/TSX; DC regression tests go red without it. TSX uses `L
 - [x] Refine ImportExtractor: named ES6 → path+name, default ES6 → DEFAULT_EXPORT, CommonJS destructuring → per-name, CommonJS default → DEFAULT_EXPORT, named re-exports → per-specifier with original name (alias preserved)
 - [x] Refine DeclarationExtractor: add variable_declaration → VARIABLE, scope to direct children only (skip nested const inside class/function bodies)
 - [x] Fix: CommonJS pair_pattern destructuring → pair_pattern key as import name (TDD)
+- [x] Fix: JavaScript declaration extraction → use DeclarationExtractor in JavascriptDependencyMapping (TDD)
 - [ ] Fix: REEXPORT declarations → add REEXPORT to DeclarationType, extend DeclarationExtractor (TDD)
 - [ ] Fix: declare module declarations → AST dump, then implement with parentPath (TDD)
 - [ ] Fix: JSX elements as usedTypes → extend UsedTypeExtractor + create TsxDependencyMapping (TDD)
@@ -258,13 +274,14 @@ After integrating TSE into DC's TypescriptAnalyzer, 17 DC tests remained failing
 - **Fix 13** (REEXPORT declarations): `export { A } from '...'` and `export { A as B } from '...'` producing no Declaration entries
 - **Fix 14** (declare module): ambient module blocks not producing any declarations; need AST dump to confirm node type first
 - **Fix 15** (JSX usedTypes + TsxDependencyMapping): DC regression tests require JSX support; approach is extend `UsedTypeExtractor` with JSX nodes (backward-compatible) + create `TsxDependencyMapping` reusing TS extractors; DC must dispatch `.tsx` to `Language.TSX`
+- **Fix 12b** (JavaScript declarations): `JavascriptDependencyMapping` used `emptyList()` for declarations — wrong; DC's JavascriptAnalyzer extracts exported declarations. Fix: use `DeclarationExtractor::extract`, same as TypeScript.
 - **Fix 16** (import alias): aliased imports like `MyType as MyRenamedType` leaking local alias name into usedTypes instead of original
 
 ## Notes
 
 - All new files live in `languages/javascript/` (TypeScript and JavaScript share the folder)
 - TypeScript concatenation order: typeIdentifiers, constructorCalls, memberAccesses, methodCalls, extensions, relevantIdentifiers
-- JavaScript: imports only — no `UsedTypeExtractor` needed
+- JavaScript: full extraction — `JavascriptDependencyMapping` uses same extractors as TypeScript (correction: initial "imports only" assumption was wrong)
 - `type_alias_declaration` → CLASS (matches DC legacy behavior)
 - Each language owns its own `extractType` helper — no shared utility (per Kotlin plan decision)
 - DC follow-up (separate PR): rewrite DC's `TypescriptAnalyzer` + `JavascriptAnalyzer` to use TSE

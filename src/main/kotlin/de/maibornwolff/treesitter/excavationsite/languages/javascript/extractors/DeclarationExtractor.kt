@@ -71,11 +71,11 @@ internal object DeclarationExtractor {
         }.toList()
 
     private fun extractName(node: TSNode, sourceCode: String): String {
-        val nameType = when (node.type) {
-            CLASS_DECLARATION, INTERFACE_DECLARATION, TYPE_ALIAS_DECLARATION -> TYPE_IDENTIFIER
-            else -> IDENTIFIER
+        val nameTypes = when (node.type) {
+            CLASS_DECLARATION, INTERFACE_DECLARATION, TYPE_ALIAS_DECLARATION -> arrayOf(TYPE_IDENTIFIER, IDENTIFIER)
+            else -> arrayOf(IDENTIFIER)
         }
-        return TreeTraversal.findFirstChildTextByType(node, sourceCode, nameType)?.trim() ?: ""
+        return TreeTraversal.findFirstChildTextByType(node, sourceCode, *nameTypes)?.trim() ?: ""
     }
 
     private fun declarationType(nodeType: String): DeclarationType = when (nodeType) {

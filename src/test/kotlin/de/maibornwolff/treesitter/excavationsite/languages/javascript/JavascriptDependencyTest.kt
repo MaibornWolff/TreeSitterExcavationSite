@@ -1,5 +1,6 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript
 
+import de.maibornwolff.treesitter.excavationsite.api.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
 import org.assertj.core.api.Assertions.assertThat
@@ -134,16 +135,50 @@ class JavascriptDependencyTest {
             assertThat(result.imports[0].isWildcard).isFalse()
         }
 
+    }
+
+    @Nested
+    inner class DeclarationExtraction {
         @Test
-        fun `should return empty declarations`() {
+        fun `should extract exported class declaration`() {
             // Arrange
-            val code = "class Foo extends Bar {}"
+            val code = "export class Foo {}"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
 
             // Assert
-            assertThat(result.declarations).isEmpty()
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("Foo")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.CLASS)
+        }
+
+        @Test
+        fun `should extract exported function declaration`() {
+            // Arrange
+            val code = "export function bar() {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("bar")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.FUNCTION)
+        }
+
+        @Test
+        fun `should extract exported const declaration`() {
+            // Arrange
+            val code = "export const baz = 42"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("baz")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.VARIABLE)
         }
     }
 
