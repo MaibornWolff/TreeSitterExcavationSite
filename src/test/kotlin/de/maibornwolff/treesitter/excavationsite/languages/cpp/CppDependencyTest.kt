@@ -1283,5 +1283,46 @@ class CppDependencyTest {
                 assertThat(derived.usedTypes).containsExactly(UsedType(name = "Base"))
             }
         }
+
+        @Nested
+        inner class TypeOperands {
+            @Test
+            fun `should extract type from sizeof expression with pointer type`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork() {
+                            auto s = sizeof(Foo*);
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+
+            @Test
+            fun `should extract type from alignof expression`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork() {
+                            auto a = alignof(Foo);
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+        }
     }
 }

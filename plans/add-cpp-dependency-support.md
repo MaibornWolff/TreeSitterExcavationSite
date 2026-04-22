@@ -16,7 +16,7 @@ dc_branch: feat/cpp-dependency-integration
 | 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
 | 4. `DeclarationExtractor` | ✅ done (16/16 cycles) | `db43ebf` → (cycle 16) |
-| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (13/14 cats) | `7d5bc19` → (cat 12+13) |
+| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (14/14 cats, cat 14 partial) | `7d5bc19` → (cat 14) |
 | 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
 | 7. Test consolidation | ⏳ pending | — |
 | 8. dc-compare iteration on Catch2 | ▶ round 1 done (structure OK, deps blocked on Task 5) | `7288351` (DC), local composite build |
@@ -458,7 +458,7 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
   - [x] 11. Call expression types — bundled with cat 10. `extractInstantiationTypes` processes `call_expression`: template_function callees yield their template arguments (subsumes the explicit-cast handling from cat 9 — `EXPLICIT_CAST_NAMES` filter removed since generic template-function extraction catches static_cast/etc. by design); qualified_identifier callees yield the rightmost segment (matching DC's `extractTypeWithFoundNamespacesAsDependencies` behavior for static/method calls, even when that emits a function name rather than a class).
   - [x] 12. Friend declaration types — bundled with cat 13. `friend_declaration` children are inspected; type_identifiers/template_types pass through `CppTypeHelper.extractType`, `qualified_identifier` yields its rightmost segment (matching DC's fallback behavior).
   - [x] 13. In-class using directive types — bundled with cat 12. `using_declaration` nodes inside `class`/`struct`/`union` bodies emit a type: qualified forms yield the second-to-last segment (the base class), plain identifiers yield themselves (for `using enum X;` unqualified). Refactor: the two qualified_identifier walking helpers (rightmost / second-to-last) moved to `CppTypeHelper.extractRightmostSegment` / `extractSecondToLastSegment` to keep UsedTypeExtractor's function count under detekt's threshold.
-  - [ ] 14. Type operands (sizeof/noexcept/alignof/typeid)
+  - [x] 14. Type operands (sizeof/alignof) — partial. `sizeof_expression` and `alignof_expression` share the same `type:`/type_descriptor pattern as `cast_expression` and reuse `extractTypeFromTypeField`. `typeid` deferred: tree-sitter-cpp parses it as a generic `call_expression` with identifier name (no dedicated node), so type extraction would require a call-expression name filter. `noexcept(T)` is actually a runtime-expression check (`noexcept(foo())`) rather than a type operator in standard C++, so nothing to do. Follow-up note: add a dedicated handler for `typeid(T)` if dc-compare reveals it matters in real code.
   - [ ] Boundary exclusion helper (category 15)
   - [ ] `extractFromFunctionBody` secondary entry point (category 16)
   - [ ] Pin concatenation order (category 17)

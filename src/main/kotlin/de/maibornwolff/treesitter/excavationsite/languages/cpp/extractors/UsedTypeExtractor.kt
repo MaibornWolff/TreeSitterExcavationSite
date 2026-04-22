@@ -40,6 +40,8 @@ internal object UsedTypeExtractor {
     private const val FUNCTION_FIELD = "function"
     private const val FRIEND_DECLARATION = "friend_declaration"
     private const val USING_DECLARATION = "using_declaration"
+    private const val SIZEOF_EXPRESSION = "sizeof_expression"
+    private const val ALIGNOF_EXPRESSION = "alignof_expression"
     private const val CLASS_SPECIFIER = "class_specifier"
     private const val STRUCT_SPECIFIER = "struct_specifier"
     private const val UNION_SPECIFIER = "union_specifier"
@@ -58,8 +60,12 @@ internal object UsedTypeExtractor {
         CALL_EXPRESSION,
         NEW_EXPRESSION,
         FRIEND_DECLARATION,
-        USING_DECLARATION
+        USING_DECLARATION,
+        SIZEOF_EXPRESSION,
+        ALIGNOF_EXPRESSION
     )
+
+    private val TYPE_OPERAND_EXPRESSIONS = setOf(SIZEOF_EXPRESSION, ALIGNOF_EXPRESSION)
 
     private val CLASS_BODY_TYPES = setOf(CLASS_SPECIFIER, STRUCT_SPECIFIER, UNION_SPECIFIER)
 
@@ -78,10 +84,13 @@ internal object UsedTypeExtractor {
         val cStyleCasts = buckets[CAST_EXPRESSION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
         val instantiationTypes = extractInstantiationTypes(buckets, sourceCode)
         val friendAndUsingTypes = extractClassScopeUsageTypes(buckets, sourceCode)
+        val typeOperandTypes = TYPE_OPERAND_EXPRESSIONS
+            .flatMap { buckets[it].orEmpty() }
+            .mapNotNull { extractTypeFromTypeField(it, sourceCode) }
         return (
             inheritance + methodTypes + initializerTypes + aliasTypes +
                 constraintTypes + fieldAndVariableTypes + cStyleCasts +
-                instantiationTypes + friendAndUsingTypes
+                instantiationTypes + friendAndUsingTypes + typeOperandTypes
         ).toSet()
     }
 
