@@ -658,3 +658,125 @@ console.log('deps:', mD, 'vs', fD);
 console.log('shared nodes', shared.length, ': matched', matched, ', main-only', mainOnly);
 "
 ```
+
+## Session break — 2026-04-22 (later, after Tasks 6/7 + namespacePrefix + Issue 1 investigation)
+
+### What's done in this session
+
+1. **Task 6** confirmed complete on inspection — `CppDependencyMapping` already references real extractors, `CppDefinition.dependencyMapping` override in place. Plan checkbox flipped. (commit `e70233b`)
+2. **Task 7** complete — `ApiSupportCheck` membership test added to `CppDependencyTest`; rest of `@Nested` structure already mirrored C# / Java conventions. (commit `ae5a176`)
+3. **`namespacePrefix` mechanism added** — `UsedType.namespacePrefix: List<String>` field for capturing scope segments in qualified type references. C++ extractors populate it; DC adapter synthesizes wildcard `Dependency` per qualified usage. Closes ~52 cppcheck cross-file deps (round 5: 467 → 519 matched). Non-breaking for Java/Kotlin/C#.
+   - TSE commits: `36e00d7` (domain), `3a6a21a` (docs + C++ motivation), `b87cfa7` (extractor), `3275d69` (round 5 + lesson)
+   - DC commit: `a4a73c9` on `feat/cpp-dependency-integration` (synthesizes wildcards + disabled Issue 1 test)
+4. **Documented C++-specific motivation** for `namespacePrefix` in `integration/dependencies/README.md` (new "Namespace-prefix handling" section) and `.claude/rules/dependency-migration.md` (new lesson — useful when migrating PHP).
+5. **Option-3 sampling** — investigated the 1936 main-only deps remaining after namespacePrefix. Two specific issues identified plus small false-positive contribution (commit `9372daa` — see "Round 5 follow-up" entry above).
+6. **Reverted Issue 1 fix** — strip-cpp-extension implementation worked at unit level (`should produce matching pathWithName for class declared in header and its implementation file` test passed), but blocked on a resolver mystery. Kept the test as `@Disabled` for future work.
+
+### Where the build stands
+- `feat/cpp-dependency-support` (TSE): green on `./gradlew build`. All tests passing.
+- `feat/cpp-dependency-integration` (DC): commit `a4a73c9` is the latest. CppAnalyzerTest has 9 pre-existing failures from the original adapter rewrite (`7288351`) — those are documented in Task 9's pending test updates and are NOT introduced by this session's work.
+- Composite-build wiring on DC still uncommitted: `analysis/settings.gradle.kts` + `analysis/build.gradle.kts` — revert before any DC merge.
+- dc-compare round 5 baseline restored: 519 matched / 1936 main-only / 150 feat-only.
+
+### Open follow-ups (in priority order for next session)
+
+**1. Live-debug DC main's resolver to crack Issue 1's mystery (BLOCKER for the rest)**
+
+Issue 1 (`.h`/`.cpp` declarations don't merge in pipeline) attempted fix is on the disabled-test branch of work. The fix made the merge happen but didn't close the dep gap because:
+- `#include "settings.h"` produces dep path `[settings]` (just filename)
+- Settings class lives at `[lib, settings, Settings]`
+- `Node.resolveTypeImport` and `resolveComplexModuleImport` were traced line-by-line; no existing rule matches `[settings]` against `[lib, settings, Settings]`.
+- **Yet DC main resolves the same shape** (legacy paths `[settings_h]` vs `[lib, settings_cpp, Settings]` — same mismatch). There's a resolver mechanism we haven't located.
+
+**Recommended: set a breakpoint** in `DependaCharta/.../model/Node.kt:resolveTypeImport` for a specific case (e.g., resolving `Settings` from `cli.cmdlineparser_cpp.CmdLineParser`). Run DC main against cppcheck. Step through. Find which line returns the resolved Path. That'll tell us:
+- Whether the resolver has unexpected logic
+- Whether the dependency or usedType has unexpected shape
+- What the actual mechanism is
+
+Without this, any further Issue-1 work is speculation. With it, the path forward is clear.
+
+**2. Implement Issue 2 — static method-call extraction (~15-25% of remaining gap)**
+
+For `Path::removeQuotationMarks()`, TSE currently extracts `UsedType("removeQuotationMarks", namespacePrefix=["Path"])`. Should ALSO emit `UsedType("Path")` because `Path` is the actual class being referenced. DC legacy's `VariableDeclarationProcessor.kt:24-25` does this via dedicated TSQuery: `(call_expression function: (qualified_identifier scope: (namespace_identifier)@type))`.
+
+TDD steps:
+- Failing test in TSE `CppDependencyTest.UsedTypeExtraction.InstantiationSites`:
+  ```kotlin
+  @Test
+  fun `should extract scope as type for single-scope qualified static call`() {
+      val code = """class Container { void doWork() { Path::removeQuotationMarks(x); } };"""
+      val result = TreeSitterDependencies.analyze(code, Language.CPP)
+      val container = result.declarations.single { it.name == "Container" }
+      assertThat(container.usedTypes).contains(UsedType(name = "Path"))
+  }
+  ```
+- Implement in `UsedTypeExtractor.extractInstantiationTypes` — for `call_expression` with `function = qualified_identifier`, additionally emit `UsedType(scope_text)` IF scope is a `namespace_identifier` (single scope, not nested qualified_identifier).
+- Re-run dc-compare; expect another bump in matched deps.
+
+**Note**: tackling Issue 2 BEFORE Issue 1 is cracked is fine — they're independent. Both gains will compound when Issue 1 is fixed.
+
+**3. Decision point after Issues 1+2 are fixed**
+
+Re-run dc-compare. If matched/total reaches ~80-90%, ship. If still big gap, repeat sampling on what's left.
+
+### Re-enable Issue 1 fix (when resolver mystery is solved)
+
+The Issue 1 fix code was reverted but the disabled test is preserved. To re-enable:
+1. Remove `@org.junit.jupiter.api.Disabled` from `CppAnalyzerTest > should produce matching pathWithName for class declared in header and its implementation file`.
+2. Reapply the strip-cpp-extension fix in `CppAnalyzer.kt`. Working version was at git ref before commit `a4a73c9` modulo the namespacePrefix lines. Specifically:
+   - Add `companion object { private val CPP_FILE_EXTENSIONS = setOf("h", "hpp", "hxx", "hh", "cpp", "cc", "cxx", "c", "c++"); private fun stripCppFileExtension(segment: String): String { val dot = segment.lastIndexOf('.'); if (dot <= 0) return segment; val ext = segment.substring(dot + 1).lowercase(); return if (ext in CPP_FILE_EXTENSIONS) segment.substring(0, dot) else segment } }`
+   - In `analyze()`: replace `val physicalPathParts = splitNameToParts(fileInfo.physicalPath).filter { it != "." }` with the stripped version (apply `stripCppFileExtension` to last segment).
+   - In `normalize()`: strip extensions BEFORE constructing `Path` (Path constructor's `replaceDots` mangles the dot otherwise).
+3. Re-run dc-compare. If resolver mystery is solved, gap should now close meaningfully.
+
+### Resume instructions for tomorrow
+
+**Step 1 — get back to current state:**
+```bash
+# TSE
+cd C:/Users/ChristianSpa/IdeaProjects/DCTSE/TreeSitterExcavationSite
+git checkout feat/cpp-dependency-support
+./gradlew build  # confirm green
+
+# DC
+cd ../DependaCharta
+git checkout feat/cpp-dependency-integration
+git status  # should show modified analysis/build.gradle.kts + analysis/settings.gradle.kts (composite-build wiring; uncommitted by design)
+cd analysis && ./gradlew compileKotlin  # confirm composite build still works
+```
+
+**Step 2 — for Issue 1 live debugging:**
+- Open `DependaCharta` in IntelliJ on `main` branch (NOT `feat/cpp-dependency-integration` — we want the legacy analyzer).
+- Set breakpoint in `Node.kt:resolveTypeImport` line 92 (`val plainTypeName = fullName.split(".").last()`).
+- Add conditional: `plainTypeName == "Settings" && pathWithName.withDots().contains("CmdLineParser")`.
+- Run `dependacharta-analysis` Cli main with args `-d "C:/Users/ChristianSpa/IdeaProjects/DCTSE/cppcheck" -o "C:/Users/ChristianSpa/IdeaProjects/DCTSE/dc-compare/main-debug" -f analysis -c`.
+- Step through resolution. Record which line returns the matching Path.
+
+**Step 3 — for Issue 2 fix (if working alone):**
+- TDD on TSE branch as outlined above.
+- Re-run dc-compare to measure isolated impact.
+
+**Step 4 — to re-run dc-compare (still cppcheck baseline):**
+```bash
+cd C:/Users/ChristianSpa/IdeaProjects/DCTSE/DependaCharta/analysis
+./gradlew fatJar
+java -jar build/libs/dependacharta.jar -d "../../cppcheck" -o "../../dc-compare/feature" -f analysis -c
+# then comparison script (Step 3 in earlier session-break section)
+```
+
+### What NOT to do
+
+- Don't reapply Issue 1 fix until the resolver mystery is solved — it changes node IDs in dc-compare-incompatible ways without closing the gap.
+- Don't commit composite-build overrides on DC — must be reverted before any merge to DC main.
+- Don't push DC `feat/cpp-dependency-integration` to remote yet — Task 9's test cleanups (the 9 pre-existing failures) still need to be done first.
+
+### Task / commit summary for this session
+
+| Task | Commits | Status |
+|---|---|---|
+| Task 6 | `e70233b` | ✅ done (was already wired, plan reconciled) |
+| Task 7 | `ae5a176` | ✅ done |
+| `namespacePrefix` (cross-cutting feature) | TSE: `36e00d7`, `3a6a21a`, `b87cfa7`, `3275d69` / DC: `a4a73c9` | ✅ done |
+| Option-3 sampling + Issue analysis | `9372daa` | ✅ done (findings recorded) |
+| Issue 1 fix | — | 🔶 attempted, reverted, blocked on resolver mystery |
+| Issue 2 fix | — | ⏳ deferred to next session |
