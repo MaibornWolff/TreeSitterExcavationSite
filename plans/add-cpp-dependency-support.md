@@ -18,7 +18,7 @@ dc_branch: feat/cpp-dependency-integration
 | 4. `DeclarationExtractor` | ✅ done (16/16 cycles) | `db43ebf` → (cycle 16) |
 | 5. `UsedTypeExtractor` (14 cats + boundary exclusion + out-of-class) | ✅ done (14/14 cats, boundary exclusion, out-of-class bodies, order-pin test) | `7d5bc19` → (cat 16+17) |
 | 6. Wire `CppDependencyMapping` | ✅ done — real extractor refs in place; `CppDefinition.dependencyMapping` override wired | `88d5eff` |
-| 7. Test consolidation | ✅ done — `ApiSupportCheck` added; `@Nested` structure matches C#; concatenation-order integration test present | TBD |
+| 7. Test consolidation | ✅ done — `ApiSupportCheck` added; `@Nested` structure matches C#; concatenation-order integration test present | `ae5a176` |
 | 8. dc-compare iteration | ▶ 4 rounds done, switched baseline to cppcheck in R3 | R2 `f3d625f`, R3 `fd5475b`, R4 `e9ae7cb` |
 | 9. DC adapter (`feat/cpp-dependency-integration`) | 🔶 partial — analyzer rewrite committed, legacy files still on disk, resolver gap open | DC: `7288351` |
 | 10. Release + integrate | ⏳ pending | — |
