@@ -34,6 +34,12 @@ internal object UsedTypeExtractor {
     private const val RIGHT_FIELD = "right"
     private const val FIELD_DECLARATION = "field_declaration"
     private const val DECLARATION = "declaration"
+    private const val CAST_EXPRESSION = "cast_expression"
+    private const val TEMPLATE_FUNCTION = "template_function"
+    private const val TEMPLATE_ARGUMENT_LIST = "template_argument_list"
+    private const val ARGUMENTS_FIELD = "arguments"
+    private const val FUNCTION_FIELD = "function"
+    private val EXPLICIT_CAST_NAMES = setOf("static_cast", "dynamic_cast", "reinterpret_cast", "const_cast")
 
     private val ALL_NODE_TYPES = setOf(
         BASE_CLASS_CLAUSE,
@@ -42,7 +48,9 @@ internal object UsedTypeExtractor {
         TYPE_DEFINITION,
         ALIAS_DECLARATION,
         FIELD_DECLARATION,
-        DECLARATION
+        DECLARATION,
+        CAST_EXPRESSION,
+        CALL_EXPRESSION
     )
 
     fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
@@ -52,8 +60,14 @@ internal object UsedTypeExtractor {
         val initializerTypes = extractConstructorInitializerTypes(buckets, sourceCode)
         val aliasTypes = extractTypeAliasTypes(buckets, sourceCode)
         val constraintTypes = extractTemplateConstraintTypes(declaration, sourceCode)
-        val fieldAndVariableTypes = extractFieldAndVariableTypes(buckets, sourceCode)
-        return (inheritance + methodTypes + initializerTypes + aliasTypes + constraintTypes + fieldAndVariableTypes).toSet()
+        val fieldAndVariableTypes =
+            (buckets[FIELD_DECLARATION].orEmpty() + buckets[DECLARATION].orEmpty())
+                .mapNotNull { extractTypeFromTypeField(it, sourceCode) }
+        val castTypes = extractCastTypes(buckets, sourceCode)
+        return (
+            inheritance + methodTypes + initializerTypes + aliasTypes +
+                constraintTypes + fieldAndVariableTypes + castTypes
+        ).toSet()
     }
 
     private fun extractInheritanceTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
@@ -101,27 +115,31 @@ internal object UsedTypeExtractor {
             initList
                 .children()
                 .filter { it.type == FIELD_INITIALIZER }
-                .flatMap { fieldInit -> extractTypesFromFieldInitializer(fieldInit, sourceCode) }
-                .toList()
+                .flatMap { fieldInit ->
+                    val argList = fieldInit.children().firstOrNull { it.type == ARGUMENT_LIST || it.type == INITIALIZER_LIST }
+                    if (argList == null) emptySequence() else collectInitializerArgumentTypes(argList, sourceCode)
+                }.toList()
         }
 
-    private fun extractTypesFromFieldInitializer(fieldInit: TSNode, sourceCode: String): Sequence<UsedType> {
-        val argList = fieldInit.children().firstOrNull { it.type == ARGUMENT_LIST || it.type == INITIALIZER_LIST }
-            ?: return emptySequence()
+    private fun collectInitializerArgumentTypes(argList: TSNode, sourceCode: String): Sequence<UsedType> {
         val isBraceInit = argList.type == INITIALIZER_LIST
         return argList.namedChildren().flatMap { arg ->
             when (arg.type) {
-                QUALIFIED_IDENTIFIER -> listOfNotNull(extractInitializerTypeFromQualifiedIdentifier(arg, sourceCode)).asSequence()
-                CALL_EXPRESSION -> if (isBraceInit) emptySequence() else extractTypesFromCallExpression(arg, sourceCode)
+                QUALIFIED_IDENTIFIER ->
+                    listOfNotNull(extractInitializerTypeFromQualifiedIdentifier(arg, sourceCode)).asSequence()
+                CALL_EXPRESSION ->
+                    if (isBraceInit) {
+                        emptySequence()
+                    } else {
+                        arg
+                            .children()
+                            .filter { it.type == QUALIFIED_IDENTIFIER }
+                            .mapNotNull { extractInitializerTypeFromQualifiedIdentifier(it, sourceCode) }
+                    }
                 else -> emptySequence()
             }
         }
     }
-
-    private fun extractTypesFromCallExpression(call: TSNode, sourceCode: String): Sequence<UsedType> = call
-        .children()
-        .filter { it.type == QUALIFIED_IDENTIFIER }
-        .mapNotNull { extractInitializerTypeFromQualifiedIdentifier(it, sourceCode) }
 
     private fun extractTypeAliasTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
         val fromTypeDefs = buckets[TYPE_DEFINITION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
@@ -166,10 +184,31 @@ internal object UsedTypeExtractor {
             .toList()
     }
 
-    private fun extractFieldAndVariableTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
-        val fieldTypes = buckets[FIELD_DECLARATION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
-        val variableTypes = buckets[DECLARATION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
-        return fieldTypes + variableTypes
+    private fun extractCastTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
+        val cStyleCasts = buckets[CAST_EXPRESSION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
+        val explicitCasts = buckets[CALL_EXPRESSION].orEmpty().flatMap { call ->
+            extractExplicitCastTypes(call, sourceCode)
+        }
+        return cStyleCasts + explicitCasts
+    }
+
+    private fun extractExplicitCastTypes(call: TSNode, sourceCode: String): List<UsedType> {
+        val function = call.getChildByFieldName(FUNCTION_FIELD).takeIf { !it.isNull } ?: return emptyList()
+        if (function.type != TEMPLATE_FUNCTION) return emptyList()
+        val name = function.getChildByFieldName(NAME_FIELD).takeIf { !it.isNull } ?: return emptyList()
+        if (TreeTraversal.getNodeText(name, sourceCode).trim() !in EXPLICIT_CAST_NAMES) return emptyList()
+        val argList = function.getChildByFieldName(ARGUMENTS_FIELD).takeIf { !it.isNull && it.type == TEMPLATE_ARGUMENT_LIST }
+            ?: return emptyList()
+        return argList
+            .namedChildren()
+            .mapNotNull { arg ->
+                val inner = if (arg.type == TYPE_DESCRIPTOR) {
+                    arg.namedChildren().firstOrNull { CppTypeHelper.isTypeNode(it) }
+                } else {
+                    arg.takeIf { CppTypeHelper.isTypeNode(it) }
+                }
+                inner?.let { CppTypeHelper.extractType(it, sourceCode) }
+            }.toList()
     }
 
     private fun extractInitializerTypeFromQualifiedIdentifier(qualifiedId: TSNode, sourceCode: String): UsedType? {

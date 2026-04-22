@@ -1041,5 +1041,106 @@ class CppDependencyTest {
                 assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
             }
         }
+
+        @Nested
+        inner class Casts {
+            @Test
+            fun `should extract type from C-style cast expression`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork(void* p) {
+                            auto result = (Foo)p;
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+
+            @Test
+            fun `should extract type from static_cast`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork(int x) {
+                            auto result = static_cast<Foo>(x);
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+
+            @Test
+            fun `should extract type from dynamic_cast`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork(Base* b) {
+                            auto d = dynamic_cast<Derived*>(b);
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Base"),
+                    UsedType(name = "Derived")
+                )
+            }
+
+            @Test
+            fun `should extract type from reinterpret_cast`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork(void* p) {
+                            auto x = reinterpret_cast<Foo*>(p);
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+
+            @Test
+            fun `should extract type from const_cast`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork(const Foo* p) {
+                            auto x = const_cast<Foo*>(p);
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+        }
     }
 }
