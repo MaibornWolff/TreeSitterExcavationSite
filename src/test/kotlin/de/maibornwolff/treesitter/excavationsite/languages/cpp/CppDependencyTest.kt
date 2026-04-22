@@ -983,5 +983,63 @@ class CppDependencyTest {
                 )
             }
         }
+
+        @Nested
+        inner class FieldAndVariableTypes {
+            @Test
+            fun `should extract type from member field declaration`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        Foo field_;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+
+            @Test
+            fun `should extract template type from member field declaration`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        Vec<Foo> items_;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(name = "Vec", genericTypes = listOf(UsedType(name = "Foo")))
+                )
+            }
+
+            @Test
+            fun `should extract type from local variable declaration inside method body`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork() {
+                            Foo local;
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+        }
     }
 }

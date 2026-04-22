@@ -32,9 +32,18 @@ internal object UsedTypeExtractor {
     private const val CONSTRAINT_CONJUNCTION = "constraint_conjunction"
     private const val LEFT_FIELD = "left"
     private const val RIGHT_FIELD = "right"
+    private const val FIELD_DECLARATION = "field_declaration"
+    private const val DECLARATION = "declaration"
 
-    private val ALL_NODE_TYPES =
-        setOf(BASE_CLASS_CLAUSE, FUNCTION_DEFINITION, FIELD_INITIALIZER_LIST, TYPE_DEFINITION, ALIAS_DECLARATION)
+    private val ALL_NODE_TYPES = setOf(
+        BASE_CLASS_CLAUSE,
+        FUNCTION_DEFINITION,
+        FIELD_INITIALIZER_LIST,
+        TYPE_DEFINITION,
+        ALIAS_DECLARATION,
+        FIELD_DECLARATION,
+        DECLARATION
+    )
 
     fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
         val buckets = TreeTraversal.findAllDescendantsGroupedByType(declaration, ALL_NODE_TYPES)
@@ -43,7 +52,8 @@ internal object UsedTypeExtractor {
         val initializerTypes = extractConstructorInitializerTypes(buckets, sourceCode)
         val aliasTypes = extractTypeAliasTypes(buckets, sourceCode)
         val constraintTypes = extractTemplateConstraintTypes(declaration, sourceCode)
-        return (inheritance + methodTypes + initializerTypes + aliasTypes + constraintTypes).toSet()
+        val fieldAndVariableTypes = extractFieldAndVariableTypes(buckets, sourceCode)
+        return (inheritance + methodTypes + initializerTypes + aliasTypes + constraintTypes + fieldAndVariableTypes).toSet()
     }
 
     private fun extractInheritanceTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
@@ -114,25 +124,21 @@ internal object UsedTypeExtractor {
         .mapNotNull { extractInitializerTypeFromQualifiedIdentifier(it, sourceCode) }
 
     private fun extractTypeAliasTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
-        val fromTypeDefs = buckets[TYPE_DEFINITION].orEmpty().mapNotNull { extractTypeFromTypeDefinition(it, sourceCode) }
-        val fromAliases = buckets[ALIAS_DECLARATION].orEmpty().mapNotNull { extractTypeFromAliasDeclaration(it, sourceCode) }
+        val fromTypeDefs = buckets[TYPE_DEFINITION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
+        val fromAliases = buckets[ALIAS_DECLARATION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
         return fromTypeDefs + fromAliases
     }
 
-    private fun extractTypeFromTypeDefinition(node: TSNode, sourceCode: String): UsedType? {
-        val typeNode = node.getChildByFieldName(TYPE_FIELD).takeIf { !it.isNull }
-            ?: node.namedChildren().firstOrNull { CppTypeHelper.isTypeNode(it) }
+    private fun extractTypeFromTypeField(node: TSNode, sourceCode: String): UsedType? {
+        val typeField = node.getChildByFieldName(TYPE_FIELD).takeIf { !it.isNull }
+            ?: node.namedChildren().firstOrNull { CppTypeHelper.isTypeNode(it) || it.type == TYPE_DESCRIPTOR }
             ?: return null
-        return CppTypeHelper.extractType(typeNode, sourceCode)
-    }
-
-    private fun extractTypeFromAliasDeclaration(node: TSNode, sourceCode: String): UsedType? {
-        val typeField = node.getChildByFieldName(TYPE_FIELD).takeIf { !it.isNull } ?: return null
         val unwrapped = if (typeField.type == TYPE_DESCRIPTOR) {
-            typeField.namedChildren().firstOrNull { CppTypeHelper.isTypeNode(it) }
+            typeField.namedChildren().firstOrNull { CppTypeHelper.isTypeNode(it) } ?: return null
         } else {
-            typeField.takeIf { CppTypeHelper.isTypeNode(it) }
-        } ?: return null
+            typeField
+        }
+        if (!CppTypeHelper.isTypeNode(unwrapped)) return null
         return CppTypeHelper.extractType(unwrapped, sourceCode)
     }
 
@@ -158,6 +164,12 @@ internal object UsedTypeExtractor {
             .filter { CppTypeHelper.isTypeNode(it) }
             .mapNotNull { CppTypeHelper.extractType(it, sourceCode) }
             .toList()
+    }
+
+    private fun extractFieldAndVariableTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
+        val fieldTypes = buckets[FIELD_DECLARATION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
+        val variableTypes = buckets[DECLARATION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
+        return fieldTypes + variableTypes
     }
 
     private fun extractInitializerTypeFromQualifiedIdentifier(qualifiedId: TSNode, sourceCode: String): UsedType? {

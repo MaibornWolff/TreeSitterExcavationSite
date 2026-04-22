@@ -16,7 +16,7 @@ dc_branch: feat/cpp-dependency-integration
 | 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
 | 4. `DeclarationExtractor` | ✅ done (16/16 cycles) | `db43ebf` → (cycle 16) |
-| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (6/14 cats) | `7d5bc19` → (cat 6) |
+| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (8/14 cats) | `7d5bc19` → (cat 7+8) |
 | 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
 | 7. Test consolidation | ⏳ pending | — |
 | 8. dc-compare iteration on Catch2 | ▶ round 1 done (structure OK, deps blocked on Task 5) | `7288351` (DC), local composite build |
@@ -451,8 +451,8 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
   - [x] 4. Typedef types — bundled with cat 5 in single commit
   - [x] 5. Alias declaration types — bundled with cat 4. `extractTypeAliasTypes` handles both `type_definition` (`typedef`) and `alias_declaration` (`using X = Y;`) via the `type:` field + CppTypeHelper. Primitive/sized-type children deliberately skipped (accepted improvement — primitives don't resolve as project types).
   - [x] 6. Template constraint types (C++20 requires) — `extractTemplateConstraintTypes` walks up to a template_declaration parent, descends into the requires_clause constraint, and recursively handles constraint_disjunction/constraint_conjunction (left/right fields).
-  - [ ] 7. Field types
-  - [ ] 8. Variable types
+  - [x] 7. Field types — bundled with cat 8. `field_declaration` added to ALL_NODE_TYPES; delegates to `extractTypeFromTypeField` which unwraps `type_descriptor` or the `type:` field directly.
+  - [x] 8. Variable types — bundled with cat 7. `declaration` (non-top-level, found inside function bodies by `findAllDescendantsGroupedByType`) reuses `extractTypeFromTypeField`. Parameters remain handled by cat 2.
   - [ ] 9. Cast types (incl. static_cast/dynamic_cast/reinterpret_cast/const_cast)
   - [ ] 10. New expression types
   - [ ] 11. Call expression types
