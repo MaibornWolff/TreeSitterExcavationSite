@@ -1324,5 +1324,30 @@ class CppDependencyTest {
                 assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
             }
         }
+
+        @Nested
+        inner class BoundaryExclusion {
+            @Test
+            fun `should not leak nested class types into outer used types`() {
+                // Arrange
+                val code = """
+                    class Outer {
+                        class Inner {
+                            Foo innerField;
+                        };
+                        Bar outerField;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val outer = result.declarations.single { it.name == "Outer" }
+                val inner = result.declarations.single { it.name == "Inner" }
+                assertThat(outer.usedTypes).containsExactly(UsedType(name = "Bar"))
+                assertThat(inner.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+        }
     }
 }

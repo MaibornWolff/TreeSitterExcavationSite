@@ -45,8 +45,11 @@ internal object UsedTypeExtractor {
     private const val CLASS_SPECIFIER = "class_specifier"
     private const val STRUCT_SPECIFIER = "struct_specifier"
     private const val UNION_SPECIFIER = "union_specifier"
+    private const val ENUM_SPECIFIER = "enum_specifier"
     private const val IDENTIFIER = "identifier"
     private const val TYPE_IDENTIFIER = "type_identifier"
+
+    private val DECLARATION_BOUNDARIES = setOf(CLASS_SPECIFIER, STRUCT_SPECIFIER, UNION_SPECIFIER, ENUM_SPECIFIER)
 
     private val ALL_NODE_TYPES = setOf(
         BASE_CLASS_CLAUSE,
@@ -70,7 +73,7 @@ internal object UsedTypeExtractor {
     private val CLASS_BODY_TYPES = setOf(CLASS_SPECIFIER, STRUCT_SPECIFIER, UNION_SPECIFIER)
 
     fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
-        val buckets = TreeTraversal.findAllDescendantsGroupedByType(declaration, ALL_NODE_TYPES)
+        val buckets = groupDescendantsStoppingAtNestedDeclarations(declaration, ALL_NODE_TYPES)
         val inheritance = extractInheritanceTypes(buckets, sourceCode)
         val methodTypes = extractMethodReturnAndParamTypes(buckets, sourceCode)
         val initializerTypes = extractConstructorInitializerTypes(buckets, sourceCode)
@@ -246,8 +249,14 @@ internal object UsedTypeExtractor {
         }
         val inClassUsingTypes = buckets[USING_DECLARATION]
             .orEmpty()
-            .filter { isInsideClassBody(it) }
-            .mapNotNull { usingDecl ->
+            .filter { usingDecl ->
+                var anc = usingDecl.parent
+                var inside = false
+                while (!inside && anc != null && !anc.isNull) {
+                    if (anc.type in CLASS_BODY_TYPES) inside = true else anc = anc.parent
+                }
+                inside
+            }.mapNotNull { usingDecl ->
                 val qualified = usingDecl.namedChildren().firstOrNull { it.type == QUALIFIED_IDENTIFIER }
                 if (qualified != null) {
                     CppTypeHelper.extractSecondToLastSegment(qualified, sourceCode)
@@ -262,12 +271,21 @@ internal object UsedTypeExtractor {
         return friendTypes + inClassUsingTypes
     }
 
-    private fun isInsideClassBody(node: TSNode): Boolean {
-        var current = node.parent
-        while (current != null && !current.isNull) {
-            if (current.type in CLASS_BODY_TYPES) return true
-            current = current.parent
+    private fun groupDescendantsStoppingAtNestedDeclarations(root: TSNode, targetTypes: Set<String>): Map<String, List<TSNode>> {
+        val buckets = mutableMapOf<String, MutableList<TSNode>>()
+        val stack = ArrayDeque<TSNode>()
+        root.children().forEach(stack::addLast)
+        while (stack.isNotEmpty()) {
+            val node = stack.removeLast()
+            if (!node.isNull) {
+                if (node.type in targetTypes) {
+                    buckets.getOrPut(node.type) { mutableListOf() }.add(node)
+                }
+                if (node.type !in DECLARATION_BOUNDARIES) {
+                    node.children().forEach(stack::addLast)
+                }
+            }
         }
-        return false
+        return buckets
     }
 }
