@@ -22,6 +22,7 @@ enum class DeclarationType {
     ANNOTATION,
     FUNCTION,
     VARIABLE,
+    REEXPORT,
     UNKNOWN
 }
 

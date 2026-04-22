@@ -256,7 +256,7 @@ DC already supported JSX/TSX; DC regression tests go red without it. TSX uses `L
 - [x] Refine DeclarationExtractor: add variable_declaration → VARIABLE, scope to direct children only (skip nested const inside class/function bodies)
 - [x] Fix: CommonJS pair_pattern destructuring → pair_pattern key as import name (TDD)
 - [x] Fix: JavaScript declaration extraction → use DeclarationExtractor in JavascriptDependencyMapping (TDD)
-- [ ] Fix: REEXPORT declarations → add REEXPORT to DeclarationType, extend DeclarationExtractor (TDD)
+- [x] Fix: REEXPORT declarations → add REEXPORT to DeclarationType, extend DeclarationExtractor (TDD)
 - [ ] Fix: declare module declarations → AST dump, then implement with parentPath (TDD)
 - [ ] Fix: JSX elements as usedTypes → extend UsedTypeExtractor + create TsxDependencyMapping (TDD)
 - [ ] Fix: Import alias → original usedType → buildAliasMap + thread through UsedTypeExtractor (TDD)

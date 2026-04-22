@@ -383,6 +383,67 @@ class TypescriptDependencyTest {
         }
 
         @Test
+        fun `should extract simple re-export as REEXPORT declaration`() {
+            // Arrange
+            val code = "export { MyReexportedClass } from './MyInternalClass'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyReexportedClass")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes.map { it.name }).containsExactlyInAnyOrder("MyReexportedClass")
+        }
+
+        @Test
+        fun `should extract aliased re-export with alias as name and original as usedType`() {
+            // Arrange
+            val code = "export { MyReexportedClass as MRC } from './MyInternalClass'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MRC")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes.map { it.name }).containsExactlyInAnyOrder("MyReexportedClass")
+        }
+
+        @Test
+        fun `should extract default re-export with DEFAULT_EXPORT as usedType`() {
+            // Arrange
+            val code = "export { default as validationMixin } from './mixins/validation.mixin'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("validationMixin")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes.map { it.name }).containsExactlyInAnyOrder("DEFAULT_EXPORT")
+        }
+
+        @Test
+        fun `should extract one REEXPORT declaration per specifier`() {
+            // Arrange
+            val code = "export { A, B } from './utils'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(2)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName.keys).containsExactlyInAnyOrder("A", "B")
+            assertThat(byName["A"]?.type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(byName["B"]?.type).isEqualTo(DeclarationType.REEXPORT)
+        }
+
+        @Test
         fun `should extract nested class declarations`() {
             // Arrange
             val code = """
