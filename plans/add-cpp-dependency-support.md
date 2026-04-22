@@ -17,10 +17,10 @@ dc_branch: feat/cpp-dependency-integration
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
 | 4. `DeclarationExtractor` | ✅ done (16/16 cycles) | `db43ebf` → (cycle 16) |
 | 5. `UsedTypeExtractor` (14 cats + boundary exclusion + out-of-class) | ✅ done (14/14 cats, boundary exclusion, out-of-class bodies, order-pin test) | `7d5bc19` → (cat 16+17) |
-| 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
+| 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2; still to replace with real extractor references) | `88d5eff` |
 | 7. Test consolidation | ⏳ pending | — |
-| 8. dc-compare iteration on Catch2 | ▶ round 1 done (structure OK, deps blocked on Task 5) | `7288351` (DC), local composite build |
-| 9. DC adapter (`feat/cpp-dependency-integration`) | 🔶 partial — analyzer rewrite committed, legacy files still on disk | DC: `7288351` |
+| 8. dc-compare iteration | ▶ 4 rounds done, switched baseline to cppcheck in R3 | R2 `f3d625f`, R3 `fd5475b`, R4 `e9ae7cb` |
+| 9. DC adapter (`feat/cpp-dependency-integration`) | 🔶 partial — analyzer rewrite committed, legacy files still on disk, resolver gap open | DC: `7288351` |
 | 10. Release + integrate | ⏳ pending | — |
 
 ## Goal
@@ -578,3 +578,67 @@ TSE's public API surface (`api/`, exposed `shared/domain/` types) remains source
 **Boundary exclusion implementation detail**: DC's scoped-context behavior is structural (each `BodyProcessor` call gets a fresh context). TSE emits flat `List<Declaration>` so boundary exclusion must be explicit in `UsedTypeExtractor` — skip descending into nested `class_specifier`/`struct_specifier`/`union_specifier`/`enum_specifier` subtrees. This is opposite of Kotlin's intentional leakage (Kotlin mirrors DC Kotlin's re-parsing) and aligns with Java's scoped behavior (per `dependency-migration.md` "Nested declarations" lesson).
 
 **Verification strategy**: set up `/dc-compare` after PackageExtractor + IncludeExtractor work, not after everything's done. Migration rules: "The Kotlin migration went through 4 rounds (17k → 2.9k → 1.7k → 74 lines), each revealing issues that unit tests couldn't catch." Apply same iteration here.
+
+## Session break — 2026-04-22 state
+
+### What's done in this session
+- Task 5 fully complete (14 extractor categories + boundary exclusion + out-of-class method bodies + order-pin integration test). 11 commits (`e530f49` → `400083e`) grouped per the user-agreed "bundle related categories" scheme: type aliases, template constraints, fields+vars, casts, instantiation sites, friend+in-class using, type operands, boundary exclusion, out-of-class bodies.
+- Plus `1f03d92` — `function_declarator` param extraction (caught method decls in headers).
+- Four dc-compare rounds recorded. Switched baseline from Catch2 to cppcheck because Catch2 ships an amalgamated header (`extras/catch_amalgamated.hpp`) that duplicates every class, triggering DC's `mergeDuplicates` and polluting the diff.
+
+### Where the build stands
+- `feat/cpp-dependency-support` green on `./gradlew build` (ktlint, detekt, all tests).
+- `CppDependencyTest` covers every category with `@Nested` groups + one comprehensive integration test.
+- Composite build wiring on DC's `feat/cpp-dependency-integration` intact (uncommitted edits in `analysis/settings.gradle.kts` + `analysis/build.gradle.kts` — revert before merging DC).
+
+### Open follow-ups (backlog, roughly in priority order)
+
+**Resolver-side gap (blocks meaningful dep parity)** — Round 4 cppcheck: 616 shared declaration ids, but only 467/2455 cross-file deps match (1988 main-only). The gap is in DC's resolver, not TSE's extractor:
+- `TseMappings.UsedType.toType()` collapses every type to `TypeOfUsage.USAGE`; DC legacy distinguishes INSTANTIATION/ARGUMENT/RETURN_VALUE and some resolver paths may branch on that.
+- DC legacy seeds its resolver with `Dependency(Path([NS]), isWildcard=true)` per qualified type (namespace-prefix wildcard). TSE's `UsedType` model has no slot for this (Task 1 accepted regression). The DC adapter currently cannot recreate these namespace wildcards from just the import list, so the resolver loses matches for `A::B::Settings`-style usages.
+- Fix requires DC-side adapter work, not TSE categories. Either (a) thread `TypeOfUsage` through `UsedType` or (b) have the DC adapter synthesize namespace-prefix wildcards from the qualified callees it sees — but the latter needs more info than TSE currently exposes.
+
+**TSE-side edge cases** (backlog, low priority):
+- 8 main-only declaration ids on cppcheck have unusual `::` separators in parent path (`Library::LibraryData.Platform`, `PathMatch::PathIterator.Pos`). Likely inner types inside member structs that our `findParentClassPath` doesn't handle.
+- 11 `Catch.Detail.Catch.ExprLhs.*` duplicate-segment paths from Catch2's amalgamated file — `extractOutOfClassDeclarations` double-counts the namespace when a fully-qualified out-of-class method is defined inside its own namespace. Only affects amalgamated file; not visible on cppcheck.
+- Template specializations (`Catch.StringMaker<std::string>`) are not synthesized as separate declarations. DC legacy does. Needs a `template_declaration` handler that emits one declaration per specialization.
+- `typeid(T)` parses as `call_expression` with identifier function, no dedicated node — skipped per Task 5 cat 14 note.
+
+### Resume instructions
+
+**Step 1 — continue the migration (priority order):**
+1. **Task 6**: replace the inline stubs in `languages/cpp/CppDependencyMapping.kt` with real references to `PackageExtractor`, `ImportExtractor`, `DeclarationExtractor`, `UsedTypeExtractor`. Confirm `TreeSitterDependencies.analyze(code, Language.CPP)` works end-to-end (the composite build run during dc-compare R4 confirms the chain already does, but the mapping itself may still be pointing to temporary stubs).
+2. **Task 7**: consolidate `CppDependencyTest` — mirror recent C# test-file conventions, add `ApiSupportCheck` membership test, verify no section-comment-style grouping anywhere.
+3. **Task 9 (DC side)**: finish the adapter on `feat/cpp-dependency-integration`. Delete `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `CppUtils.kt`, `CppQueryFactory.kt`, `FunctionArgumentParser.kt`, `TypeExtractionService.kt`. Update DC tests as documented in Task 9. Revert composite-build overrides before committing.
+4. **Resolver gap**: decide whether to fix now (with adapter changes) or release as-is and tackle in a follow-up migration.
+5. **Task 10**: release TSE, bump DC's JitPack dep, merge DC.
+
+**Step 2 — to re-run dc-compare (round 5+):**
+- Golden main at `../dc-compare/main/` is cppcheck v@HEAD (depth-1 clone 2026-04-22). Reuse as-is unless cppcheck is re-cloned.
+- From TSE: `./gradlew ktlintFormat build` (confirm green).
+- From DC: `cd ../DependaCharta/analysis && ./gradlew fatJar && java -jar build/libs/dependacharta.jar -d "../../cppcheck" -o ../../dc-compare/feature -f analysis`
+- Compare via `/dc-compare ../cppcheck` or the node normalizer snippet in the skill.
+
+**Step 3 — the comparative node script I was using** (drop into a Bash block):
+```js
+node -e "
+const fs = require('fs');
+const m = JSON.parse(fs.readFileSync('../dc-compare/main/analysis.cg.json','utf8'));
+const f = JSON.parse(fs.readFileSync('../dc-compare/feature/analysis.cg.json','utf8'));
+const mL = Object.keys(m.leaves), fL = Object.keys(f.leaves);
+let mD=0, fD=0;
+Object.values(m.leaves).forEach(v => mD += Object.keys(v.dependencies||{}).length);
+Object.values(f.leaves).forEach(v => fD += Object.keys(v.dependencies||{}).length);
+const shared = mL.filter(k => fL.includes(k));
+let matched=0, mainOnly=0;
+for (const k of shared) {
+  const md = Object.keys(m.leaves[k].dependencies || {});
+  const fd = Object.keys(f.leaves[k].dependencies || {});
+  matched += md.filter(d => fd.includes(d)).length;
+  mainOnly += md.filter(d => !fd.includes(d)).length;
+}
+console.log('nodes:', mL.length, 'vs', fL.length);
+console.log('deps:', mD, 'vs', fD);
+console.log('shared nodes', shared.length, ': matched', matched, ', main-only', mainOnly);
+"
+```
