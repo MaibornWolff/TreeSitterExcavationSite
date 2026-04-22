@@ -754,5 +754,97 @@ class CppDependencyTest {
                 assertThat(svc.usedTypes).containsExactly(UsedType(name = "Foo"))
             }
         }
+
+        @Nested
+        inner class ConstructorInitializers {
+            @Test
+            fun `should extract second-to-last segment from qualified constant in brace initializer`() {
+                // Arrange
+                val code = """
+                    class Foo {
+                        Foo() : type_{A::B::GLOBAL_CONSTANT} {}
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val foo = result.declarations.single { it.name == "Foo" }
+                assertThat(foo.usedTypes).containsExactly(UsedType(name = "B"))
+            }
+
+            @Test
+            fun `should extract single namespace segment from qualified constant in brace initializer`() {
+                // Arrange
+                val code = """
+                    class Foo {
+                        Foo() : type_{A::GLOBAL_CONSTANT} {}
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val foo = result.declarations.single { it.name == "Foo" }
+                assertThat(foo.usedTypes).containsExactly(UsedType(name = "A"))
+            }
+
+            @Test
+            fun `should extract qualified identifier from base class argument list`() {
+                // Arrange
+                val code = """
+                    class FooClass : public BarClass {
+                        FooClass(int base, int bonus)
+                            : BarClass(base, bonus, A::B::C::GLOBAL_CONSTANT) {}
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val foo = result.declarations.single { it.name == "FooClass" }
+                assertThat(foo.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "BarClass"),
+                    UsedType(name = "C")
+                )
+            }
+
+            @Test
+            fun `should not emit used type when initializer list has no qualified identifiers`() {
+                // Arrange
+                val code = """
+                    class FooClass : public BarClass {
+                        FooClass(int base, int bonus) : BarClass(base, bonus) {}
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val foo = result.declarations.single { it.name == "FooClass" }
+                assertThat(foo.usedTypes).containsExactly(UsedType(name = "BarClass"))
+            }
+
+            @Test
+            fun `should extract qualified identifier from nested call expression in argument list`() {
+                // Arrange
+                val code = """
+                    class Foo {
+                        Foo() : member_(X::make()) {}
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val foo = result.declarations.single { it.name == "Foo" }
+                assertThat(foo.usedTypes).containsExactly(UsedType(name = "X"))
+            }
+        }
     }
 }
