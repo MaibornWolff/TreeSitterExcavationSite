@@ -17,6 +17,8 @@ Add TypeScript and JavaScript dependency support to TSE, following the migration
 
 **DC follow-up (separate PR, out of scope):** After TSE is merged and tagged, DC's `TypescriptAnalyzer` and `JavascriptAnalyzer` need to be rewritten to call `TreeSitterDependencies.analyze()` — same pattern as Java/Kotlin.
 
+**DC prerequisite for TSX:** DC's TypescriptAnalyzer must dispatch `.tsx` files to `Language.TSX` (not `Language.TYPESCRIPT`) — the TypeScript parser does not emit JSX nodes. This is a DC-side change coordinated alongside TSE task 15.
+
 ## Design Decisions
 
 ### Package path — empty list
@@ -39,6 +41,9 @@ Start without boundary exclusion — match DC's re-parsing type leakage behavior
 
 ### Used type concatenation order (TypeScript)
 From `integration/dependencies/README.md`: `typeIdentifiers, constructorCalls, memberAccesses, methodCalls, extensions, relevantIdentifiers`
+
+### TSX dependency mapping — reuse TypeScript extractors
+TSX is a superset of TypeScript. `TsxDependencyMapping` reuses `PackageExtractor`, `ImportExtractor`, and `DeclarationExtractor` unchanged. `UsedTypeExtractor` is extended to also handle `jsx_opening_element` and `jsx_self_closing_element` — these nodes are simply absent when called via the TypeScript parser, so the extension is backward-compatible and safe to share.
 
 ## Tasks
 
@@ -154,6 +159,70 @@ When to run:
 - Architecture tests pass
 - Final dc-compare confirms match for both TypeScript and JavaScript
 
+### 12. Fix: CommonJS pair_pattern destructuring (TDD)
+
+`const { myMethod: alias } = require('myModule')` currently extracts nothing because `ImportExtractor` only handles `shorthand_property_identifier_pattern` inside `OBJECT_PATTERN`. In a `pair_pattern`, the first child is the key (original name) and the second is the alias.
+
+- Write failing tests in `JavascriptDependencyTest` and `TypescriptDependencyTest`:
+  - `const { myMethod: alias } = require('myModule')` → `ImportDeclaration(path=["myModule", "myMethod"], isWildcard=false)`
+- In `ImportExtractor.extractCommonJsImports`: also filter `pair_pattern` children of `OBJECT_PATTERN`; extract first child text as import name
+
+### 13. Fix: REEXPORT declarations (TDD)
+
+`export { A } from './foo'` should produce `Declaration` objects in addition to imports. Currently `DeclarationExtractor` ignores `export_statement` nodes with a source string.
+
+- Add `REEXPORT` to `DeclarationType` in `shared/domain/DependencyResult.kt`
+- Write failing tests in `TypescriptDependencyTest.DeclarationExtraction`:
+  - `export { MyReexportedClass } from './MyInternalClass'` → `Declaration(name="MyReexportedClass", type=REEXPORT, usedTypes=[UsedType("MyReexportedClass")])`
+  - `export { MyReexportedClass as MRC } from './MyInternalClass'` → `Declaration(name="MRC", type=REEXPORT, usedTypes=[UsedType("MyReexportedClass")])`
+  - `export { default as validationMixin } from './mixins/validation.mixin'` → `Declaration(name="validationMixin", type=REEXPORT, usedTypes=[UsedType("DEFAULT_EXPORT")])`
+  - multiple specifiers → one `Declaration` per specifier
+- Extend `DeclarationExtractor.extract()`: add branch for `export_statement` nodes with both an `export_clause` child and a source `string` child; iterate `export_specifier` children:
+  - single identifier → name = identifier, usedType = same
+  - two identifiers (`A as B`) → name = second, usedType = first
+  - `default` keyword → usedType = `"DEFAULT_EXPORT"`
+
+### 14. Fix: declare module declarations (TDD)
+
+`declare module "MyModule" { export class MyClass {} }` should produce `Declaration`s with `parentPath=["MyModule"]`. Currently ignored.
+
+- **AST dump first**: parse a `declare module "MyModule" { ... }` snippet with the TypeScript parser and log the node tree to confirm node type (likely `ambient_module_declaration`) and child structure before writing any code
+- Write failing tests in `TypescriptDependencyTest.DeclarationExtraction`:
+  - `declare module "MyModule" { export function myFunction(): void; }` → `Declaration(name="myFunction", type=FUNCTION, parentPath=["MyModule"])`
+  - `declare module "MyModule" { export class MyClass {} }` → `Declaration(name="MyClass", type=CLASS, parentPath=["MyModule"])`
+  - `declare module "*.md" {}` (glob pattern) → no declarations
+  - empty body → no declarations
+- Extend `DeclarationExtractor.extract()`: scan root for `ambient_module_declaration` nodes; extract module name string as `parentPath`; reuse `extractFromNode` for each declaration in the body, passing `parentPath` through
+
+### 15. Fix: JSX elements as usedTypes + TsxDependencyMapping (TDD)
+
+DC already supported JSX/TSX; DC regression tests go red without it. TSX uses `Language.TSX` (DC fix: dispatch `.tsx` files accordingly). The TSX parser emits `jsx_opening_element` and `jsx_self_closing_element` nodes; TypeScript does not — so JSX support lives in `UsedTypeExtractor` as an additive, backward-compatible extension.
+
+- Write failing tests in a new `TsxDependencyTest.kt`:
+  - `class Foo { render() { return <Routes /> } }` → `UsedType("Routes")` in Foo's usedTypes
+  - `class Foo { render() { return <Form.Input /> } }` → `UsedType("Form")` (root identifier only)
+  - `class Foo { render() { return <div /> } }` → `div` NOT included (lowercase)
+  - Verify imports and class declarations also work (reuse of TS extractors)
+- Extend `UsedTypeExtractor`:
+  - Add `jsx_opening_element` and `jsx_self_closing_element` to `ALL_NODE_TYPES`
+  - Add `extractJsxComponents`: extract tag's root identifier if uppercase-first; for member expressions (`Form.Input`), include only the root object
+- Create `TsxDependencyMapping` in `languages/tsx/`:
+  - Reuses `PackageExtractor::extract`, `ImportExtractor::extract`, `DeclarationExtractor::extract`
+- Override `dependencyMapping` in `TsxDefinition`
+
+### 16. Fix: Import alias → original usedType (TDD)
+
+`import { MyType as MyRenamedType } from './MyType'` + `private myType: MyRenamedType` should produce `UsedType("MyType")`, not `UsedType("MyRenamedType")`.
+
+- Write failing test in `TypescriptDependencyTest.UsedTypeExtraction`:
+  - class with aliased import used as field type → usedTypes contains original name, not alias
+- Add private `buildAliasMap(rootNode: TSNode, sourceCode: String): Map<String, String>` to `DeclarationExtractor`:
+  - scan `import_statement` → `named_imports` → `import_specifier` with 2 identifier children
+  - map alias (second identifier) → original (first identifier)
+- Change `UsedTypeExtractor.extract()` to accept `aliasMap: Map<String, String> = emptyMap()`
+- After collecting all usedTypes in `UsedTypeExtractor`, replace names present in `aliasMap` with their originals
+- Call from `DeclarationExtractor.extract()` with the pre-built alias map
+
 ## Steps
 
 - [x] Explore TypeScript + JavaScript AST (dump samples, verify all node type assumptions)
@@ -170,9 +239,26 @@ When to run:
 - [x] Add dynamic imports (`import('...')`) to `ImportExtractor` (TDD)
 - [x] Refine ImportExtractor: named ES6 → path+name, default ES6 → DEFAULT_EXPORT, CommonJS destructuring → per-name, CommonJS default → DEFAULT_EXPORT, named re-exports → per-specifier with original name (alias preserved)
 - [x] Refine DeclarationExtractor: add variable_declaration → VARIABLE, scope to direct children only (skip nested const inside class/function bodies)
+- [x] Fix: CommonJS pair_pattern destructuring → pair_pattern key as import name (TDD)
+- [ ] Fix: REEXPORT declarations → add REEXPORT to DeclarationType, extend DeclarationExtractor (TDD)
+- [ ] Fix: declare module declarations → AST dump, then implement with parentPath (TDD)
+- [ ] Fix: JSX elements as usedTypes → extend UsedTypeExtractor + create TsxDependencyMapping (TDD)
+- [ ] Fix: Import alias → original usedType → buildAliasMap + thread through UsedTypeExtractor (TDD)
 - [ ] Set up DC branch, run first dc-compare (TypeScript project) — iterate
 - [ ] Run first dc-compare (JavaScript project) — iterate
 - [ ] Final verification: full test suite + ktlintCheck + architecture tests
+
+## Session Notes
+
+### 2026-04-21 — DC integration fixes (5 failing test groups)
+
+After integrating TSE into DC's TypescriptAnalyzer, 17 DC tests remained failing. Root causes identified and planned as tasks 12–16:
+
+- **Fix 12** (CommonJS pair_pattern): `const { key: alias } = require(...)` not extracting the original key name
+- **Fix 13** (REEXPORT declarations): `export { A } from '...'` and `export { A as B } from '...'` producing no Declaration entries
+- **Fix 14** (declare module): ambient module blocks not producing any declarations; need AST dump to confirm node type first
+- **Fix 15** (JSX usedTypes + TsxDependencyMapping): DC regression tests require JSX support; approach is extend `UsedTypeExtractor` with JSX nodes (backward-compatible) + create `TsxDependencyMapping` reusing TS extractors; DC must dispatch `.tsx` to `Language.TSX`
+- **Fix 16** (import alias): aliased imports like `MyType as MyRenamedType` leaking local alias name into usedTypes instead of original
 
 ## Notes
 

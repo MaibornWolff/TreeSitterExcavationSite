@@ -121,6 +121,20 @@ class JavascriptDependencyTest {
         }
 
         @Test
+        fun `should extract CommonJS destructuring require with renamed property`() {
+            // Arrange
+            val code = "const { myMethod: alias } = require('myModule')"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly("myModule", "myMethod")
+            assertThat(result.imports[0].isWildcard).isFalse()
+        }
+
+        @Test
         fun `should return empty declarations`() {
             // Arrange
             val code = "class Foo extends Bar {}"

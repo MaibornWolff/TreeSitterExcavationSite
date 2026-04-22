@@ -21,6 +21,8 @@ internal object ImportExtractor {
     private const val VARIABLE_DECLARATOR = "variable_declarator"
     private const val OBJECT_PATTERN = "object_pattern"
     private const val SHORTHAND_PROPERTY_IDENTIFIER_PATTERN = "shorthand_property_identifier_pattern"
+    private const val PAIR_PATTERN = "pair_pattern"
+    private const val PROPERTY_IDENTIFIER = "property_identifier"
     private const val REQUIRE = "require"
     private const val IMPORT_KEYWORD = "import"
     private const val PATH_SEPARATOR = "/"
@@ -93,10 +95,19 @@ internal object ImportExtractor {
                 OBJECT_PATTERN ->
                     nameChild
                         .children()
-                        .filter { it.type == SHORTHAND_PROPERTY_IDENTIFIER_PATTERN }
-                        .mapNotNull { prop ->
-                            val name = TreeTraversal.getNodeText(prop, sourceCode).trim()
-                            if (name.isBlank()) null else ImportDeclaration(path = basePath + name, isWildcard = false)
+                        .flatMap { prop ->
+                            when (prop.type) {
+                                SHORTHAND_PROPERTY_IDENTIFIER_PATTERN -> {
+                                    val name = TreeTraversal.getNodeText(prop, sourceCode).trim()
+                                    if (name.isBlank()) emptyList() else listOf(ImportDeclaration(path = basePath + name, isWildcard = false))
+                                }
+                                PAIR_PATTERN -> {
+                                    val key = prop.children().firstOrNull { it.type == IDENTIFIER || it.type == PROPERTY_IDENTIFIER }
+                                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                                    if (key.isNullOrBlank()) emptyList() else listOf(ImportDeclaration(path = basePath + key, isWildcard = false))
+                                }
+                                else -> emptyList()
+                            }
                         }.toList()
                 else -> listOf(ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false))
             }
