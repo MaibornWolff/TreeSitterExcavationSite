@@ -738,6 +738,27 @@ class CppDependencyTest {
             }
 
             @Test
+            fun `should extract param types from pure method declaration in header`() {
+                // Arrange
+                val code = """
+                    class Service {
+                        Result process(Input arg, Other o);
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val svc = result.declarations.single { it.name == "Service" }
+                assertThat(svc.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Result"),
+                    UsedType(name = "Input"),
+                    UsedType(name = "Other")
+                )
+            }
+
+            @Test
             fun `should extract trailing return type`() {
                 // Arrange
                 val code = """

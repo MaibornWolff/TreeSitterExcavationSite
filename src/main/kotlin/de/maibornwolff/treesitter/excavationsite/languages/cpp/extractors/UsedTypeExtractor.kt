@@ -54,6 +54,7 @@ internal object UsedTypeExtractor {
     private val ALL_NODE_TYPES = setOf(
         BASE_CLASS_CLAUSE,
         FUNCTION_DEFINITION,
+        FUNCTION_DECLARATOR,
         FIELD_INITIALIZER_LIST,
         TYPE_DEFINITION,
         ALIAS_DECLARATION,
@@ -76,6 +77,9 @@ internal object UsedTypeExtractor {
         val buckets = groupDescendantsStoppingAtNestedDeclarations(declaration, ALL_NODE_TYPES)
         val inheritance = extractInheritanceTypes(buckets, sourceCode)
         val methodTypes = extractMethodReturnAndParamTypes(buckets, sourceCode)
+        val declaratorParamTypes = buckets[FUNCTION_DECLARATOR]
+            .orEmpty()
+            .flatMap { extractParameterTypes(it, sourceCode) }
         val initializerTypes = extractConstructorInitializerTypes(buckets, sourceCode)
         val aliasTypes =
             (buckets[TYPE_DEFINITION].orEmpty() + buckets[ALIAS_DECLARATION].orEmpty())
@@ -91,7 +95,7 @@ internal object UsedTypeExtractor {
             .flatMap { buckets[it].orEmpty() }
             .mapNotNull { extractTypeFromTypeField(it, sourceCode) }
         return (
-            inheritance + methodTypes + initializerTypes + aliasTypes +
+            inheritance + methodTypes + declaratorParamTypes + initializerTypes + aliasTypes +
                 constraintTypes + fieldAndVariableTypes + cStyleCasts +
                 instantiationTypes + friendAndUsingTypes + typeOperandTypes
         ).toSet()
