@@ -51,14 +51,19 @@ internal object CppTypeHelper {
     }
 
     fun extractRightmostSegment(qualifiedId: TSNode, sourceCode: String): UsedType? {
+        val scopeSegments = mutableListOf<String>()
         var node = qualifiedId
         while (node.type == QUALIFIED_IDENTIFIER) {
+            val scope = node.getChildByFieldName(SCOPE_FIELD)
+            if (!scope.isNull) {
+                scopeSegments.add(TreeTraversal.getNodeText(scope, sourceCode).trim())
+            }
             val nameField = node.getChildByFieldName(NAME_FIELD)
             if (nameField.isNull) return null
             node = nameField
         }
         val text = TreeTraversal.getNodeText(node, sourceCode).trim()
-        return if (text.isEmpty()) null else UsedType(name = text)
+        return if (text.isEmpty()) null else UsedType(name = text, namespacePrefix = scopeSegments.toList())
     }
 
     fun extractSecondToLastSegment(qualifiedId: TSNode, sourceCode: String): UsedType? {
@@ -72,6 +77,8 @@ internal object CppTypeHelper {
             node = node.getChildByFieldName(NAME_FIELD)
             if (node.isNull) break
         }
-        return scopeSegments.lastOrNull()?.let { UsedType(name = it) }
+        val name = scopeSegments.lastOrNull() ?: return null
+        val prefix = scopeSegments.dropLast(1)
+        return UsedType(name = name, namespacePrefix = prefix)
     }
 }

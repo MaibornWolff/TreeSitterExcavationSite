@@ -792,7 +792,9 @@ class CppDependencyTest {
 
                 // Assert
                 val foo = result.declarations.single { it.name == "Foo" }
-                assertThat(foo.usedTypes).containsExactly(UsedType(name = "B"))
+                assertThat(foo.usedTypes).containsExactly(
+                    UsedType(name = "B", namespacePrefix = listOf("A"))
+                )
             }
 
             @Test
@@ -829,7 +831,7 @@ class CppDependencyTest {
                 val foo = result.declarations.single { it.name == "FooClass" }
                 assertThat(foo.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "BarClass"),
-                    UsedType(name = "C")
+                    UsedType(name = "C", namespacePrefix = listOf("A", "B"))
                 )
             }
 
@@ -866,7 +868,7 @@ class CppDependencyTest {
                 val foo = result.declarations.single { it.name == "Foo" }
                 assertThat(foo.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "X"),
-                    UsedType(name = "make")
+                    UsedType(name = "make", namespacePrefix = listOf("X"))
                 )
             }
         }
@@ -1244,7 +1246,30 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "registerTest"))
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(name = "registerTest", namespacePrefix = listOf("Catch"))
+                )
+            }
+
+            @Test
+            fun `should capture multi-segment namespace prefix on qualified call`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork() {
+                            A::B::C::helper();
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(name = "helper", namespacePrefix = listOf("A", "B", "C"))
+                )
             }
         }
 
@@ -1281,7 +1306,9 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "Tester"))
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(name = "Tester", namespacePrefix = listOf("Outer"))
+                )
             }
         }
 
@@ -1302,6 +1329,25 @@ class CppDependencyTest {
                 // Assert
                 val derived = result.declarations.single { it.name == "Derived" }
                 assertThat(derived.usedTypes).containsExactly(UsedType(name = "Base"))
+            }
+
+            @Test
+            fun `should capture namespace prefix on deeply qualified using declaration`() {
+                // Arrange
+                val code = """
+                    class Derived {
+                        using Outer::Inner::method;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val derived = result.declarations.single { it.name == "Derived" }
+                assertThat(derived.usedTypes).containsExactly(
+                    UsedType(name = "Inner", namespacePrefix = listOf("Outer"))
+                )
             }
         }
 
