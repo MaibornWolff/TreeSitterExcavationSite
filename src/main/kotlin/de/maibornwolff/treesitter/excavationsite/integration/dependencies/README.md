@@ -77,7 +77,8 @@ data class Declaration(
 
 data class UsedType(
     val name: String,                       // "List"
-    val genericTypes: List<UsedType> = []   // [UsedType("String")] for List<String>
+    val genericTypes: List<UsedType> = [],  // [UsedType("String")] for List<String>
+    val namespacePrefix: List<String> = [], // ["A", "B"] for A::B::Settings; [] for unqualified
 )
 ```
 
@@ -93,6 +94,24 @@ data class UsedType(
 Without this tag, a C++ DC adapter cannot tell `#include "foo"` (needs path normalization) from `using foo;` (must not be normalized) — both produce the same `(path, isWildcard, namespacePath)` triple. TSE extractors tag the AST source; adapters branch on `kind`.
 
 All non-C++ languages leave the field at its default (`STANDARD`), so adding the field is source- and binary-compatible with existing callers.
+
+### Namespace-prefix handling
+
+`UsedType.namespacePrefix` captures the scope segments that appear *before* a type name at the use site. For `A::B::Settings` it is `["A", "B"]`; for an unqualified `Settings` it is `[]`.
+
+**Why it exists — and why it's essentially a C++ concern:**
+
+| Language | Typical style | Does `namespacePrefix` carry info? |
+|---|---|---|
+| Java, Kotlin, C# | Import types at the top, use short names inline. Qualified inline usage (`com.other.Settings s`) is rare and idiomatically discouraged. | No — always empty. The import list already carries the neighborhood info the resolver needs. |
+| C++ | `using namespace` is discouraged in headers because it pollutes scope. Writing `cppcheck::Settings` inline is **the normal way** to reference cross-namespace types. | Yes — populated on every qualified inline reference. |
+| TypeScript, JavaScript, Python, Go, Vue | Import-aliased usage (`pkg.Type`) is idiomatic but stored as a dotted string in `UsedType.name`; the resolver splits on `.`. | No — always empty. |
+| PHP | Has namespaces similar to C++; could opt in if the same resolver gap appears. | Optional; opt-in per extractor. |
+
+**How a DC-side adapter consumes it:** when building a node's `dependencies` set, emit a synthetic `Dependency(Path(namespacePrefix), isWildcard = true)` per `UsedType` that has a non-empty prefix. This mirrors what DC's legacy C++ analyzer did implicitly via `TypeExtractionService.extractTypeWithFoundNamespacesAsDependencies`: for every qualified usage, add a wildcard pointing at the type's neighborhood so the resolver can match the short name against classes declared there.
+
+The resolver itself needs no changes — the existing wildcard-matching loop in `Node.resolveTypeImport` already prepends wildcards to type names and looks for project matches.
+
 
 ## Adding a new language
 
