@@ -846,5 +846,80 @@ class CppDependencyTest {
                 assertThat(foo.usedTypes).containsExactly(UsedType(name = "X"))
             }
         }
+
+        @Nested
+        inner class TypeAliases {
+            @Test
+            fun `should extract aliased type from typedef`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        typedef Foo Bar;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+
+            @Test
+            fun `should extract template aliased type from typedef`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        typedef Vec<Foo> Items;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(name = "Vec", genericTypes = listOf(UsedType(name = "Foo")))
+                )
+            }
+
+            @Test
+            fun `should extract aliased type from using alias declaration`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        using Bar = Foo;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+
+            @Test
+            fun `should extract template aliased type from using alias declaration`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        using Items = Vec<Foo>;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(name = "Vec", genericTypes = listOf(UsedType(name = "Foo")))
+                )
+            }
+        }
     }
 }

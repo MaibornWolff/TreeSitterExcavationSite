@@ -16,7 +16,7 @@ dc_branch: feat/cpp-dependency-integration
 | 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
 | 4. `DeclarationExtractor` | ✅ done (16/16 cycles) | `db43ebf` → (cycle 16) |
-| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (3/14 cats) | `7d5bc19` → (cat 3) |
+| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (5/14 cats) | `7d5bc19` → (cat 4+5) |
 | 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
 | 7. Test consolidation | ⏳ pending | — |
 | 8. dc-compare iteration on Catch2 | ▶ round 1 done (structure OK, deps blocked on Task 5) | `7288351` (DC), local composite build |
@@ -448,8 +448,8 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
   - [x] 1. Inheritance (incl. template specialization as base) — commits `7d5bc19`, `34990ab`
   - [x] 2. Method return + parameter types + trailing return type — commits `37570c4`, `9b2847f`
   - [x] 3. Constructor initializer types — done, 5 tests covering brace/paren init, qualified constants (2- and 3-segment), nested call expression, and no-op base call. `extractInitializerTypeFromQualifiedIdentifier` walks scope fields and emits the last scope segment (second-to-last overall) to match DC's `FieldInitializerProcessor` behavior. Call expressions skipped inside `initializer_list` (brace init) to match DC emitting `Type.unparsable()` there.
-  - [ ] 4. Typedef types
-  - [ ] 5. Alias declaration types
+  - [x] 4. Typedef types — bundled with cat 5 in single commit
+  - [x] 5. Alias declaration types — bundled with cat 4. `extractTypeAliasTypes` handles both `type_definition` (`typedef`) and `alias_declaration` (`using X = Y;`) via the `type:` field + CppTypeHelper. Primitive/sized-type children deliberately skipped (accepted improvement — primitives don't resolve as project types).
   - [ ] 6. Template constraint types (C++20 requires)
   - [ ] 7. Field types
   - [ ] 8. Variable types

@@ -22,15 +22,20 @@ internal object UsedTypeExtractor {
     private const val CALL_EXPRESSION = "call_expression"
     private const val SCOPE_FIELD = "scope"
     private const val NAME_FIELD = "name"
+    private const val TYPE_FIELD = "type"
+    private const val TYPE_DEFINITION = "type_definition"
+    private const val ALIAS_DECLARATION = "alias_declaration"
 
-    private val ALL_NODE_TYPES = setOf(BASE_CLASS_CLAUSE, FUNCTION_DEFINITION, FIELD_INITIALIZER_LIST)
+    private val ALL_NODE_TYPES =
+        setOf(BASE_CLASS_CLAUSE, FUNCTION_DEFINITION, FIELD_INITIALIZER_LIST, TYPE_DEFINITION, ALIAS_DECLARATION)
 
     fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
         val buckets = TreeTraversal.findAllDescendantsGroupedByType(declaration, ALL_NODE_TYPES)
         val inheritance = extractInheritanceTypes(buckets, sourceCode)
         val methodTypes = extractMethodReturnAndParamTypes(buckets, sourceCode)
         val initializerTypes = extractConstructorInitializerTypes(buckets, sourceCode)
-        return (inheritance + methodTypes + initializerTypes).toSet()
+        val aliasTypes = extractTypeAliasTypes(buckets, sourceCode)
+        return (inheritance + methodTypes + initializerTypes + aliasTypes).toSet()
     }
 
     private fun extractInheritanceTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
@@ -99,6 +104,29 @@ internal object UsedTypeExtractor {
         .children()
         .filter { it.type == QUALIFIED_IDENTIFIER }
         .mapNotNull { extractInitializerTypeFromQualifiedIdentifier(it, sourceCode) }
+
+    private fun extractTypeAliasTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
+        val fromTypeDefs = buckets[TYPE_DEFINITION].orEmpty().mapNotNull { extractTypeFromTypeDefinition(it, sourceCode) }
+        val fromAliases = buckets[ALIAS_DECLARATION].orEmpty().mapNotNull { extractTypeFromAliasDeclaration(it, sourceCode) }
+        return fromTypeDefs + fromAliases
+    }
+
+    private fun extractTypeFromTypeDefinition(node: TSNode, sourceCode: String): UsedType? {
+        val typeNode = node.getChildByFieldName(TYPE_FIELD).takeIf { !it.isNull }
+            ?: node.namedChildren().firstOrNull { CppTypeHelper.isTypeNode(it) }
+            ?: return null
+        return CppTypeHelper.extractType(typeNode, sourceCode)
+    }
+
+    private fun extractTypeFromAliasDeclaration(node: TSNode, sourceCode: String): UsedType? {
+        val typeField = node.getChildByFieldName(TYPE_FIELD).takeIf { !it.isNull } ?: return null
+        val unwrapped = if (typeField.type == TYPE_DESCRIPTOR) {
+            typeField.namedChildren().firstOrNull { CppTypeHelper.isTypeNode(it) }
+        } else {
+            typeField.takeIf { CppTypeHelper.isTypeNode(it) }
+        } ?: return null
+        return CppTypeHelper.extractType(unwrapped, sourceCode)
+    }
 
     private fun extractInitializerTypeFromQualifiedIdentifier(qualifiedId: TSNode, sourceCode: String): UsedType? {
         val scopeSegments = mutableListOf<String>()
