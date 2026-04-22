@@ -16,7 +16,7 @@ dc_branch: feat/cpp-dependency-integration
 | 2. `PackageExtractor` | ✅ done (6/6 cycles) | `88d5eff` → `c4dc5c4` |
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
 | 4. `DeclarationExtractor` | ✅ done (16/16 cycles) | `db43ebf` → (cycle 16) |
-| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (9/14 cats) | `7d5bc19` → (cat 9) |
+| 5. `UsedTypeExtractor` (14 cats + boundary exclusion) | ▶ in progress (11/14 cats) | `7d5bc19` → (cat 10+11) |
 | 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2) | `88d5eff` |
 | 7. Test consolidation | ⏳ pending | — |
 | 8. dc-compare iteration on Catch2 | ▶ round 1 done (structure OK, deps blocked on Task 5) | `7288351` (DC), local composite build |
@@ -454,8 +454,8 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
   - [x] 7. Field types — bundled with cat 8. `field_declaration` added to ALL_NODE_TYPES; delegates to `extractTypeFromTypeField` which unwraps `type_descriptor` or the `type:` field directly.
   - [x] 8. Variable types — bundled with cat 7. `declaration` (non-top-level, found inside function bodies by `findAllDescendantsGroupedByType`) reuses `extractTypeFromTypeField`. Parameters remain handled by cat 2.
   - [x] 9. Cast types (incl. static_cast/dynamic_cast/reinterpret_cast/const_cast) — `extractCastTypes` handles C-style `cast_expression` via `extractTypeFromTypeField`; the four explicit-cast forms are recognized as `call_expression` whose `function:` is a `template_function` with one of four fixed names, extracting from the `arguments` template_argument_list.
-  - [ ] 10. New expression types
-  - [ ] 11. Call expression types
+  - [x] 10. New expression types — bundled with cat 11. `new_expression` emits type via `extractTypeFromTypeField`. Pointer/ref declarators on the new-type are handled by CppTypeHelper's generic-argument unwrap.
+  - [x] 11. Call expression types — bundled with cat 10. `extractInstantiationTypes` processes `call_expression`: template_function callees yield their template arguments (subsumes the explicit-cast handling from cat 9 — `EXPLICIT_CAST_NAMES` filter removed since generic template-function extraction catches static_cast/etc. by design); qualified_identifier callees yield the rightmost segment (matching DC's `extractTypeWithFoundNamespacesAsDependencies` behavior for static/method calls, even when that emits a function name rather than a class).
   - [ ] 12. Friend declaration types
   - [ ] 13. In-class using directive types
   - [ ] 14. Type operands (sizeof/noexcept/alignof/typeid)

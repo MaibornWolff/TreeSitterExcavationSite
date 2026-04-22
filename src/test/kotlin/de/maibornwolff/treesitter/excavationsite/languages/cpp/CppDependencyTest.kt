@@ -843,7 +843,10 @@ class CppDependencyTest {
 
                 // Assert
                 val foo = result.declarations.single { it.name == "Foo" }
-                assertThat(foo.usedTypes).containsExactly(UsedType(name = "X"))
+                assertThat(foo.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "X"),
+                    UsedType(name = "make")
+                )
             }
         }
 
@@ -1140,6 +1143,87 @@ class CppDependencyTest {
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+        }
+
+        @Nested
+        inner class InstantiationSites {
+            @Test
+            fun `should extract type from new expression`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork() {
+                            auto p = new Foo();
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+
+            @Test
+            fun `should extract template type from new expression`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork() {
+                            auto p = new Vec<Foo>();
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(name = "Vec", genericTypes = listOf(UsedType(name = "Foo")))
+                )
+            }
+
+            @Test
+            fun `should extract template argument types from template function call`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork() {
+                            auto x = make<Foo>();
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+
+            @Test
+            fun `should extract rightmost segment from qualified call`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        void doWork() {
+                            Catch::registerTest();
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "registerTest"))
             }
         }
     }

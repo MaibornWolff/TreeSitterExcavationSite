@@ -35,11 +35,11 @@ internal object UsedTypeExtractor {
     private const val FIELD_DECLARATION = "field_declaration"
     private const val DECLARATION = "declaration"
     private const val CAST_EXPRESSION = "cast_expression"
+    private const val NEW_EXPRESSION = "new_expression"
     private const val TEMPLATE_FUNCTION = "template_function"
     private const val TEMPLATE_ARGUMENT_LIST = "template_argument_list"
     private const val ARGUMENTS_FIELD = "arguments"
     private const val FUNCTION_FIELD = "function"
-    private val EXPLICIT_CAST_NAMES = setOf("static_cast", "dynamic_cast", "reinterpret_cast", "const_cast")
 
     private val ALL_NODE_TYPES = setOf(
         BASE_CLASS_CLAUSE,
@@ -50,7 +50,8 @@ internal object UsedTypeExtractor {
         FIELD_DECLARATION,
         DECLARATION,
         CAST_EXPRESSION,
-        CALL_EXPRESSION
+        CALL_EXPRESSION,
+        NEW_EXPRESSION
     )
 
     fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
@@ -58,15 +59,18 @@ internal object UsedTypeExtractor {
         val inheritance = extractInheritanceTypes(buckets, sourceCode)
         val methodTypes = extractMethodReturnAndParamTypes(buckets, sourceCode)
         val initializerTypes = extractConstructorInitializerTypes(buckets, sourceCode)
-        val aliasTypes = extractTypeAliasTypes(buckets, sourceCode)
+        val aliasTypes =
+            (buckets[TYPE_DEFINITION].orEmpty() + buckets[ALIAS_DECLARATION].orEmpty())
+                .mapNotNull { extractTypeFromTypeField(it, sourceCode) }
         val constraintTypes = extractTemplateConstraintTypes(declaration, sourceCode)
         val fieldAndVariableTypes =
             (buckets[FIELD_DECLARATION].orEmpty() + buckets[DECLARATION].orEmpty())
                 .mapNotNull { extractTypeFromTypeField(it, sourceCode) }
-        val castTypes = extractCastTypes(buckets, sourceCode)
+        val cStyleCasts = buckets[CAST_EXPRESSION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
+        val instantiationTypes = extractInstantiationTypes(buckets, sourceCode)
         return (
             inheritance + methodTypes + initializerTypes + aliasTypes +
-                constraintTypes + fieldAndVariableTypes + castTypes
+                constraintTypes + fieldAndVariableTypes + cStyleCasts + instantiationTypes
         ).toSet()
     }
 
@@ -141,12 +145,6 @@ internal object UsedTypeExtractor {
         }
     }
 
-    private fun extractTypeAliasTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
-        val fromTypeDefs = buckets[TYPE_DEFINITION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
-        val fromAliases = buckets[ALIAS_DECLARATION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
-        return fromTypeDefs + fromAliases
-    }
-
     private fun extractTypeFromTypeField(node: TSNode, sourceCode: String): UsedType? {
         val typeField = node.getChildByFieldName(TYPE_FIELD).takeIf { !it.isNull }
             ?: node.namedChildren().firstOrNull { CppTypeHelper.isTypeNode(it) || it.type == TYPE_DESCRIPTOR }
@@ -184,20 +182,23 @@ internal object UsedTypeExtractor {
             .toList()
     }
 
-    private fun extractCastTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
-        val cStyleCasts = buckets[CAST_EXPRESSION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
-        val explicitCasts = buckets[CALL_EXPRESSION].orEmpty().flatMap { call ->
-            extractExplicitCastTypes(call, sourceCode)
+    private fun extractInstantiationTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
+        val newTypes = buckets[NEW_EXPRESSION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
+        val callTypes = buckets[CALL_EXPRESSION].orEmpty().flatMap { call ->
+            val function = call.getChildByFieldName(FUNCTION_FIELD).takeIf { !it.isNull } ?: return@flatMap emptyList()
+            when (function.type) {
+                TEMPLATE_FUNCTION -> extractTemplateArgumentTypes(function, sourceCode)
+                QUALIFIED_IDENTIFIER -> listOfNotNull(extractRightmostTypeFromQualifiedIdentifier(function, sourceCode))
+                else -> emptyList()
+            }
         }
-        return cStyleCasts + explicitCasts
+        return newTypes + callTypes
     }
 
-    private fun extractExplicitCastTypes(call: TSNode, sourceCode: String): List<UsedType> {
-        val function = call.getChildByFieldName(FUNCTION_FIELD).takeIf { !it.isNull } ?: return emptyList()
-        if (function.type != TEMPLATE_FUNCTION) return emptyList()
-        val name = function.getChildByFieldName(NAME_FIELD).takeIf { !it.isNull } ?: return emptyList()
-        if (TreeTraversal.getNodeText(name, sourceCode).trim() !in EXPLICIT_CAST_NAMES) return emptyList()
-        val argList = function.getChildByFieldName(ARGUMENTS_FIELD).takeIf { !it.isNull && it.type == TEMPLATE_ARGUMENT_LIST }
+    private fun extractTemplateArgumentTypes(templateFunction: TSNode, sourceCode: String): List<UsedType> {
+        val argList = templateFunction
+            .getChildByFieldName(ARGUMENTS_FIELD)
+            .takeIf { !it.isNull && it.type == TEMPLATE_ARGUMENT_LIST }
             ?: return emptyList()
         return argList
             .namedChildren()
@@ -209,6 +210,18 @@ internal object UsedTypeExtractor {
                 }
                 inner?.let { CppTypeHelper.extractType(it, sourceCode) }
             }.toList()
+    }
+
+    private fun extractRightmostTypeFromQualifiedIdentifier(qualifiedId: TSNode, sourceCode: String): UsedType? {
+        var node = qualifiedId
+        while (node.type == QUALIFIED_IDENTIFIER) {
+            val nameField = node.getChildByFieldName(NAME_FIELD)
+            if (nameField.isNull) return null
+            node = nameField
+        }
+        val text = TreeTraversal.getNodeText(node, sourceCode).trim()
+        if (text.isEmpty()) return null
+        return UsedType(name = text)
     }
 
     private fun extractInitializerTypeFromQualifiedIdentifier(qualifiedId: TSNode, sourceCode: String): UsedType? {
