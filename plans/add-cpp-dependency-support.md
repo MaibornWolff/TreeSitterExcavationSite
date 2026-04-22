@@ -17,8 +17,8 @@ dc_branch: feat/cpp-dependency-integration
 | 3. `ImportExtractor` + `ImportKind` | ✅ done (13/13 cycles) | `1a825e9` → `7f27773` |
 | 4. `DeclarationExtractor` | ✅ done (16/16 cycles) | `db43ebf` → (cycle 16) |
 | 5. `UsedTypeExtractor` (14 cats + boundary exclusion + out-of-class) | ✅ done (14/14 cats, boundary exclusion, out-of-class bodies, order-pin test) | `7d5bc19` → (cat 16+17) |
-| 6. Wire `CppDependencyMapping` | 🔶 partial (stubs in place from Task 2; still to replace with real extractor references) | `88d5eff` |
-| 7. Test consolidation | ⏳ pending | — |
+| 6. Wire `CppDependencyMapping` | ✅ done — real extractor refs in place; `CppDefinition.dependencyMapping` override wired | `88d5eff` |
+| 7. Test consolidation | ✅ done — `ApiSupportCheck` added; `@Nested` structure matches C#; concatenation-order integration test present | TBD |
 | 8. dc-compare iteration | ▶ 4 rounds done, switched baseline to cppcheck in R3 | R2 `f3d625f`, R3 `fd5475b`, R4 `e9ae7cb` |
 | 9. DC adapter (`feat/cpp-dependency-integration`) | 🔶 partial — analyzer rewrite committed, legacy files still on disk, resolver gap open | DC: `7288351` |
 | 10. Release + integrate | ⏳ pending | — |
@@ -471,8 +471,8 @@ Delete all of `analyzers/cpp/processing/`, `analyzers/cpp/model/`, `analyzers/cp
   - `extractOutOfClassDeclarations` passes individual declarations through `UsedTypeExtractor.extract(declarationNode, ...)` implicitly for *explicit* class/struct decls; synthetic decls from out-of-class methods bypass it and will need category 16 routing.
   - Boundary exclusion: needs a local private helper in `UsedTypeExtractor` that recurses like `TreeTraversal.findAllDescendantsGroupedByType` but stops at nested `class_specifier`/`struct_specifier`/`union_specifier`/`enum_specifier` — so types referenced *inside* a nested class body don't leak upward into the outer class's `usedTypes`. Keep the helper local until a second TSE caller appears.
 
-- [ ] Complete Task 6: `CppDependencyMapping` wiring + `CppDefinition` update — **partially done**: mapping + override exist with stubs from Task 2; still need replacement of inline stubs as Tasks 3 and 4 land
-- [ ] Complete Task 7: `CppDependencyTest` with `@Nested` groups mirroring C#
+- [x] Complete Task 6: `CppDependencyMapping` wiring + `CppDefinition` update — mapping references real `PackageExtractor`/`ImportExtractor`/`DeclarationExtractor`; `CppDefinition.dependencyMapping` override in place; end-to-end `TreeSitterDependencies.analyze(code, Language.CPP)` confirmed via full build + `*CppDependencyTest*`
+- [x] Complete Task 7: `CppDependencyTest` with `@Nested` groups mirroring C# — `ApiSupportCheck` added; structure already covers Package/Import/Declaration/UsedType extraction with per-category nested groups and one top-level concatenation-order integration test
 - [ ] Complete Task 8: dc-compare iteration against Catch2 v3 (interleaved with Tasks 3–5)
   - **Round 1 (2026-04-21)**: ran composite build against `../Catch2` (depth-1 clone). Output in `../dc-compare/main/` (golden) and `../dc-compare/feature/`. Structural parity confirmed after adding physical-path prefix for file-scope decls in the DC adapter (`fullyQualify` equivalent). Remaining diffs: +150 feature-only nodes (files DC legacy errored on — accepted improvement), ~20 main-only nodes (DC legacy namespace-loss duplicates — accepted improvement), ~5 genuine gaps (template-specialized struct/class names like `Catch.StringMaker<std::string>` and typedef-like decls — will re-check after Task 5 lands alias/typedef + richer template_type handling). Dependencies empty on C++ nodes because `usedTypes` was empty at round time — rerun after Task 5 to unblock dep/cycle comparison.
   - **Round 4 (2026-04-22, cppcheck, after full Task 5)**: re-ran cppcheck analysis with the complete Task 5 chain (cats 1–14 + boundary exclusion + out-of-class bodies + function_declarator param types).
