@@ -1089,6 +1089,105 @@ class CppDependencyTest {
         }
 
         @Nested
+        inner class NamespacedTemplateGenerics {
+            @Test
+            fun `should extract simple generic from namespaced template as nested generic type`() {
+                // Arrange — tree-sitter-cpp parses std::list<Foo> as qualified_identifier whose name
+                // field is a template_type, not another qualified_identifier. Walker must dispatch
+                // through extractTemplateType when the chain exits on a template_type leaf.
+                val code = """
+                    class Container {
+                        std::list<Foo> items_;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(name = "list", namespacePrefix = listOf("std"), genericTypes = listOf(UsedType(name = "Foo")))
+                )
+            }
+
+            @Test
+            fun `should extract qualified generic from namespaced template as nested generic type`() {
+                // Arrange — the cppcheck exemplar: std::list<ErrorMessage::FileLocation>.
+                val code = """
+                    class Container {
+                        std::list<ErrorMessage::FileLocation> callStack_;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(
+                        name = "list",
+                        namespacePrefix = listOf("std"),
+                        genericTypes = listOf(
+                            UsedType(name = "FileLocation", namespacePrefix = listOf("ErrorMessage"))
+                        )
+                    )
+                )
+            }
+
+            @Test
+            fun `should extract nested namespaced templates recursively`() {
+                // Arrange — std::shared_ptr<std::string>: both container and inner are namespaced.
+                val code = """
+                    class Container {
+                        std::shared_ptr<std::string> payload_;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(
+                        name = "shared_ptr",
+                        namespacePrefix = listOf("std"),
+                        genericTypes = listOf(
+                            UsedType(name = "string", namespacePrefix = listOf("std"))
+                        )
+                    )
+                )
+            }
+
+            @Test
+            fun `should extract namespaced template from method return type`() {
+                // Arrange — same pattern when used as a method return type rather than field.
+                val code = """
+                    class Container {
+                        std::list<ErrorMessage::FileLocation> getCallStack();
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(
+                        name = "list",
+                        namespacePrefix = listOf("std"),
+                        genericTypes = listOf(
+                            UsedType(name = "FileLocation", namespacePrefix = listOf("ErrorMessage"))
+                        )
+                    )
+                )
+            }
+        }
+
+        @Nested
         inner class Casts {
             @Test
             fun `should extract type from C-style cast expression`() {

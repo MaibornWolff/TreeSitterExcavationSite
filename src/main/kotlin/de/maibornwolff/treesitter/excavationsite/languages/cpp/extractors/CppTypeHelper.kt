@@ -68,7 +68,11 @@ internal object CppTypeHelper {
 
     fun extractRightmostSegment(qualifiedId: TSNode, sourceCode: String): UsedType? {
         val (segments, leaf) = walkQualified(qualifiedId, sourceCode)
-        val text = leaf ?: return null
+        val leafNode = leaf ?: return null
+        if (leafNode.type == TEMPLATE_TYPE) {
+            return extractTemplateType(leafNode, sourceCode)?.copy(namespacePrefix = segments)
+        }
+        val text = TreeTraversal.getNodeText(leafNode, sourceCode).trim()
         return if (text.isEmpty()) null else UsedType(name = text, namespacePrefix = segments)
     }
 
@@ -85,7 +89,7 @@ internal object CppTypeHelper {
         return UsedType(name = name, namespacePrefix = segments.dropLast(1))
     }
 
-    private fun walkQualified(qualifiedId: TSNode, sourceCode: String): Pair<List<String>, String?> {
+    private fun walkQualified(qualifiedId: TSNode, sourceCode: String): Pair<List<String>, TSNode?> {
         val scopeSegments = mutableListOf<String>()
         var node = qualifiedId
         while (node.type == QUALIFIED_IDENTIFIER) {
@@ -97,6 +101,6 @@ internal object CppTypeHelper {
             if (nameField.isNull) return scopeSegments to null
             node = nameField
         }
-        return scopeSegments to TreeTraversal.getNodeText(node, sourceCode).trim()
+        return scopeSegments to node
     }
 }
