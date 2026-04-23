@@ -1442,6 +1442,78 @@ class CppDependencyTest {
         }
 
         @Nested
+        inner class ThrowStatements {
+            @Test
+            fun `should extract bare-identifier callee from throw statement`() {
+                // Arrange — DC legacy's VariableDeclarationProcessor throwCalls TSQuery
+                // captures the call_expression's function field as @type for bare identifier,
+                // qualified_identifier, template_function, and primitive_type cases.
+                val code = """
+                    class Container {
+                        void doWork() {
+                            throw MyException(x);
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "MyException"))
+            }
+
+            @Test
+            fun `should extract qualified callee from throw statement`() {
+                // Arrange — emits the rightmost segment with namespacePrefix,
+                // plus the scope as its own UsedType (Issue 2 scope-as-type for qualified calls).
+                val code = """
+                    class Container {
+                        void doWork() {
+                            throw std::runtime_error("x");
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "std"),
+                    UsedType(name = "runtime_error", namespacePrefix = listOf("std"))
+                )
+            }
+
+            @Test
+            fun `should extract template-function callee from throw statement`() {
+                // Arrange — DC emits the whole template_function as a Type.generic
+                // with name + generics; the template_argument_list type_descriptor
+                // is also captured separately, producing both the generic type and
+                // its argument.
+                val code = """
+                    class Container {
+                        void doWork() {
+                            throw make_ex<Detail>();
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Detail"),
+                    UsedType(name = "make_ex", genericTypes = listOf(UsedType(name = "Detail")))
+                )
+            }
+        }
+
+        @Nested
         inner class OutOfClassMethodBodies {
             @Test
             fun `should extract parameter types from out-of-class method`() {

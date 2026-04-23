@@ -42,6 +42,7 @@ internal object UsedTypeExtractor {
     private const val USING_DECLARATION = "using_declaration"
     private const val SIZEOF_EXPRESSION = "sizeof_expression"
     private const val ALIGNOF_EXPRESSION = "alignof_expression"
+    private const val THROW_STATEMENT = "throw_statement"
     private const val CLASS_SPECIFIER = "class_specifier"
     private const val STRUCT_SPECIFIER = "struct_specifier"
     private const val UNION_SPECIFIER = "union_specifier"
@@ -66,7 +67,8 @@ internal object UsedTypeExtractor {
         FRIEND_DECLARATION,
         USING_DECLARATION,
         SIZEOF_EXPRESSION,
-        ALIGNOF_EXPRESSION
+        ALIGNOF_EXPRESSION,
+        THROW_STATEMENT
     )
 
     private val TYPE_OPERAND_EXPRESSIONS = setOf(SIZEOF_EXPRESSION, ALIGNOF_EXPRESSION)
@@ -213,14 +215,36 @@ internal object UsedTypeExtractor {
 
     private fun extractInstantiationTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
         val newTypes = buckets[NEW_EXPRESSION].orEmpty().mapNotNull { extractTypeFromTypeField(it, sourceCode) }
-        val callTypes = buckets[CALL_EXPRESSION].orEmpty().flatMap { call ->
+        val throwCallees = buckets[THROW_STATEMENT].orEmpty().mapNotNull { throwStmt ->
+            throwStmt.namedChildren().firstOrNull { it.type == CALL_EXPRESSION }
+        }
+        val callTypes = (buckets[CALL_EXPRESSION].orEmpty() + throwCallees).flatMap { call ->
             val function = call.getChildByFieldName(FUNCTION_FIELD).takeIf { !it.isNull } ?: return@flatMap emptyList()
+            val isInThrow = call.parent.takeIf { !it.isNull }?.type == THROW_STATEMENT
             when (function.type) {
-                TEMPLATE_FUNCTION -> extractTemplateArgumentTypes(function, sourceCode)
+                TEMPLATE_FUNCTION -> {
+                    val generics = extractTemplateArgumentTypes(function, sourceCode)
+                    if (isInThrow) {
+                        val name = function
+                            .getChildByFieldName("name")
+                            .takeIf { !it.isNull }
+                            ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                            .orEmpty()
+                        if (name.isEmpty()) generics else generics + UsedType(name = name, genericTypes = generics)
+                    } else {
+                        generics
+                    }
+                }
                 QUALIFIED_IDENTIFIER -> listOfNotNull(
                     CppTypeHelper.extractRightmostSegment(function, sourceCode),
                     CppTypeHelper.extractSingleSegmentScope(function, sourceCode)
                 )
+                IDENTIFIER -> if (isInThrow) {
+                    val text = TreeTraversal.getNodeText(function, sourceCode).trim()
+                    if (text.isEmpty()) emptyList() else listOf(UsedType(name = text))
+                } else {
+                    emptyList()
+                }
                 else -> emptyList()
             }
         }
