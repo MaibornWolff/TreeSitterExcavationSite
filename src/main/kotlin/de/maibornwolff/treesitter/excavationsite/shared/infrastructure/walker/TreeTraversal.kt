@@ -52,51 +52,25 @@ object TreeTraversal {
     /**
      * Checks if the node has an ancestor of the given type.
      */
-    fun hasAncestorOfType(node: TSNode, type: String): Boolean {
-        var current = node.parent
-        while (current != null && !current.isNull) {
-            if (current.type == type) return true
-            current = current.parent
-        }
-        return false
-    }
+    fun hasAncestorOfType(node: TSNode, type: String): Boolean = node.ancestors().any { it.type == type }
 
     /**
      * Checks if the node has an ancestor of any of the given types.
      */
     fun hasAncestorOfTypes(node: TSNode, vararg types: String): Boolean {
         val typeSet = types.toSet()
-        var current = node.parent
-        while (current != null && !current.isNull) {
-            if (current.type in typeSet) return true
-            current = current.parent
-        }
-        return false
+        return node.ancestors().any { it.type in typeSet }
     }
 
     /**
      * Finds the first ancestor of the given type, or null if none exists.
      */
-    fun findAncestorOfType(node: TSNode, type: String): TSNode? {
-        var current = node.parent
-        while (current != null && !current.isNull) {
-            if (current.type == type) return current
-            current = current.parent
-        }
-        return null
-    }
+    fun findAncestorOfType(node: TSNode, type: String): TSNode? = node.ancestors().firstOrNull { it.type == type }
 
     /**
      * Checks if the node is a descendant of the given ancestor node.
      */
-    fun isDescendantOf(node: TSNode, ancestor: TSNode): Boolean {
-        var current = node.parent
-        while (current != null && !current.isNull) {
-            if (current == ancestor) return true
-            current = current.parent
-        }
-        return false
-    }
+    fun isDescendantOf(node: TSNode, ancestor: TSNode): Boolean = node.ancestors().any { it == ancestor }
 
     /**
      * Finds all descendants matching any of the given types via recursive descent.
@@ -164,5 +138,17 @@ fun TSNode.children(): Sequence<TSNode> = sequence {
 fun TSNode.namedChildren(): Sequence<TSNode> = sequence {
     for (i in 0 until namedChildCount) {
         yield(getNamedChild(i))
+    }
+}
+
+/**
+ * Extension function to iterate over the chain of ancestors of a TSNode,
+ * starting from the immediate parent and walking upward toward the root.
+ */
+fun TSNode.ancestors(): Sequence<TSNode> = sequence {
+    var current = parent
+    while (current != null && !current.isNull) {
+        yield(current)
+        current = current.parent
     }
 }
