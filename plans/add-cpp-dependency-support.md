@@ -780,6 +780,9 @@ java -jar build/libs/dependacharta.jar -d "../../cppcheck" -o "../../dc-compare/
 | Option-3 sampling + Issue analysis | `9372daa` | ✅ done (findings recorded) |
 | Issue 1 fix | DC: `20ea8a4` | ✅ done — unconditional selfWildcard; +358 matched cppcheck deps (R6 → R7) |
 | Issue 2 fix | `4891922` | ✅ done — +112 matched cppcheck deps (R5 → R6) |
+| Issue 3 fix | `d189b57` | ✅ done — qualified_identifier as type node; +91 matched (R7 → R8) |
+| Issue 4 fix | `8cfc2a2` | ✅ done — throw-statement callee extraction; +9 matched (R9 → R10) |
+| Concat order | `69bca49` | ✅ done — match DC BodyProcessor order; neutral on cppcheck |
 | Constructor regression guard | `bfc75ce` | ✅ done — pins out-of-class constructor param extraction |
 
 ## Session break — 2026-04-23
@@ -822,13 +825,63 @@ The feature-branch `CppAnalyzer.kt:36-40` guarded `selfWildcard` behind `if (par
 
 Match rate: 25.7% → **40.3%**. 3x the gain from Issue 2. The +183 feat-only is the expected cost of loose simple-name matching; DC main has the same looseness but lands on slightly different candidates via groupBy iteration order.
 
-### What's left
+### Rounds 8-10 summary
 
-1466 main-only deps still unmatched. Remaining candidates from earlier sampling (file 9372daa docs): template specializations not synthesized as separate declarations, weird `::` separator cases in parent paths (8 ids), and `Catch.Detail.Catch.ExprLhs.*` duplicate-segment paths (11 ids, amalgamated-only). Beyond those, further sampling needed. Match rate 40.3% still short of the ~80-90% ship threshold.
+| Round | Change | matched | main-only | feat-only | rate |
+|---|---|---|---|---|---|
+| R5 | baseline | 519 | 1936 | 150 | 21.1% |
+| R6 | Issue 2 (scope-as-type) | 631 | 1824 | 173 | 25.7% |
+| R7 | Issue 1 (DC: selfWildcard) | 989 | 1466 | 356 | 40.3% |
+| R8 | Issue 3 (qualified_identifier as type) | 1080 | 1375 | 470 | 43.9% |
+| R9 | concat reorder | 1081 | 1374 | 469 | 44.0% |
+| R10 | Issue 4 (throw callee) | 1090 | 1365 | 470 | 44.4% |
+
+### Bucket analysis of remaining 1365 main-only (post-R10)
+
+Classification via script against the R10 cg.json:
+
+| Category | Count | Can we close? |
+|---|---|---|
+| Misdirection (resolver picks different same-simple-name candidate) | 167 | No — inherent to DC's loose simple-name resolver + groupBy iteration order |
+| DC misattribution (dump-to-last-node in multi-class files) | ~700-900 | No — would require replicating a DC legacy bug |
+| Genuine extraction gaps | ~300-500 | Yes — additional AST patterns (Issue 5 bare-identifier-call, etc.) |
+
+**Key bucket-analysis finding**: 411 of 1186 not-emitted (34.7%) come from a single file — `lib/valueflow.cpp`. Top 4 files (`valueflow_cpp` 411, `symboldatabase_cpp` 84, `vf_analyzers_cpp` 49, `checkclass_cpp` 44) account for 588 deps (~50% of not-emitted). All four are multi-class-per-file scenarios where DC's misattribution bug pollutes every node.
+
+### Third DC bug discovered: dump-to-last-node misattribution
+
+In DC's `analyzers/cpp/processing/BodyProcessor.kt:86-95`, `addTypesAndDependenciesToRelatedNode` uses `this.lastOrNull()` — the most-recently-added node — as the target for accumulated types:
+
+```kotlin
+private fun MutableList<Node>.addTypesAndDependenciesToRelatedNode(processorResult: CppContext): MutableList<Node> {
+    val relatedNode = this.lastOrNull() ?: return this
+    ...
+}
+```
+
+For a file like `lib/valueflow.cpp` with ~30 sequential class/struct declarations interleaved with free functions, every free function's type usages get dumped onto the most recent declaration node — NOT the semantic owner. Example: `lib.valueflow_cpp.ValueFlowPass` is a 12-line struct with one real dependency (`ValueFlowState`), but DC attributes 32 deps to it including `Path`, `ErrorMessage`, `simpleMatch`, etc. Feature correctly scopes to the actual owner (enclosing class for methods, file-scope for free functions if they had declarations — which they don't).
+
+### Three DC legacy bugs surfaced, none mirrored by feature
+
+| Bug | Effect in DC main | Feature behavior |
+|---|---|---|
+| Header parse crash (`Node is a null node`) | ~121 `.h`-only classes missing from main's output | Feature correctly extracts all 179 `_h` nodes |
+| Empty-namespace wildcard + `String.contains("")` in resolver | Every simple name matches first project candidate regardless of context | Feature benefits (Issue 1 fix) — same loose-match behavior |
+| `addTypesAndDependenciesToRelatedNode` dumps on `lastOrNull()` | ~700-900 deps misattributed to wrong leaf nodes | Feature correctly scopes types to semantic owner |
+
+The 167 misdirection + 700-900 misattribution is a ceiling for correctness-respecting matching against cppcheck main. Match rate above ~50-55% requires mirroring DC bugs.
+
+### What's left for extraction work
+
+~300-500 genuine extraction gaps. Candidates to pursue via TDD:
+
+1. **Issue 5: bare-identifier call in argument list** — DC's `(argument_list (call_expression function:(identifier)@potential_constructor))` pattern. `push_back(Widget(x))` → emit `UsedType("Widget")`. Likely produces modest gains (~30-80 matched) but also adds feat-only noise for function calls that aren't constructor-like.
+2. **Issue 6: primitive_type in field/var declarations** — `int x;`, `size_t n;`. Low impact (resolves to C++ standard library externally).
+3. **Nested type references `A::B` as constants** — e.g., `FilePath.ANY` or `SuppressionList.ErrorMessage`. Some of these are already extracted via second-to-last segment (`ConstructorInitializers`); likely more patterns exist.
 
 ### Resume instructions
 
-- TSE: `feat/cpp-dependency-support` at `205f788`, green on `./gradlew build`.
-- DC: `feat/cpp-dependency-integration` at `20ea8a4`, composite-build wiring uncommitted on `analysis/settings.gradle.kts` + `analysis/build.gradle.kts` — revert before any DC merge.
+- TSE: `feat/cpp-dependency-support` at `8cfc2a2`, green on `./gradlew build`.
+- DC: `feat/cpp-dependency-integration` at `20ea8a4`, composite-build wiring uncommitted on `analysis/settings.gradle.kts` + `analysis/build.gradle.kts` — revert before any DC merge. Note: composite-build wiring gets lost when checking out main for debugging; always confirm with `grep includeBuild analysis/settings.gradle.kts`.
 - dc-compare baseline: cppcheck depth-1 clone at `../cppcheck/`. Main golden at `../dc-compare/main/`. Feature output at `../dc-compare/feature/`.
 - **Watch for branch drift**: if TSE is on `main`, composite build ships TSE main (no `namespacePrefix`/`ImportKind`) and DC's feature branch fails to compile. Always confirm `git branch --show-current` on TSE before rebuilding DC.
