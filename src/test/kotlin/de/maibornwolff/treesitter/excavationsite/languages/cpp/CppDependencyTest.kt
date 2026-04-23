@@ -1413,6 +1413,24 @@ class CppDependencyTest {
             }
 
             @Test
+            fun `should extract parameter types from out-of-class constructor`() {
+                // Arrange — constructors have no return type, so extractors must not require one
+                val code = """
+                    Executor::Executor(const Settings& settings, ErrorLogger& errorLogger) {}
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val executor = result.declarations.single { it.name == "Executor" }
+                assertThat(executor.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Settings"),
+                    UsedType(name = "ErrorLogger")
+                )
+            }
+
+            @Test
             fun `should extract local variable types from out-of-class method body`() {
                 // Arrange
                 val code = """
