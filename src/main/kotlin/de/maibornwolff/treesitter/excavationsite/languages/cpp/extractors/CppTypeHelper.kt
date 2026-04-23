@@ -8,7 +8,9 @@ import org.treesitter.TSNode
 
 internal object CppTypeHelper {
     private const val TYPE_IDENTIFIER = "type_identifier"
+    private const val IDENTIFIER = "identifier"
     private const val TEMPLATE_TYPE = "template_type"
+    private const val TEMPLATE_FUNCTION = "template_function"
     private const val TEMPLATE_ARGUMENT_LIST = "template_argument_list"
     private const val TYPE_DESCRIPTOR = "type_descriptor"
     private const val QUALIFIED_IDENTIFIER = "qualified_identifier"
@@ -18,14 +20,16 @@ internal object CppTypeHelper {
     private const val TYPE_FIELD = "type"
 
     private val TYPE_NODE_TYPES = setOf(TYPE_IDENTIFIER, TEMPLATE_TYPE, QUALIFIED_IDENTIFIER)
+    private val TEMPLATE_LIKE_TYPES = setOf(TEMPLATE_TYPE, TEMPLATE_FUNCTION)
+    private val TEMPLATE_NAME_TYPES = setOf(TYPE_IDENTIFIER, IDENTIFIER)
 
     fun isTypeNode(node: TSNode): Boolean = node.type in TYPE_NODE_TYPES
 
     fun extractType(typeNode: TSNode, sourceCode: String): UsedType? {
         if (typeNode.isNull) return null
         return when (typeNode.type) {
-            TYPE_IDENTIFIER -> UsedType(name = TreeTraversal.getNodeText(typeNode, sourceCode).trim())
-            TEMPLATE_TYPE -> extractTemplateType(typeNode, sourceCode)
+            TYPE_IDENTIFIER, IDENTIFIER -> UsedType(name = TreeTraversal.getNodeText(typeNode, sourceCode).trim())
+            TEMPLATE_TYPE, TEMPLATE_FUNCTION -> extractTemplateLike(typeNode, sourceCode)
             QUALIFIED_IDENTIFIER -> extractRightmostSegment(typeNode, sourceCode)
             else -> null
         }
@@ -44,8 +48,11 @@ internal object CppTypeHelper {
         return extractType(unwrapped, sourceCode)
     }
 
-    private fun extractTemplateType(templateNode: TSNode, sourceCode: String): UsedType? {
-        val nameNode = templateNode.children().firstOrNull { it.type == TYPE_IDENTIFIER } ?: return null
+    private fun extractTemplateLike(templateNode: TSNode, sourceCode: String): UsedType? {
+        // Accepts template_type (name=type_identifier, used for types) and
+        // template_function (name=identifier, used for function-call forms and, per
+        // tree-sitter-cpp, also for nested template arguments like C<T> inside list<C<T>>).
+        val nameNode = templateNode.children().firstOrNull { it.type in TEMPLATE_NAME_TYPES } ?: return null
         val argList = templateNode.children().firstOrNull { it.type == TEMPLATE_ARGUMENT_LIST }
         val genericTypes = argList
             ?.namedChildren()
@@ -60,8 +67,7 @@ internal object CppTypeHelper {
 
     private fun extractGenericArgument(argNode: TSNode, sourceCode: String): UsedType? {
         if (argNode.type == TYPE_DESCRIPTOR) {
-            val innerType = argNode.namedChildren().firstOrNull { isTypeNode(it) }
-            return innerType?.let { extractType(it, sourceCode) }
+            return argNode.namedChildren().firstNotNullOfOrNull { extractType(it, sourceCode) }
         }
         return extractType(argNode, sourceCode)
     }
@@ -69,8 +75,8 @@ internal object CppTypeHelper {
     fun extractRightmostSegment(qualifiedId: TSNode, sourceCode: String): UsedType? {
         val (segments, leaf) = walkQualified(qualifiedId, sourceCode)
         val leafNode = leaf ?: return null
-        if (leafNode.type == TEMPLATE_TYPE) {
-            return extractTemplateType(leafNode, sourceCode)?.copy(namespacePrefix = segments)
+        if (leafNode.type in TEMPLATE_LIKE_TYPES) {
+            return extractTemplateLike(leafNode, sourceCode)?.copy(namespacePrefix = segments)
         }
         val text = TreeTraversal.getNodeText(leafNode, sourceCode).trim()
         return if (text.isEmpty()) null else UsedType(name = text, namespacePrefix = segments)
