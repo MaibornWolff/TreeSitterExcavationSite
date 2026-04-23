@@ -16,7 +16,7 @@ internal object CppTypeHelper {
     private const val NAME_FIELD = "name"
     private const val SCOPE_FIELD = "scope"
 
-    private val TYPE_NODE_TYPES = setOf(TYPE_IDENTIFIER, TEMPLATE_TYPE)
+    private val TYPE_NODE_TYPES = setOf(TYPE_IDENTIFIER, TEMPLATE_TYPE, QUALIFIED_IDENTIFIER)
 
     fun isTypeNode(node: TSNode): Boolean = node.type in TYPE_NODE_TYPES
 
@@ -25,6 +25,7 @@ internal object CppTypeHelper {
         return when (typeNode.type) {
             TYPE_IDENTIFIER -> UsedType(name = TreeTraversal.getNodeText(typeNode, sourceCode).trim())
             TEMPLATE_TYPE -> extractTemplateType(typeNode, sourceCode)
+            QUALIFIED_IDENTIFIER -> extractRightmostSegment(typeNode, sourceCode)
             else -> null
         }
     }

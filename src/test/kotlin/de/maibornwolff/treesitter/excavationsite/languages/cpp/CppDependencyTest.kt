@@ -651,12 +651,12 @@ class CppDependencyTest {
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.CPP)
 
-            // Assert
+            // Assert — std::string is captured from constructor parameter and method return type
             assertThat(result.declarations).containsExactly(
                 Declaration(
                     name = "Pattern",
                     type = DeclarationType.CLASS,
-                    usedTypes = emptySet(),
+                    usedTypes = setOf(UsedType(name = "string", namespacePrefix = listOf("std"))),
                     parentPath = listOf("Catch", "TestSpec")
                 )
             )
@@ -1065,6 +1065,26 @@ class CppDependencyTest {
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+            }
+
+            @Test
+            fun `should extract qualified type from member field declaration`() {
+                // Arrange — qualified_identifier as a declaration's type (e.g. tinyxml2::XMLDocument doc)
+                // is the dominant pattern for std::* and cross-namespace field/var types in real C++.
+                val code = """
+                    class Container {
+                        tinyxml2::XMLDocument doc_;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(name = "XMLDocument", namespacePrefix = listOf("tinyxml2"))
+                )
             }
         }
 
