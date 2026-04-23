@@ -67,19 +67,9 @@ internal object CppTypeHelper {
     }
 
     fun extractRightmostSegment(qualifiedId: TSNode, sourceCode: String): UsedType? {
-        val scopeSegments = mutableListOf<String>()
-        var node = qualifiedId
-        while (node.type == QUALIFIED_IDENTIFIER) {
-            val scope = node.getChildByFieldName(SCOPE_FIELD)
-            if (!scope.isNull) {
-                scopeSegments.add(TreeTraversal.getNodeText(scope, sourceCode).trim())
-            }
-            val nameField = node.getChildByFieldName(NAME_FIELD)
-            if (nameField.isNull) return null
-            node = nameField
-        }
-        val text = TreeTraversal.getNodeText(node, sourceCode).trim()
-        return if (text.isEmpty()) null else UsedType(name = text, namespacePrefix = scopeSegments.toList())
+        val (segments, leaf) = walkQualified(qualifiedId, sourceCode)
+        val text = leaf ?: return null
+        return if (text.isEmpty()) null else UsedType(name = text, namespacePrefix = segments)
     }
 
     fun extractSingleSegmentScope(qualifiedId: TSNode, sourceCode: String): UsedType? {
@@ -90,6 +80,12 @@ internal object CppTypeHelper {
     }
 
     fun extractSecondToLastSegment(qualifiedId: TSNode, sourceCode: String): UsedType? {
+        val (segments, _) = walkQualified(qualifiedId, sourceCode)
+        val name = segments.lastOrNull() ?: return null
+        return UsedType(name = name, namespacePrefix = segments.dropLast(1))
+    }
+
+    private fun walkQualified(qualifiedId: TSNode, sourceCode: String): Pair<List<String>, String?> {
         val scopeSegments = mutableListOf<String>()
         var node = qualifiedId
         while (node.type == QUALIFIED_IDENTIFIER) {
@@ -97,11 +93,10 @@ internal object CppTypeHelper {
             if (!scope.isNull) {
                 scopeSegments.add(TreeTraversal.getNodeText(scope, sourceCode).trim())
             }
-            node = node.getChildByFieldName(NAME_FIELD)
-            if (node.isNull) break
+            val nameField = node.getChildByFieldName(NAME_FIELD)
+            if (nameField.isNull) return scopeSegments to null
+            node = nameField
         }
-        val name = scopeSegments.lastOrNull() ?: return null
-        val prefix = scopeSegments.dropLast(1)
-        return UsedType(name = name, namespacePrefix = prefix)
+        return scopeSegments to TreeTraversal.getNodeText(node, sourceCode).trim()
     }
 }
