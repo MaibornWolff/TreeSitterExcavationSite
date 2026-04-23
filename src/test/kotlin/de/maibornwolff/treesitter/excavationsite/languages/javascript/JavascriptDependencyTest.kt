@@ -134,7 +134,6 @@ class JavascriptDependencyTest {
             assertThat(result.imports[0].path).containsExactly("myModule", "myMethod")
             assertThat(result.imports[0].isWildcard).isFalse()
         }
-
     }
 
     @Nested

@@ -703,6 +703,88 @@ class TypescriptDependencyTest {
     }
 
     @Nested
+    inner class AmbientModuleDeclaration {
+        @Test
+        fun `should extract function declaration inside declare module with parentPath`() {
+            // Arrange
+            val code = """
+                declare module "MyModule" {
+                    export function myFunction(): void;
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("myFunction")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.FUNCTION)
+            assertThat(result.declarations[0].parentPath).containsExactly("MyModule")
+        }
+
+        @Test
+        fun `should extract class declaration inside declare module with parentPath`() {
+            // Arrange
+            val code = """
+                declare module "MyModule" {
+                    export class MyClass {}
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyClass")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.CLASS)
+            assertThat(result.declarations[0].parentPath).containsExactly("MyModule")
+        }
+
+        @Test
+        fun `should produce no declarations for glob pattern declare module`() {
+            // Arrange
+            val code = """declare module "*.md" {}"""
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
+
+        @Test
+        fun `should produce no declarations for empty declare module body`() {
+            // Arrange
+            val code = """declare module "MyModule" {}"""
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
+
+        @Test
+        fun `should split scoped module name into path segments for parentPath`() {
+            // Arrange
+            val code = """
+                declare module "@scope/pkg" {
+                    export function myFunction(): void;
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].parentPath).containsExactly("@scope", "pkg")
+        }
+    }
+
+    @Nested
     inner class ApiSupportCheck {
         @Test
         fun `should support TypeScript dependency analysis`() {

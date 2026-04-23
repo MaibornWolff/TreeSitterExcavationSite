@@ -99,12 +99,26 @@ internal object ImportExtractor {
                             when (prop.type) {
                                 SHORTHAND_PROPERTY_IDENTIFIER_PATTERN -> {
                                     val name = TreeTraversal.getNodeText(prop, sourceCode).trim()
-                                    if (name.isBlank()) emptyList() else listOf(ImportDeclaration(path = basePath + name, isWildcard = false))
+                                    if (name.isBlank()) {
+                                        emptyList()
+                                    } else {
+                                        listOf(
+                                            ImportDeclaration(path = basePath + name, isWildcard = false)
+                                        )
+                                    }
                                 }
                                 PAIR_PATTERN -> {
-                                    val key = prop.children().firstOrNull { it.type == IDENTIFIER || it.type == PROPERTY_IDENTIFIER }
+                                    val key = prop
+                                        .children()
+                                        .firstOrNull { it.type == IDENTIFIER || it.type == PROPERTY_IDENTIFIER }
                                         ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                                    if (key.isNullOrBlank()) emptyList() else listOf(ImportDeclaration(path = basePath + key, isWildcard = false))
+                                    if (key.isNullOrBlank()) {
+                                        emptyList()
+                                    } else {
+                                        listOf(
+                                            ImportDeclaration(path = basePath + key, isWildcard = false)
+                                        )
+                                    }
                                 }
                                 else -> emptyList()
                             }
