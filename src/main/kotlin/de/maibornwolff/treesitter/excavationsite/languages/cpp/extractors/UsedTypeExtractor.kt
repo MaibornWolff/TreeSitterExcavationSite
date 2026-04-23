@@ -215,7 +215,10 @@ internal object UsedTypeExtractor {
             val function = call.getChildByFieldName(FUNCTION_FIELD).takeIf { !it.isNull } ?: return@flatMap emptyList()
             when (function.type) {
                 TEMPLATE_FUNCTION -> extractTemplateArgumentTypes(function, sourceCode)
-                QUALIFIED_IDENTIFIER -> listOfNotNull(CppTypeHelper.extractRightmostSegment(function, sourceCode))
+                QUALIFIED_IDENTIFIER -> listOfNotNull(
+                    CppTypeHelper.extractRightmostSegment(function, sourceCode),
+                    CppTypeHelper.extractSingleSegmentScope(function, sourceCode)
+                )
                 else -> emptyList()
             }
         }

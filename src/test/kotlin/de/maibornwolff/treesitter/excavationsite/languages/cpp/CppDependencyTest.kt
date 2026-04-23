@@ -1244,9 +1244,11 @@ class CppDependencyTest {
                 // Act
                 val result = TreeSitterDependencies.analyze(code, Language.CPP)
 
-                // Assert
+                // Assert — scope-as-type (Catch) is emitted alongside the rightmost segment
+                // per DC's VariableDeclarationProcessor TSQuery; see the single-scope test below.
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Catch"),
                     UsedType(name = "registerTest", namespacePrefix = listOf("Catch"))
                 )
             }
@@ -1265,10 +1267,37 @@ class CppDependencyTest {
                 // Act
                 val result = TreeSitterDependencies.analyze(code, Language.CPP)
 
+                // Assert — outermost scope (A) is also emitted as its own UsedType;
+                // see `should also extract scope as type for qualified call`.
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "helper", namespacePrefix = listOf("A", "B", "C")),
+                    UsedType(name = "A")
+                )
+            }
+
+            @Test
+            fun `should also extract scope as type for qualified call`() {
+                // Arrange — DC legacy (VariableDeclarationProcessor.kt:24-25) matches
+                // (call_expression function: (qualified_identifier scope: (namespace_identifier)@type))
+                // and emits the immediate scope as its own UsedType so the resolver can match
+                // the referenced class (Path), in addition to the rightmost segment.
+                val code = """
+                    class Container {
+                        void doWork() {
+                            Path::removeQuotationMarks(x);
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(
-                    UsedType(name = "helper", namespacePrefix = listOf("A", "B", "C"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Path"),
+                    UsedType(name = "removeQuotationMarks", namespacePrefix = listOf("Path"))
                 )
             }
         }
@@ -1530,6 +1559,7 @@ class CppDependencyTest {
                 "Local",
                 "Casted",
                 "Created",
+                "Namespace",
                 "helper",
                 "Sized",
                 "Init"

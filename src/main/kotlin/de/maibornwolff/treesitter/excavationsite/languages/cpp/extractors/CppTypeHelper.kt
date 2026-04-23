@@ -12,6 +12,7 @@ internal object CppTypeHelper {
     private const val TEMPLATE_ARGUMENT_LIST = "template_argument_list"
     private const val TYPE_DESCRIPTOR = "type_descriptor"
     private const val QUALIFIED_IDENTIFIER = "qualified_identifier"
+    private const val NAMESPACE_IDENTIFIER = "namespace_identifier"
     private const val NAME_FIELD = "name"
     private const val SCOPE_FIELD = "scope"
 
@@ -64,6 +65,13 @@ internal object CppTypeHelper {
         }
         val text = TreeTraversal.getNodeText(node, sourceCode).trim()
         return if (text.isEmpty()) null else UsedType(name = text, namespacePrefix = scopeSegments.toList())
+    }
+
+    fun extractSingleSegmentScope(qualifiedId: TSNode, sourceCode: String): UsedType? {
+        val scope = qualifiedId.getChildByFieldName(SCOPE_FIELD).takeIf { !it.isNull } ?: return null
+        if (scope.type != NAMESPACE_IDENTIFIER) return null
+        val text = TreeTraversal.getNodeText(scope, sourceCode).trim()
+        return if (text.isEmpty()) null else UsedType(name = text)
     }
 
     fun extractSecondToLastSegment(qualifiedId: TSNode, sourceCode: String): UsedType? {
