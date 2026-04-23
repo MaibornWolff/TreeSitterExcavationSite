@@ -1320,6 +1320,53 @@ class CppDependencyTest {
                     UsedType(name = "removeQuotationMarks", namespacePrefix = listOf("Path"))
                 )
             }
+
+            @Test
+            fun `should extract bare-identifier callee when nested in argument list`() {
+                // Arrange — DC's constructorCall TSQuery captures
+                // (argument_list (call_expression function: (identifier)@potential_constructor))
+                // for function-style constructor calls like Widget(x) passed as arguments
+                // to other functions. This pattern is common in modern C++ for implicit
+                // temporaries passed into container methods, std algorithms, etc.
+                val code = """
+                    class Container {
+                        void doWork(List& l) {
+                            l.add(Widget(x));
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert — List from parameter type, Widget from constructor-style call in arg list.
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "List"),
+                    UsedType(name = "Widget")
+                )
+            }
+
+            @Test
+            fun `should not extract bare-identifier callee at statement level`() {
+                // Arrange — only argument-list-wrapped identifier calls are treated as
+                // potential constructors; free-standing `foo();` at statement level is
+                // just a function call and must not pollute usedTypes.
+                val code = """
+                    class Container {
+                        void doWork() {
+                            helperFunction();
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).isEmpty()
+            }
         }
 
         @Nested

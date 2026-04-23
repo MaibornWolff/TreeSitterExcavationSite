@@ -220,7 +220,9 @@ internal object UsedTypeExtractor {
         }
         val callTypes = (buckets[CALL_EXPRESSION].orEmpty() + throwCallees).flatMap { call ->
             val function = call.getChildByFieldName(FUNCTION_FIELD).takeIf { !it.isNull } ?: return@flatMap emptyList()
-            val isInThrow = call.parent.takeIf { !it.isNull }?.type == THROW_STATEMENT
+            val parentType = call.parent.takeIf { !it.isNull }?.type
+            val isInThrow = parentType == THROW_STATEMENT
+            val isInArgList = parentType == ARGUMENT_LIST
             when (function.type) {
                 TEMPLATE_FUNCTION -> {
                     val generics = extractTemplateArgumentTypes(function, sourceCode)
@@ -239,7 +241,7 @@ internal object UsedTypeExtractor {
                     CppTypeHelper.extractRightmostSegment(function, sourceCode),
                     CppTypeHelper.extractSingleSegmentScope(function, sourceCode)
                 )
-                IDENTIFIER -> if (isInThrow) {
+                IDENTIFIER -> if (isInThrow || isInArgList) {
                     val text = TreeTraversal.getNodeText(function, sourceCode).trim()
                     if (text.isEmpty()) emptyList() else listOf(UsedType(name = text))
                 } else {
