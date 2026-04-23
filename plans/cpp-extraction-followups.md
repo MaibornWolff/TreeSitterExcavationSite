@@ -65,16 +65,22 @@ The refactor must:
 
 ## Tasks — extraction patterns (after refactor)
 
-### 1. Issue 6 — primitive_type as type node
+### 1. Issue 6 — primitive_type as type node — DEFERRED (measurement 2026-04-23)
 
-Expected impact: low (+5 to +20 matched). Primitive types (`int`, `size_t`, `long`) in declarations usually resolve to C++ standard library (external), so match-count moves little.
+**Status: deferred on cppcheck.** Measured impact is exactly 0 matched deps.
 
-DC's `typeDeclarations()` list includes `primitive_type` alongside the three types we already handle. For parity, extend `CppTypeHelper.TYPE_NODE_TYPES` to include it and return `UsedType(name=text)` in `extractType`.
+Direct node query over the R11 dc-compare output (cppcheck main vs feature):
 
-TDD cycle:
-- Red: test for `class C { int count_; };` → expect `UsedType("int")` on C
-- Green: add `PRIMITIVE_TYPE` to `TYPE_NODE_TYPES` + new branch in `extractType`
-- Run dc-compare R12; commit if net positive, revert if feat-only explodes from C++ stdlib types matching unrelated project nodes named `int`/`long`/etc.
+- `main-only deps with primitive simple name: 0 / 1364`
+- `feat-only deps with primitive simple name: 0 / 474`
+
+Primitive list tested: `int, long, short, char, float, double, bool, void, auto, signed, unsigned, size_t, ssize_t, ptrdiff_t, intptr_t, uintptr_t, uint{8,16,32,64}_t, int{8,16,32,64}_t, wchar_t, char{16,32}_t`.
+
+DC legacy does emit `UsedType("int")` etc. via `typeDeclarations()`, but none of those resolve to a project node in cppcheck — there is no cppcheck file or class named `int`, `size_t`, etc. Neither side produces primitive-target Dependencies, so adding `primitive_type` to TSE's `TYPE_NODE_TYPES` would not move the match count on this corpus.
+
+**Re-measure before implementing on any future corpus.** A project that typedefs primitives (`typedef int Counter;` used inline) could flip the result — the measurement is cppcheck-specific.
+
+DC's `typeDeclarations()` list includes `primitive_type` alongside the three types we already handle; if this is ever reopened, the change is still the one-liner: extend `CppTypeHelper.TYPE_NODE_TYPES` and add a `PRIMITIVE_TYPE` branch in `extractType`.
 
 ### 2. Issue 7 — nested-type constant references as UsedType
 
@@ -156,8 +162,8 @@ not-emitted by source file (top 12):
 - [ ] Refactor Task 3: unify `TreeTraversal` ancestor walkers
 - [ ] Refactor Task 4: AST-structural walk in `DeclarationExtractor.toOutOfClassDeclaration`
 - [ ] Refactor Task 5 (optional): encapsulate `RealLinesOfCodeCalc` state
-- [ ] Issue 6: primitive_type as type node (+ R12 measurement)
-- [ ] Issue 7: investigate nested-type constant references
+- [x] Issue 6: primitive_type as type node — DEFERRED on cppcheck (0/1364 main-only, 0/474 feat-only have primitive simple names; re-measure on future corpora before implementing)
+- [x] Issue 7: nested-type constant references — PARTIAL. Fixed namespaced-template-generic extraction (TSE 8576afd) + nested-generic namespace wildcards (DC 1ff96b4). R14 cppcheck: 1091→1116 matched (+25), 44.4%→45.5%. Remaining gaps (Token 125, Function 74, ValueType 57…) are dominated by DC misattribution/misdirection, not extraction. Exemplar CppCheckExecutor→ErrorMessage.FileLocation stayed main-only because the source is a DC dump-to-lastNode victim (the usage is in a free function, not a CppCheckExecutor member).
 - [ ] Issue 8: sampling pass for macro/typedef aliases
 - [ ] Issue 9: template specializations (deferred — only matters on Catch2)
 - [ ] Issue 10: investigate ValueFlow 22-gap cluster
