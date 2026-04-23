@@ -164,10 +164,87 @@ not-emitted by source file (top 12):
 - [ ] Refactor Task 5 (optional): encapsulate `RealLinesOfCodeCalc` state
 - [x] Issue 6: primitive_type as type node — DEFERRED on cppcheck (0/1364 main-only, 0/474 feat-only have primitive simple names; re-measure on future corpora before implementing)
 - [x] Issue 7: nested-type constant references — PARTIAL. Fixed namespaced-template-generic extraction (TSE 8576afd) + nested-generic namespace wildcards (DC 1ff96b4). R14 cppcheck: 1091→1116 matched (+25), 44.4%→45.5%. Remaining gaps (Token 125, Function 74, ValueType 57…) are dominated by DC misattribution/misdirection, not extraction. Exemplar CppCheckExecutor→ErrorMessage.FileLocation stayed main-only because the source is a DC dump-to-lastNode victim (the usage is in a free function, not a CppCheckExecutor member).
-- [ ] Issue 8: sampling pass for macro/typedef aliases
-- [ ] Issue 9: template specializations (deferred — only matters on Catch2)
-- [ ] Issue 10: investigate ValueFlow 22-gap cluster
-- [ ] Final dc-compare R_n and DC-side cleanup (Task 9 of base plan)
+- [x] Issue 8: macro/typedef aliases — SKIPPED. After Issue 7 landed, remaining top-20 main-only target simple names are all project class names (Token, Function, ValueType, TokenList, etc.); no macro/typedef pattern stands out in the gap distribution.
+- [x] Issue 9: template specializations — DEFERRED. Only relevant to Catch2-style amalgamated headers; cppcheck does not exhibit the pattern at any scale.
+- [x] Issue 10: ValueFlow 22-gap cluster — CLOSED. Investigated 24 main-only deps for lib.valueflow_cpp.ValueFlow: all fall into existing misattribution + misdirection buckets (sibling classes like ConditionHandler/Lambda/LifetimeStore dumped via DC's lastOrNull() bug; Token/Variable/Scope/Function/Type/ValueType resolving to simplecpp.* alternates instead of lib.*). No new extraction pattern.
+- [ ] Final dc-compare R_n and DC-side cleanup (Task 9 of base plan — update 8 CppAnalyzerTest failures, revert composite-build wiring, merge TSE + DC)
+
+## Next session pick-up — wrap-up status
+
+### Where we are now
+
+- **TSE `feat/cpp-dependency-support`** at `e8018a9` — build green, 4 namespaced-template generic tests added and passing.
+- **DC `feat/cpp-dependency-integration`** at `1ff96b4` — Fix 2 (nested-generic wildcards) committed; composite-build wiring in `analysis/settings.gradle.kts` + `analysis/build.gradle.kts` still uncommitted (must revert before merge).
+- **cppcheck dc-compare R15**: matched 1118, main-only 1337, feat-only 507, **match rate 45.6%** (R11 baseline 44.4%, total +27 matched across the session).
+
+### Issue 7 extension that landed mid-wrap-up
+
+Investigating the CppAnalyzerTest failures surfaced two additional tree-sitter-cpp parsing quirks that `8576afd`'s fix didn't cover:
+
+1. Templated call callees like `std::make_shared<T>()` — tree-sitter parses the leaf of the qualified_identifier as `template_function` (not `template_type`), with `name=identifier` (not `type_identifier`).
+2. Nested template-argument types like `CreatureRepository<X, Y>` inside `list<CreatureRepository<X, Y>>` also parse as `template_function` even in a type context; bare class names used as template args appear as direct `identifier` nodes (not wrapped in `type_descriptor`).
+
+Commit `e8018a9` extends `CppTypeHelper` to handle both via `extractTemplateLike` (accepts `TYPE_IDENTIFIER` or `IDENTIFIER` as name) and looser `extractGenericArgument` filtering. Gained +2 matched on cppcheck (R14→R15), no feat-only regression.
+
+### Remaining wrap-up work for next session
+
+#### 1. CppAnalyzerTest — 8 failing, categorized
+
+All 8 failures are in `DependaCharta/.../analyzers/cpp/CppAnalyzerTest.kt`.
+
+**Category (a) — tests that expect primitive_type extraction** (4 tests):
+- `should recognize types of function parameters correctly` — expects `int64_t`, `uint`. `int64_t` parses as `primitive_type` in tree-sitter-cpp; TSE currently skips it.
+- `should extract constructor parameter types correctly` — expects `void`.
+- `should extract method return types correctly` — expects `void`, and `string`/`CreatureEntity` which are extracted as *nested generics* not as standalone (see category b).
+- `should recognize unsigned statement without type as int` and `should recognize signed statement without type as int` — expect "int" as the extracted type name for bare `unsigned`/`signed`. Tree-sitter parses these as `sized_type_specifier`, and DC legacy normalized them to "int".
+
+**Category (b) — flattening divergence** (2 tests, also overlap with some (a) tests):
+- `should extract field types correctly` — expects `shared_ptr[TEntity]` as a standalone UsedType. TSE keeps it nested inside `unordered_set` and `set`; `Node.resolveTypes` flattens via `Type.containedTypes()` at resolve time, but pre-resolution `usedTypes` set stores only top-level entries.
+- `should recognize constructor call correctly` — expects `Mu`, `Nu` as standalone. Same pattern; they appear nested in `unique_ptr[Mu]`, `shared_ptr[Nu]`, `make_unique[Mu]`, `make_shared[Nu]`.
+
+**Category (c) — multiline include backslash continuation** (1 test):
+- `should recognize multiline include statements` — source uses `#include "dir/\` + next-line continuation. TSE doesn't strip `\\\n\s*` from the raw include path text, producing `dir.\ subdir.AnotherCreatureRepository_h` (literal backslash + spaces).
+
+#### 2. Primitive-type extraction — three graduated options (from prior discussion)
+
+Tried the minimal (primitive_type only) during this session; it added `void`/`int`/etc. to TSE's extraction which broke **29 TSE CppDependencyTest** tests that use `containsExactly` and didn't expect primitives. Reverted because the test-update cascade was larger than expected for a "minimal" change.
+
+Graduated options for next session:
+
+- **A (minimal)**: Add `PRIMITIVE_TYPE` to `CppTypeHelper.TYPE_NODE_TYPES` + extractType branch. Fixes 3 of the 4 category (a) tests (leaves `unsigned`/`signed`-as-int). **Cost: ~5 lines in TSE, but also ~29 TSE test-assertion updates** to add primitives to expected `containsExactly` sets.
+- **B (medium)**: A + `sized_type_specifier` support. Fixes the 4th primitive test but with `"unsigned"`/`"signed"` names, not `"int"`. One more node-type constant + extractType branch. Tests need assertion tweaks.
+- **C (medium+)**: B plus the DC-legacy "bare unsigned/signed == int" normalization. All 4 tests pass as-written. Adds language-quirk normalization to TSE which is semantically questionable.
+
+R15 data shows primitive-name resolution impact on cppcheck is 0 matched deps (we measured this as Issue 6). Primitives as UsedTypes don't resolve to project nodes because cppcheck has no file/class named `int`/`void`/`size_t`. The feat-only risk is statistically low (empty-wildcard would need to match a primitive's simple name against a project node containing that name as substring — rare). But other corpora that typedef primitives could change the calculation.
+
+**Recommended sequence for next session**:
+1. Decide on A / B / C for primitive extraction.
+2. If A or B: update the TSE tests (~29 assertions adding primitives) and re-run dc-compare to quantify any feat-only drift on cppcheck.
+3. Update the 8 DC `CppAnalyzerTest` tests:
+   - Category (a): pass automatically once A/B/C is picked (A fixes 3, B/C fix all 4).
+   - Category (b): update assertions to drop standalone expectations for types that appear only as nested generics (e.g., assert `shared_ptr.genericTypes == [TEntity]` instead of looking for bare `shared_ptr[TEntity]`).
+   - Category (c): `@Disabled("TSE extraction gap: multiline include continuation")` with a TODO, or optionally fix TSE to strip `\\\n\s*` from `ImportExtractor`'s include path text.
+4. Revert DC's composite-build wiring in `analysis/settings.gradle.kts` + `analysis/build.gradle.kts`.
+5. Merge TSE, tag release.
+6. Update DC's JitPack TSE dep to the new tag.
+7. Merge DC.
+
+#### 3. Verify state before continuing (repeat Step 1 from top of this plan)
+
+```bash
+cd C:/Users/ChristianSpa/IdeaProjects/DCTSE/TreeSitterExcavationSite
+git branch --show-current         # feat/cpp-dependency-support
+git log --oneline -5              # top should be e8018a9 feat(cpp): handle template_function leaves ...
+./gradlew build                   # green
+
+cd ../DependaCharta
+git branch --show-current         # feat/cpp-dependency-integration
+git log --oneline -5              # top should be 1ff96b4 feat(cpp): synthesize wildcards from nested generic ...
+grep -c "includeBuild" analysis/settings.gradle.kts   # 1 (still-uncommitted composite wiring)
+grep "TreeSitterExcavationSite\|treesitter-excavationsite" analysis/build.gradle.kts
+```
+
+If the composite wiring is missing, restore per the instructions at the top of this plan.
 
 ## How to pick up next session
 
