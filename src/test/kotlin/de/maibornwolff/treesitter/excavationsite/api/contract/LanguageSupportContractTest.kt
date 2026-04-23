@@ -289,7 +289,16 @@ class LanguageSupportContractTest {
         fun `should return supported dependency analysis languages`() {
             // Act & Assert
             assertThat(TreeSitterDependencies.getSupportedLanguages())
-                .containsExactlyInAnyOrder(Language.JAVA, Language.KOTLIN, Language.CSHARP, Language.TYPESCRIPT, Language.JAVASCRIPT)
+                .containsExactlyInAnyOrder(
+                    Language.JAVA,
+                    Language.KOTLIN,
+                    Language.CSHARP,
+                    Language.CPP,
+                    Language.DELPHI,
+                    Language.TYPESCRIPT,
+                    Language.JAVASCRIPT,
+                    Language.TSX
+                )
         }
     }
 
