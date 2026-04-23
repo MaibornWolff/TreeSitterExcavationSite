@@ -778,7 +778,7 @@ java -jar build/libs/dependacharta.jar -d "../../cppcheck" -o "../../dc-compare/
 | Task 7 | `ae5a176` | ✅ done |
 | `namespacePrefix` (cross-cutting feature) | TSE: `36e00d7`, `3a6a21a`, `b87cfa7`, `3275d69` / DC: `a4a73c9` | ✅ done |
 | Option-3 sampling + Issue analysis | `9372daa` | ✅ done (findings recorded) |
-| Issue 1 fix | — | 🔶 attempted, reverted, blocked on resolver mystery |
+| Issue 1 fix | DC: `20ea8a4` | ✅ done — unconditional selfWildcard; +358 matched cppcheck deps (R6 → R7) |
 | Issue 2 fix | `4891922` | ✅ done — +112 matched cppcheck deps (R5 → R6) |
 | Constructor regression guard | `bfc75ce` | ✅ done — pins out-of-class constructor param extraction |
 
@@ -802,15 +802,33 @@ java -jar build/libs/dependacharta.jar -d "../../cppcheck" -o "../../dc-compare/
 
 Match rate: 21.1% → 25.7%. Below the plan's estimated 15-25% of the gap (would have been 290-484), but a clean directional win. The +23 feat-only is expected — new scope-as-type emissions create deps DC main doesn't emit, typically single-segment scopes that resolve against common namespaces.
 
+### Issue 1 mechanism (cracked via static research, no debugger needed)
+
+The `#include "settings.h"` path never actually resolves through the include dependency. DC legacy's resolution goes:
+
+1. `analyzers/cpp/CppUtils.kt:41` (`createNode`) unconditionally appends `Dependency(namespace, isWildcard=true)` to every node's dependencies, including when `namespace = Path(emptyList())` (file-scope declarations).
+2. `DependencyResolverService.resolveNodes` builds `projectDictionary = nodes.groupBy { it.pathWithName.parts.last() }` — indexed by simple name.
+3. `Node.kt:134-141` unqualified-name fallback iterates wildcards and does `it.withDots().contains(wildcard.withDots())` — `String.contains`, not List. With an empty-namespace wildcard, `wildcard.withDots() == ""`, and `"lib.settings_h.Settings".contains("")` is trivially true. Effect: resolver picks the first project-wide node whose simple name matches `fullName`. DC's `Node.kt:136` has an in-code TODO flagging this as too loose.
+
+The feature-branch `CppAnalyzer.kt:36-40` guarded `selfWildcard` behind `if (parentPath.isNotEmpty())`, so file-scope declarations got no wildcard and the simple-name fallback never fired. **Fix: always emit `Dependency(Path(parentPath), isWildcard=true)`.**
+
+### Round 7 dc-compare (cppcheck) — Issue 1 isolated impact
+
+| | R6 | R7 | Δ |
+|---|---|---|---|
+| matched | 631 | **989** | **+358** |
+| main-only | 1824 | 1466 | -358 |
+| feat-only | 173 | 356 | +183 |
+
+Match rate: 25.7% → **40.3%**. 3x the gain from Issue 2. The +183 feat-only is the expected cost of loose simple-name matching; DC main has the same looseness but lands on slightly different candidates via groupBy iteration order.
+
 ### What's left
 
-**Issue 1 (resolver mystery)** — still the dominant blocker. 1824 main-only remaining. Live IntelliJ debugging of DC main's `Node.kt:resolveTypeImport` on the `Settings` / `CmdLineParser` case still required — same breakpoint setup as documented in the 2026-04-22 session break. Without it, reapplying the strip-cpp-extension fix is speculation.
-
-**Ship decision**: match rate 25.7% is far below the plan's ~80-90% threshold. Continue with Issue 1 before considering ship.
+1466 main-only deps still unmatched. Remaining candidates from earlier sampling (file 9372daa docs): template specializations not synthesized as separate declarations, weird `::` separator cases in parent paths (8 ids), and `Catch.Detail.Catch.ExprLhs.*` duplicate-segment paths (11 ids, amalgamated-only). Beyond those, further sampling needed. Match rate 40.3% still short of the ~80-90% ship threshold.
 
 ### Resume instructions
 
-- TSE: `feat/cpp-dependency-support` at `4891922`, green on `./gradlew build`.
-- DC: `feat/cpp-dependency-integration` at `a4a73c9`, composite-build wiring uncommitted on `analysis/settings.gradle.kts` + `analysis/build.gradle.kts` — revert before any DC merge.
+- TSE: `feat/cpp-dependency-support` at `205f788`, green on `./gradlew build`.
+- DC: `feat/cpp-dependency-integration` at `20ea8a4`, composite-build wiring uncommitted on `analysis/settings.gradle.kts` + `analysis/build.gradle.kts` — revert before any DC merge.
 - dc-compare baseline: cppcheck depth-1 clone at `../cppcheck/`. Main golden at `../dc-compare/main/`. Feature output at `../dc-compare/feature/`.
-- For Issue 1 debugging, use the breakpoint setup documented in the 2026-04-22 session break (line 751).
+- **Watch for branch drift**: if TSE is on `main`, composite build ships TSE main (no `namespacePrefix`/`ImportKind`) and DC's feature branch fails to compile. Always confirm `git branch --show-current` on TSE before rebuilding DC.
