@@ -95,9 +95,11 @@ internal object UsedTypeExtractor {
             .flatMap { buckets[it].orEmpty() }
             .mapNotNull { extractTypeFromTypeField(it, sourceCode) }
         return (
-            inheritance + methodTypes + declaratorParamTypes + initializerTypes + aliasTypes +
-                constraintTypes + fieldAndVariableTypes + cStyleCasts +
-                instantiationTypes + friendAndUsingTypes + typeOperandTypes
+            fieldAndVariableTypes + cStyleCasts + instantiationTypes + initializerTypes +
+                typeOperandTypes + friendAndUsingTypes +
+                inheritance +
+                methodTypes + declaratorParamTypes +
+                aliasTypes + constraintTypes
         ).toSet()
     }
 
