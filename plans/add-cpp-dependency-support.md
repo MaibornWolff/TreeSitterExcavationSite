@@ -779,4 +779,38 @@ java -jar build/libs/dependacharta.jar -d "../../cppcheck" -o "../../dc-compare/
 | `namespacePrefix` (cross-cutting feature) | TSE: `36e00d7`, `3a6a21a`, `b87cfa7`, `3275d69` / DC: `a4a73c9` | ✅ done |
 | Option-3 sampling + Issue analysis | `9372daa` | ✅ done (findings recorded) |
 | Issue 1 fix | — | 🔶 attempted, reverted, blocked on resolver mystery |
-| Issue 2 fix | — | ⏳ deferred to next session |
+| Issue 2 fix | `4891922` | ✅ done — +112 matched cppcheck deps (R5 → R6) |
+| Constructor regression guard | `bfc75ce` | ✅ done — pins out-of-class constructor param extraction |
+
+## Session break — 2026-04-23
+
+### What's done in this session
+
+1. **Constructor regression test committed** (`bfc75ce`). Yesterday's uncommitted test for `Executor::Executor(const Settings& settings, ErrorLogger& errorLogger)` already passed; kept as a regression guard since constructors have no leading return-type node and future changes to `extractMethodReturnAndParamTypes` could silently break this.
+2. **Issue 2 implemented** (`4891922`) — `UsedTypeExtractor.extractInstantiationTypes` now also emits the immediate scope of a qualified call as its own `UsedType` via a new `CppTypeHelper.extractSingleSegmentScope` helper. Mirrors DC's `VariableDeclarationProcessor.kt:24-25` TSQuery.
+3. **Tree-sitter-cpp parses qualified identifiers right-associatively** — discovered this during the TDD red step. For `A::B::C::helper()`, the scope of the top-level `qualified_identifier` is `namespace_identifier("A")`, not a nested qualified_identifier. DC's TSQuery matches and emits `Type("A")` (captured node is the bare `namespace_identifier`, DC's while-loop in `extractTypeWithFoundNamespacesAsDependencies` never fires because its `node.type` is already not `qualified_identifier`). TSE matches this behavior. Updated `should capture multi-segment namespace prefix on qualified call` to assert both emissions.
+
+### Round 6 dc-compare (cppcheck) — Issue 2 isolated impact
+
+| | R5 | R6 | Δ |
+|---|---|---|---|
+| nodes | 616 | 624 vs 947 | shared unchanged |
+| deps | 1998 vs ? | 2467 vs 926 | — |
+| matched | 519 | 631 | **+112** |
+| main-only | 1936 | 1824 | **-112** |
+| feat-only | 150 | 173 | +23 |
+
+Match rate: 21.1% → 25.7%. Below the plan's estimated 15-25% of the gap (would have been 290-484), but a clean directional win. The +23 feat-only is expected — new scope-as-type emissions create deps DC main doesn't emit, typically single-segment scopes that resolve against common namespaces.
+
+### What's left
+
+**Issue 1 (resolver mystery)** — still the dominant blocker. 1824 main-only remaining. Live IntelliJ debugging of DC main's `Node.kt:resolveTypeImport` on the `Settings` / `CmdLineParser` case still required — same breakpoint setup as documented in the 2026-04-22 session break. Without it, reapplying the strip-cpp-extension fix is speculation.
+
+**Ship decision**: match rate 25.7% is far below the plan's ~80-90% threshold. Continue with Issue 1 before considering ship.
+
+### Resume instructions
+
+- TSE: `feat/cpp-dependency-support` at `4891922`, green on `./gradlew build`.
+- DC: `feat/cpp-dependency-integration` at `a4a73c9`, composite-build wiring uncommitted on `analysis/settings.gradle.kts` + `analysis/build.gradle.kts` — revert before any DC merge.
+- dc-compare baseline: cppcheck depth-1 clone at `../cppcheck/`. Main golden at `../dc-compare/main/`. Feature output at `../dc-compare/feature/`.
+- For Issue 1 debugging, use the breakpoint setup documented in the 2026-04-22 session break (line 751).
