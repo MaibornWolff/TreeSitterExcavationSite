@@ -15,6 +15,7 @@ internal object CppTypeHelper {
     private const val NAMESPACE_IDENTIFIER = "namespace_identifier"
     private const val NAME_FIELD = "name"
     private const val SCOPE_FIELD = "scope"
+    private const val TYPE_FIELD = "type"
 
     private val TYPE_NODE_TYPES = setOf(TYPE_IDENTIFIER, TEMPLATE_TYPE, QUALIFIED_IDENTIFIER)
 
@@ -28,6 +29,19 @@ internal object CppTypeHelper {
             QUALIFIED_IDENTIFIER -> extractRightmostSegment(typeNode, sourceCode)
             else -> null
         }
+    }
+
+    fun extractTypeFromTypeField(node: TSNode, sourceCode: String): UsedType? {
+        val typeField = node.getChildByFieldName(TYPE_FIELD).takeIf { !it.isNull }
+            ?: node.namedChildren().firstOrNull { isTypeNode(it) || it.type == TYPE_DESCRIPTOR }
+            ?: return null
+        val unwrapped = if (typeField.type == TYPE_DESCRIPTOR) {
+            typeField.namedChildren().firstOrNull { isTypeNode(it) } ?: return null
+        } else {
+            typeField
+        }
+        if (!isTypeNode(unwrapped)) return null
+        return extractType(unwrapped, sourceCode)
     }
 
     private fun extractTemplateType(templateNode: TSNode, sourceCode: String): UsedType? {
