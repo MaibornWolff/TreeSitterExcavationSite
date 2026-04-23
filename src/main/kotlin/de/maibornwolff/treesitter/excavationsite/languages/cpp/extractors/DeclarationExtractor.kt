@@ -41,19 +41,12 @@ internal object DeclarationExtractor {
 
     private fun toOutOfClassDeclaration(functionDef: TSNode, sourceCode: String): Declaration? {
         val qualifiedDeclarator = findQualifiedDeclarator(functionDef) ?: return null
-        val segments = TreeTraversal
-            .getNodeText(qualifiedDeclarator, sourceCode)
-            .split(NAMESPACE_SEPARATOR)
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-        if (segments.size < 2) return null
-        val className = segments[segments.size - 2]
-        val classPathPrefix = segments.dropLast(2)
+        val enclosing = CppTypeHelper.extractSecondToLastSegment(qualifiedDeclarator, sourceCode) ?: return null
         return Declaration(
-            name = className,
+            name = enclosing.name,
             type = DeclarationType.CLASS,
             usedTypes = UsedTypeExtractor.extract(functionDef, sourceCode),
-            parentPath = findNamespacePath(functionDef, sourceCode) + classPathPrefix
+            parentPath = findNamespacePath(functionDef, sourceCode) + enclosing.namespacePrefix
         )
     }
 
