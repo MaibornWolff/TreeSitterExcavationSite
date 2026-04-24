@@ -12,6 +12,7 @@ group = "de.maibornwolff.treesitter.excavationsite"
 version = "0.5.0"
 
 val treeSitterTsxJar = "libs/tree-sitter-tsx-0.23.2.jar"
+val treeSitterPascalJar = "libs/tree-sitter-pascal-0.10.2.jar"
 
 repositories {
     mavenCentral()
@@ -40,6 +41,7 @@ dependencies {
     implementation(libs.treesitter.vue)
     implementation(libs.treesitter.abl)
     implementation(files(treeSitterTsxJar))
+    implementation(files(treeSitterPascalJar))
 
     // Testing
     testImplementation(libs.junit.jupiter.api)
@@ -65,6 +67,7 @@ detekt {
 
 tasks.jar {
     from(zipTree(treeSitterTsxJar))
+    from(zipTree(treeSitterPascalJar))
 }
 
 tasks.test {
