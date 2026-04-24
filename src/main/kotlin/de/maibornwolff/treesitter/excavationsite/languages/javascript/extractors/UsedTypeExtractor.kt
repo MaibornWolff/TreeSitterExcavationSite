@@ -26,7 +26,7 @@ internal object UsedTypeExtractor {
         IDENTIFIER
     )
 
-    fun extract(declaration: TSNode, sourceCode: String): Set<UsedType> {
+    fun extract(declaration: TSNode, sourceCode: String, aliasMap: Map<String, String> = emptyMap()): Set<UsedType> {
         val buckets = TreeTraversal.findAllDescendantsGroupedByType(declaration, ALL_NODE_TYPES)
 
         // DC concatenation order: typeIdentifiers, constructorCalls, memberAccesses, methodCalls, extensions, relevantIdentifiers
@@ -37,7 +37,9 @@ internal object UsedTypeExtractor {
         val extensions = extractExtensions(buckets, sourceCode)
         val relevantIdentifiers = extractRelevantIdentifiers(buckets, sourceCode)
 
-        return (typeIdentifiers + constructorCalls + memberAccesses + methodCalls + extensions + relevantIdentifiers).toSet()
+        return (typeIdentifiers + constructorCalls + memberAccesses + methodCalls + extensions + relevantIdentifiers)
+            .map { usedType -> aliasMap[usedType.name]?.let { UsedType(name = it) } ?: usedType }
+            .toSet()
     }
 
     // type_identifier nodes within type annotations (field types, param types, return types)

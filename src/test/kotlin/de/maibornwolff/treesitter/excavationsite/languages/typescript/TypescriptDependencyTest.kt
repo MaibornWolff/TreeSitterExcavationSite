@@ -579,6 +579,22 @@ class TypescriptDependencyTest {
             val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
             assertThat(usedTypeNames).containsExactlyInAnyOrder("MyItem", "Array")
         }
+
+        @Test
+        fun `should resolve import alias to original type name in usedTypes`() {
+            // Arrange
+            val code = """
+                import { MyType as MyRenamedType } from './MyType'
+                class Foo { field: MyRenamedType }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("MyType")
+        }
     }
 
     @Nested

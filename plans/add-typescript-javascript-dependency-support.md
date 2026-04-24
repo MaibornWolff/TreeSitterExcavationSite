@@ -259,7 +259,7 @@ DC already supported JSX/TSX; DC regression tests go red without it. TSX uses `L
 - [x] Fix: REEXPORT declarations → add REEXPORT to DeclarationType, extend DeclarationExtractor (TDD)
 - [x] Fix: declare module declarations → AST dump, then implement with parentPath (TDD)
 - [x] Fix: JSX elements as usedTypes → extend UsedTypeExtractor + create TsxDependencyMapping (TDD)
-- [ ] Fix: Import alias → original usedType → buildAliasMap + thread through UsedTypeExtractor (TDD)
+- [x] Fix: Import alias → original usedType → buildAliasMap + thread through UsedTypeExtractor (TDD)
 - [ ] Set up DC branch, run first dc-compare (TypeScript project) — iterate
 - [ ] Run first dc-compare (JavaScript project) — iterate
 - [ ] Final verification: full test suite + ktlintCheck + architecture tests
