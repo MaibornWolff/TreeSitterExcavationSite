@@ -242,7 +242,7 @@ Replace `CppTypeHelper.walkQualified`'s `Pair<List<String>, TSNode?>` return wit
 Make `CppDefinition` a pure composition file by moving the four metric-related constants and the `calculationConfig` construction to a new sibling object.
 
 **Tasks**:
-- [ ] Create `languages/cpp/CppCalculationConfig.kt`:
+- [x] Create `languages/cpp/CppCalculationConfig.kt`:
   ```kotlin
   internal object CppCalculationConfig {
       private const val ABSTRACT_FUNCTION_DECLARATOR = "abstract_function_declarator"
@@ -258,7 +258,7 @@ Make `CppDefinition` a pure composition file by moving the four metric-related c
       )
   }
   ```
-- [ ] Reduce `CppDefinition.kt` to pure composition:
+- [x] Reduce `CppDefinition.kt` to pure composition:
   ```kotlin
   object CppDefinition : LanguageDefinition {
       override val nodeMetrics = CppMetricMapping.nodeMetrics
@@ -269,9 +269,9 @@ Make `CppDefinition` a pure composition file by moving the four metric-related c
   ```
 
 **Automated Verification**:
-- [ ] `./gradlew build` passes
-- [ ] `./gradlew test --tests "CppMetricsTest"` passes — covers the complexity-ignore rules
-- [ ] `./gradlew ktlintCheck` passes
+- [x] `./gradlew build` passes
+- [x] `./gradlew test --tests "CppMetricsTest"` passes — covers the complexity-ignore rules
+- [x] `./gradlew ktlintCheck` passes
 
 ---
 
