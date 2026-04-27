@@ -14,10 +14,6 @@ internal object DeclarationExtractor {
     private const val TYPE_IDENTIFIER = "type_identifier"
     private const val FIELD_DECLARATION_LIST = "field_declaration_list"
     private const val ENUMERATOR_LIST = "enumerator_list"
-    private const val NAMESPACE_DEFINITION = "namespace_definition"
-    private const val NAMESPACE_IDENTIFIER = "namespace_identifier"
-    private const val NESTED_NAMESPACE_SPECIFIER = "nested_namespace_specifier"
-    private const val NAMESPACE_SEPARATOR = "::"
     private const val FUNCTION_DEFINITION = "function_definition"
     private const val FUNCTION_DECLARATOR = "function_declarator"
     private const val QUALIFIED_IDENTIFIER = "qualified_identifier"
@@ -46,7 +42,7 @@ internal object DeclarationExtractor {
             name = enclosing.name,
             type = DeclarationType.CLASS,
             usedTypes = UsedTypeExtractor.extract(functionDef, sourceCode),
-            parentPath = findNamespacePath(functionDef, sourceCode) + enclosing.namespacePrefix
+            parentPath = CppNamespaceWalker.walkAncestorsFrom(functionDef, sourceCode) + enclosing.namespacePrefix
         )
     }
 
@@ -72,25 +68,13 @@ internal object DeclarationExtractor {
             name = name,
             type = mapType(node.type),
             usedTypes = UsedTypeExtractor.extract(node, sourceCode),
-            parentPath = findNamespacePath(node, sourceCode) + findParentClassPath(node, nameByStartByte)
+            parentPath = CppNamespaceWalker.walkAncestorsFrom(node, sourceCode) + findParentClassPath(node, nameByStartByte)
         )
     }
 
     private fun hasBody(node: TSNode): Boolean {
         val bodyType = if (node.type == ENUM_SPECIFIER) ENUMERATOR_LIST else FIELD_DECLARATION_LIST
         return node.children().any { it.type == bodyType }
-    }
-
-    private fun findNamespacePath(node: TSNode, sourceCode: String): List<String> {
-        val segments = mutableListOf<List<String>>()
-        var current = node.parent
-        while (current != null && !current.isNull) {
-            if (current.type == NAMESPACE_DEFINITION) {
-                segments.add(0, extractNamespaceSegments(current, sourceCode))
-            }
-            current = current.parent
-        }
-        return segments.flatten()
     }
 
     private fun findParentClassPath(node: TSNode, nameByStartByte: Map<Int, String?>): List<String> {
@@ -106,16 +90,6 @@ internal object DeclarationExtractor {
             current = current.parent
         }
         return parents
-    }
-
-    private fun extractNamespaceSegments(namespaceNode: TSNode, sourceCode: String): List<String> {
-        val text = TreeTraversal.findFirstChildTextByType(
-            namespaceNode,
-            sourceCode,
-            NAMESPACE_IDENTIFIER,
-            NESTED_NAMESPACE_SPECIFIER
-        ) ?: return emptyList()
-        return text.split(NAMESPACE_SEPARATOR)
     }
 
     private fun mapType(nodeType: String): DeclarationType = when (nodeType) {
