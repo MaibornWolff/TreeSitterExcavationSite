@@ -6,7 +6,7 @@ import de.maibornwolff.treesitter.excavationsite.languages.cpp.extractors.declar
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
 import org.treesitter.TSNode
 
-internal object DeclarationExtractor {
+internal object DependencyDeclarationExtractor {
     fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> = DeclarationMerger.merge(
         InClassDeclarationFinder.find(rootNode, sourceCode) +
             OutOfClassMethodPromoter.promote(rootNode, sourceCode)

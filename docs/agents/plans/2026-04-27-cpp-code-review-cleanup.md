@@ -189,22 +189,22 @@ Dependencies: **Phase 2**
 Eliminate the two confusingly-named files/symbols. No logic changes — file renames + symbol renames + import updates only.
 
 **Tasks**:
-- [ ] Rename file `languages/cpp/extractors/GenericDeclarationExtractor.kt` → `DeclarationIdentifierExtractor.kt`. The function `extractFromDeclaration` keeps its name (it's the public reference target in `CppExtractionMapping`).
-- [ ] Rename object `DeclarationExtractor` (dependency-side, post-Phase-2) → `DependencyDeclarationExtractor`. Move its file `languages/cpp/extractors/DeclarationExtractor.kt` → `DependencyDeclarationExtractor.kt`.
-- [ ] Update import + reference in `CppDependencyMapping.kt`:
+- [x] Rename file `languages/cpp/extractors/GenericDeclarationExtractor.kt` → `DeclarationIdentifierExtractor.kt`. The function `extractFromDeclaration` keeps its name (it's the public reference target in `CppExtractionMapping`).
+- [x] Rename object `DeclarationExtractor` (dependency-side, post-Phase-2) → `DependencyDeclarationExtractor`. Move its file `languages/cpp/extractors/DeclarationExtractor.kt` → `DependencyDeclarationExtractor.kt`.
+- [x] Update import + reference in `CppDependencyMapping.kt`:
   ```kotlin
   // before:
   extractDeclarations = DeclarationExtractor::extract
   // after:
   extractDeclarations = DependencyDeclarationExtractor::extract
   ```
-- [ ] Update import in `CppExtractionMapping.kt` to reference the renamed file (function import path changes).
-- [ ] Update test imports in `CppDependencyTest.kt` if it directly references `DeclarationExtractor` (likely not — tests usually go through the public API, but verify).
+- [x] No update needed in `CppExtractionMapping.kt` — `extractFromDeclaration` is a top-level package function, so its import path is package-based, not file-based, and is unaffected by the filename change.
+- [x] No test updates needed — `CppDependencyTest.kt` doesn't reference `DeclarationExtractor` directly (verified via grep).
 
 **Automated Verification**:
-- [ ] `./gradlew build` passes
-- [ ] `./gradlew test --tests "*Cpp*"` passes
-- [ ] `./gradlew ktlintCheck` passes
+- [x] `./gradlew build` passes
+- [x] `./gradlew test --tests "*Cpp*"` passes
+- [x] `./gradlew ktlintCheck` passes
 
 ---
 
