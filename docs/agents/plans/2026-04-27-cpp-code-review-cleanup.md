@@ -4,14 +4,22 @@ git_commit: ef7bd7c17d2abfe8ca18f6084227108fc16ae73d
 branch: feat/cpp-dependency-support
 topic: "C++ code review cleanup"
 tags: [plan, cpp, refactor, code-review]
-status: draft
+status: progress
 ---
 
 # C++ Code Review Cleanup Implementation Plan
 
+## Session Status (last updated 2026-04-27)
+
+- **Phase 1 complete** — committed as `9b79371 refactor(cpp): consolidate namespace walking into CppNamespaceWalker`. Build, tests, ktlint all green.
+- **Next pickup**: Phase 2 — split `DependencyDeclarationExtractor` into focused classes under `languages/cpp/extractors/declarations/`.
+- **Note**: Phase 8 was added mid-session to absorb the cross-repo wrap-up work from `plans/cpp-extraction-followups.md` ("Remaining wrap-up work for next session"). Phase 8 lands after Phases 1–7 complete.
+
 ## Overview
 
 Address the in-scope issues from the C++ code review by refactoring `languages/cpp/` only. Six small, sequential commits plus a final three-way dc-compare verification: DRY namespace walking, split `DeclarationExtractor` SRP violation, rename ambiguous extractor files/objects, lift `QualifiedIdentifierPath` from `CppTypeHelper`, relocate complexity-ignore constants, add documentation comments for DC-legacy quirks. No behavior change — pure structural cleanup verified by the existing C++ test suite and a final dc-compare against the previous run.
+
+After Phases 1–7 land, **Phase 8** picks up the cross-repo wrap-up work carried over from `plans/cpp-extraction-followups.md`: primitive-type extraction decision, 8 DC `CppAnalyzerTest` fixes, composite-build revert, and the TSE → DC merge sequence that closes out the C++ migration.
 
 ## Current State Analysis
 
@@ -316,10 +324,73 @@ Three-way comparison on cppcheck to confirm the refactor introduced zero behavio
 
 ---
 
+## Phase 8: Wrap-up — primitive-type decision, DC test fixes, cross-repo merge
+
+Dependencies: **Phases 1–7** (refactor must be complete and dc-compare verified before changing extraction behavior or touching DC)
+
+Carried over from `plans/cpp-extraction-followups.md` "Remaining wrap-up work for next session". This is the last remaining work to close out the C++ migration end-to-end. Unlike Phases 1–7 (TSE-only structural cleanup), Phase 8 spans both repos and includes a behavior decision (primitive-type extraction) plus DC-side test updates.
+
+**Pre-flight check** (verify state before starting):
+
+```bash
+cd C:/Users/ChristianSpa/IdeaProjects/DCTSE/TreeSitterExcavationSite
+git branch --show-current         # feat/cpp-dependency-support
+./gradlew build                   # green
+
+cd ../DependaCharta
+git branch --show-current         # feat/cpp-dependency-integration
+grep -c "includeBuild" analysis/settings.gradle.kts   # 1 (composite wiring present)
+grep "TreeSitterExcavationSite\|treesitter-excavationsite" analysis/build.gradle.kts
+# expected: composite-build dependency, NOT JitPack
+```
+
+If composite wiring is missing, restore per `.claude/rules/dependency-migration.md` "Composite Build" section.
+
+**Tasks**:
+
+- [ ] **Decide primitive-type extraction option** (A/B/C from `cpp-extraction-followups.md` section 2):
+  - **A (minimal)**: add `PRIMITIVE_TYPE` to `CppTypeHelper.TYPE_NODE_TYPES` + extractType branch. Fixes 3 of 4 category-(a) DC tests. ~5 LOC in TSE, but ~29 TSE `CppDependencyTest` `containsExactly` assertions need primitives added.
+  - **B (medium)**: A + `sized_type_specifier` support. Fixes the 4th primitive test as `"unsigned"`/`"signed"`, not `"int"`. One more node-type constant + extractType branch.
+  - **C (medium+)**: B + DC-legacy "bare unsigned/signed == int" normalization. All 4 DC tests pass as-written. Adds language-quirk normalization to TSE (semantically questionable).
+  - R15 measured impact on cppcheck: 0 matched deps gained from primitives. The decision is driven by DC test compatibility, not extraction quality. Re-measure on other corpora before generalizing.
+- [ ] **Implement chosen option** in TSE; update affected `CppDependencyTest` assertions; re-run dc-compare on cppcheck to quantify any feat-only drift.
+- [ ] **Update 8 failing `DependaCharta/.../analyzers/cpp/CppAnalyzerTest.kt` tests** (categorized in `cpp-extraction-followups.md` "Wrap-up work" section):
+  - **Category (a) — primitive-type tests** (4 tests): pass automatically once A/B/C is picked (A fixes 3, B/C fix all 4).
+  - **Category (b) — flattening divergence** (2 tests): update assertions to drop standalone expectations for types that appear only as nested generics (e.g., assert `shared_ptr.genericTypes == [TEntity]` instead of looking for bare `shared_ptr[TEntity]`).
+  - **Category (c) — multiline include backslash continuation** (1 test): `@Disabled("TSE extraction gap: multiline include continuation")` with a TODO, OR fix TSE `ImportExtractor` to strip `\\\n\s*` from raw include path.
+- [ ] **Revert DC's composite-build wiring** in `analysis/settings.gradle.kts` + `analysis/build.gradle.kts` (composite paths must not be committed).
+- [ ] **Final dc-compare** on cppcheck — confirm match rate ≥ R15 baseline (45.6%, matched 1118).
+- [ ] **Merge TSE** `feat/cpp-dependency-support` → `main`, **tag release**.
+- [ ] **Update DC's JitPack TSE dependency** to the new tag in `analysis/build.gradle.kts`.
+- [ ] **Merge DC** `feat/cpp-dependency-integration` → `main`.
+
+**Automated Verification**:
+
+- [ ] `./gradlew build` green in both TSE and DC
+- [ ] All `CppDependencyTest` (TSE) and `CppAnalyzerTest` (DC) tests pass
+- [ ] Final cppcheck dc-compare match rate ≥ R15 (45.6%)
+- [ ] DC composite-build wiring is reverted (no `includeBuild("../../TreeSitterExcavationSite")` in `analysis/settings.gradle.kts` at merge time)
+
+**Manual Verification**:
+
+- [ ] Confirm primitive-type option choice with user before implementing (A/B/C is a judgment call, not deterministic)
+- [ ] Confirm TSE release tag name with user before tagging
+
+---
+
+## Out of Scope (carried forward from cpp-extraction-followups.md)
+
+These items were in the prior plan but are **explicitly not in scope** for either today's plan or Phase 8:
+
+- **Refactor Task 3 from old plan — Unify `TreeTraversal` ancestor walkers** (`hasAncestorOfType`, `hasAncestorOfTypes`, `findAncestorOfType`, `isDescendantOf` → one private `walkAncestors` sequence helper). Was attempted and reverted (commit `64b6f4a`). Today's plan scopes to `languages/cpp/` only; `TreeTraversal` lives in `shared/infrastructure/`.
+- **Refactor Task 5 from old plan (optional) — Encapsulate `RealLinesOfCodeCalc` state** (8 mutable fields → two data classes). Outside the C++ slice; flagged High severity in `Reports/TreeSitterExcavationSite-analysis-2026-04-23.md` but should be addressed in a separate metrics-focused session.
+
+---
+
 ## References
 
 - C++ code review (this conversation, 2026-04-27)
-- Existing C++ migration plan with already-completed refactors: `plans/cpp-extraction-followups.md` (esp. the "Prerequisite — refactor session" section that landed the `usedtypes/` split and `walkQualified` helper)
+- Existing C++ migration plan with already-completed refactors: `plans/cpp-extraction-followups.md` (esp. the "Prerequisite — refactor session" section that landed the `usedtypes/` split and `walkQualified` helper, plus "Remaining wrap-up work for next session" which Phase 8 absorbs)
 - Migration rules covering DC-legacy quirks: `.claude/rules/dependency-migration.md`
 - Architecture conventions: `.claude/rules/architecture.md`, `.claude/rules/extraction.md`
 - Pattern reference for sub-extractor split: existing `languages/cpp/extractors/usedtypes/` directory
