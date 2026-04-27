@@ -1,6 +1,6 @@
 ---
 date: 2026-04-27T09:11:55.468858+00:00
-git_commit: ef7bd7c17d2abfe8ca18f6084227108fc16ae73d
+git_commit: 4a58eb9
 branch: feat/cpp-dependency-support
 topic: "C++ code review cleanup"
 tags: [plan, cpp, refactor, code-review]
@@ -9,11 +9,44 @@ status: progress
 
 # C++ Code Review Cleanup Implementation Plan
 
-## Session Status (last updated 2026-04-27)
+## Session Status (last updated 2026-04-27, end of session)
 
-- **Phase 1 complete** — committed as `9b79371 refactor(cpp): consolidate namespace walking into CppNamespaceWalker`. Build, tests, ktlint all green.
-- **Next pickup**: Phase 2 — split `DependencyDeclarationExtractor` into focused classes under `languages/cpp/extractors/declarations/`.
-- **Note**: Phase 8 was added mid-session to absorb the cross-repo wrap-up work from `plans/cpp-extraction-followups.md` ("Remaining wrap-up work for next session"). Phase 8 lands after Phases 1–7 complete.
+- **Phases 1–7 complete**:
+  - Phase 1 — `9b79371` refactor(cpp): consolidate namespace walking into CppNamespaceWalker
+  - Phase 2 — `a575c04` refactor(cpp): split DeclarationExtractor into focused sub-extractors
+  - Phase 3 — `82b31f2` refactor(cpp): rename extractors to disambiguate dependency vs identifier
+  - Phase 4 — `05750d0` refactor(cpp): lift QualifiedIdentifierPath out of CppTypeHelper
+  - Phase 5 — `aa8c9f6` refactor(cpp): move complexity-ignore config to CppCalculationConfig
+  - Phase 6 — `4a58eb9` docs(cpp): document DC-legacy quirks + drop dead null checks
+  - Phase 7 — verified zero behavior change on cppcheck (no commit; comparison artifacts in `../dc-compare/after-refactor/`)
+- **Investigation done this session** (validated `cpp-extraction-followups.md` gap claims):
+  - All 3 documented DC bugs confirmed with exact citations.
+  - No correctness bugs in TSE — extraction matches DC categories exactly.
+  - Reachability analysis on 1337 main-only edges: 12 unreachable, 601 sibling-attribution-shift (dump-victim), 279 "pure under-extraction" of which ~170 are caused by the simplecpp-pollution dynamic.
+  - **New finding documented in `dependency-migration.md`**: TSE parsing files DC main fails on (`externals/simplecpp/simplecpp.cpp`) adds extra projectDictionary candidates that get picked over the "right" target via DC's empty-wildcard substring fallback. ~121 `Token` + ~49 `TokenList` deps redirect to `simplecpp.*` instead of `lib.*`. Same resolver, different inputs, different outputs. Not a TSE bug.
+  - **Realistic fixable budget**: ~40-60 main-only edges via case-by-case extraction work — not the 150-300 the followups plan estimated. Closing them would lift match-rate to ~46-47%, not 50-55%.
+  - Strategic decision: **do NOT mirror DC bugs in TSE**. Stick with the "fix bugs, document accepted improvements" agenda from `dependency-migration.md`. Ship at 45.32% match rate; document the ceiling as realistic 45-50%.
+- **Decision recorded for Phase 8 first task**: primitive-type extraction → **Option B** (add `PRIMITIVE_TYPE` + `sized_type_specifier` support; the 4th DC test's expected name is updated to `unsigned`/`signed` rather than mirroring DC's `→ int` normalization). Rationale: minimum-risk to TSE cleanliness; no DC-quirk mirroring.
+- **Next pickup**: Phase 8 starting from Task 2 (implement option B in TSE). The Phase 7 plan-status update + the two new lessons in `dependency-migration.md` are uncommitted; roll into Phase 8's first commit.
+- **DC composite-build wiring**: currently active on DC `feat/cpp-dependency-integration` — left in place because Phase 8 needs it again. Must be reverted before any DC-side commit lands.
+
+## Open question for next session
+
+**Should the DC resolver fix (`Node.resolveTypeImport` empty-wildcard substring fallback) bundle into Phase 8 or schedule as a separate post-merge DC PR?**
+
+Context:
+- DC's `Node.kt:127-133` empty-wildcard substring fallback is the documented root cause of the simplecpp-pollution misdirection (~120-180 main-only deps on cppcheck).
+- DC's own in-code TODO acknowledges the looseness.
+- Three fix candidates (in order of recommendation):
+  1. **Namespace-proximity tie-break** when empty-wildcard finds >1 candidate — most defensible; preserves current behavior for unambiguous cases.
+  2. Strict-suffix match instead of substring (doesn't help empty-wildcard case — the actual issue).
+  3. Skip empty wildcards entirely (would break ~358 currently-matched C++ deps that depend on the fallback).
+- Cross-language impact assessment: empty-wildcard emission is essentially C++-specific (Java/Kotlin/C#/Go/PHP/TS/JS/Vue all emit non-empty package-derived wildcards). One audit needed: confirm Java's adapter doesn't emit empty wildcards for default-package projects before landing the DC fix.
+- Trade-off:
+  - **Bundle into Phase 8**: matches at ~50% on cppcheck (visible bump in shipped numbers). Adds DC commit to merge sequence.
+  - **Post-merge separate DC PR**: cleaner separation; C++ migration ships pure. Resolver fix is a DC-quality improvement that benefits all future migrations regardless of which language goes next.
+
+Recommendation: **post-merge separate DC PR** — keeps the C++ migration's commit history focused, and the resolver fix is a DC-wide improvement that deserves its own review window. But it's a small change either way; revisit at start of next session.
 
 ## Overview
 
@@ -300,24 +333,24 @@ Dependencies: **Phases 1–6** (all refactor commits must be landed)
 Three-way comparison on cppcheck to confirm the refactor introduced zero behavior change. Generates a new `dc-compare/after-refactor/` folder alongside the existing `dc-compare/main/` (DC legacy baseline) and `dc-compare/feature/` (latest pre-refactor TSE run). Produces no code commit — only an analysis output and a comparison report.
 
 **Tasks**:
-- [ ] Verify DC's composite-build wiring is in place per `.claude/rules/dependency-migration.md`:
-  - `DependaCharta/analysis/settings.gradle.kts` includes `../../TreeSitterExcavationSite`
-  - `DependaCharta/analysis/build.gradle.kts` uses the composite-build dep (`de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite`), not JitPack
-- [ ] Generate the after-refactor analysis output:
+- [x] Verify DC's composite-build wiring is in place per `.claude/rules/dependency-migration.md`:
+  - `DependaCharta/analysis/settings.gradle.kts` includes `../../TreeSitterExcavationSite` ✓
+  - `DependaCharta/analysis/build.gradle.kts` uses the composite-build dep (`de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite`), not JitPack ✓
+- [x] Generate the after-refactor analysis output:
   ```bash
   cd ../DependaCharta/analysis
   ./gradlew fatJar
   java -jar build/libs/dependacharta.jar -d "../../cppcheck" -o "../../dc-compare/after-refactor" -f analysis
   ```
-- [ ] Run two pairwise comparisons via the `/dc-compare` skill or the comparison script in `plans/cpp-extraction-followups.md` Step 3:
-  - `dc-compare/feature/` vs `dc-compare/after-refactor/` → expected: zero divergence (identical node/dependency sets)
-  - `dc-compare/main/` vs `dc-compare/after-refactor/` → expected: matched/main-only/feat-only counts equal the baseline `dc-compare/main/` vs `dc-compare/feature/`
-- [ ] Revert DC's composite-build wiring before any DC-side commit lands (composite-build paths must not be committed per migration rules).
+- [x] Run two pairwise comparisons:
+  - `dc-compare/feature/` vs `dc-compare/after-refactor/` → **MATCH: byte-identical normalized JSON; identical edge sets** (zero divergence as expected)
+  - `dc-compare/main/` vs `dc-compare/after-refactor/` → matched=1118, main-only=1349, feat-only=980, **rate=45.32%**; identical to `main vs feature` (1118/1349/980/45.32%) — confirms zero behavior change. The R15 reference numbers in the plan (1337 main-only / 507 feat-only) reflect a different aggregation methodology; the `matched=1118` and `45.x%` rate match.
+- [ ] Revert DC's composite-build wiring before any DC-side commit lands (deferred — Phase 8 needs the wiring for primitive-type re-verification, will revert before any DC-side commit per migration rules).
 
 **Automated Verification**:
-- [ ] `dc-compare/feature/` vs `dc-compare/after-refactor/` reports zero divergence (no main-only or feat-only edges)
-- [ ] `dc-compare/main/` vs `dc-compare/after-refactor/` reports the same matched / main-only / feat-only counts as the latest pre-refactor baseline (R15 reference: matched ≈ 1118, main-only ≈ 1337, feat-only ≈ 507, ~45.6%)
-- [ ] `./gradlew build` in TSE green at the final commit
+- [x] `dc-compare/feature/` vs `dc-compare/after-refactor/` reports zero divergence (byte-identical edge sets)
+- [x] `dc-compare/main/` vs `dc-compare/after-refactor/` reports the same matched/main-only/feat-only counts as the pre-refactor `main vs feature` baseline (identical: 1118/1349/980/45.32%)
+- [x] `./gradlew build` in TSE green at the final commit (Phase 6 commit `4a58eb9`)
 
 ---
 
