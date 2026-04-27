@@ -179,6 +179,38 @@ class JavascriptDependencyTest {
             assertThat(result.declarations[0].name).isEqualTo("baz")
             assertThat(result.declarations[0].type).isEqualTo(DeclarationType.VARIABLE)
         }
+
+        @Test
+        fun `should rename declaration to DEFAULT_EXPORT when it is the default export target`() {
+            // Arrange
+            val code = """
+                const buildFunction = () => { return "hello"; };
+                export default buildFunction;
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.VARIABLE)
+        }
+
+        @Test
+        fun `should extract wildcard re-export as REEXPORT declaration`() {
+            // Arrange
+            val code = "export * from './module'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("*")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes).isEmpty()
+        }
     }
 
     @Nested

@@ -444,6 +444,36 @@ class TypescriptDependencyTest {
         }
 
         @Test
+        fun `should extract export default identifier as REEXPORT when not declared in file`() {
+            // Arrange
+            val code = "export default MyDefaultExport;"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes.map { it.name }).containsExactlyInAnyOrder("MyDefaultExport")
+        }
+
+        @Test
+        fun `should extract wildcard re-export as REEXPORT declaration`() {
+            // Arrange
+            val code = "export * from './utils'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("*")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes).isEmpty()
+        }
+
+        @Test
         fun `should extract nested class declarations`() {
             // Arrange
             val code = """

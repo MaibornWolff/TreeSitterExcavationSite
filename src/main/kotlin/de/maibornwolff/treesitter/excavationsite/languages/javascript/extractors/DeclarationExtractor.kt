@@ -23,6 +23,8 @@ internal object DeclarationExtractor {
     private const val STRING = "string"
     private const val STRING_FRAGMENT = "string_fragment"
     private const val DEFAULT_EXPORT = "DEFAULT_EXPORT"
+    private const val DEFAULT_KEYWORD = "default"
+    private const val WILDCARD_REEXPORT = "*"
 
     private const val AMBIENT_DECLARATION = "ambient_declaration"
     private const val MODULE_DECLARATION = "module"
@@ -50,7 +52,8 @@ internal object DeclarationExtractor {
 
     fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> {
         val aliasMap = buildAliasMap(rootNode, sourceCode)
-        return rootNode
+        val defaultExportIdentifier = findDefaultExportIdentifier(rootNode, sourceCode)
+        val declarations = rootNode
             .children()
             .flatMap { child ->
                 when (child.type) {
@@ -61,9 +64,39 @@ internal object DeclarationExtractor {
                 }
             }.filter { it.name.isNotBlank() }
             .toList()
+        return if (defaultExportIdentifier != null) applyDefaultExport(declarations, defaultExportIdentifier) else declarations
     }
 
-    private fun extractFromAmbientDeclaration(node: TSNode, sourceCode: String, aliasMap: Map<String, String> = emptyMap()): List<Declaration> {
+    private fun findDefaultExportIdentifier(rootNode: TSNode, sourceCode: String): String? =
+        rootNode.children()
+            .filter { it.type == EXPORT_STATEMENT }
+            .firstNotNullOfOrNull { exportNode ->
+                val children = exportNode.children().toList()
+                val identifier = children.firstOrNull { it.type == IDENTIFIER }
+                if (children.any { it.type == DEFAULT_KEYWORD } && identifier != null) {
+                    TreeTraversal.getNodeText(identifier, sourceCode).trim()
+                } else {
+                    null
+                }
+            }
+
+    private fun applyDefaultExport(declarations: List<Declaration>, defaultExportIdentifier: String): List<Declaration> {
+        val firstDefaultExport = declarations.indexOfFirst { it.name == defaultExportIdentifier }
+        return if (firstDefaultExport >= 0) {
+            declarations.mapIndexed { idx, decl ->
+                if (idx == firstDefaultExport) decl.copy(name = DEFAULT_EXPORT) else decl
+            }
+        } else {
+            declarations + Declaration(
+                name = DEFAULT_EXPORT,
+                type = DeclarationType.REEXPORT,
+                usedTypes = setOf(UsedType(defaultExportIdentifier))
+            )
+        }
+    }
+
+    private fun extractFromAmbientDeclaration(node: TSNode, sourceCode: String,
+                                              aliasMap: Map<String, String> = emptyMap()): List<Declaration> {
         val moduleNode = node.children().firstOrNull { it.type == MODULE_DECLARATION } ?: return emptyList()
         val moduleName = moduleNode
             .children()
@@ -87,17 +120,20 @@ internal object DeclarationExtractor {
             .toList()
     }
 
-    private fun extractFromExportStatement(node: TSNode, sourceCode: String, parentPath: List<String> = emptyList(), aliasMap: Map<String, String> = emptyMap()): List<Declaration> {
+    private fun extractFromExportStatement(node: TSNode, sourceCode: String, parentPath: List<String> = emptyList(),
+                                           aliasMap: Map<String, String> = emptyMap()): List<Declaration> {
         val hasExportClause = node.children().any { it.type == EXPORT_CLAUSE }
         val hasSource = node.children().any { it.type == STRING }
-        return if (hasExportClause && hasSource) {
-            extractReexportDeclarations(node, sourceCode)
-        } else {
-            node
-                .children()
-                .filter { it.type in DECLARATION_NODE_TYPES }
-                .flatMap { extractFromNode(it, sourceCode, parentPath, aliasMap) }
-                .toList()
+        return when {
+            hasExportClause && hasSource -> extractReexportDeclarations(node, sourceCode)
+            hasSource && !hasExportClause ->
+                listOf(Declaration(name = WILDCARD_REEXPORT, type = DeclarationType.REEXPORT, usedTypes = emptySet()))
+
+            else ->
+                node.children()
+                    .filter { it.type in DECLARATION_NODE_TYPES }
+                    .flatMap { extractFromNode(it, sourceCode, parentPath, aliasMap) }
+                    .toList()
         }
     }
 
@@ -117,18 +153,21 @@ internal object DeclarationExtractor {
                         val name = identifiers[0]
                         Declaration(name = name, type = DeclarationType.REEXPORT, usedTypes = setOf(UsedType(name)))
                     }
+
                     2 -> {
                         val originalName = identifiers[0]
                         val alias = identifiers[1]
                         val usedTypeName = if (originalName == "default") DEFAULT_EXPORT else originalName
                         Declaration(name = alias, type = DeclarationType.REEXPORT, usedTypes = setOf(UsedType(usedTypeName)))
                     }
+
                     else -> null
                 }
             }.toList()
     }
 
-    private fun extractFromNode(node: TSNode, sourceCode: String, parentPath: List<String> = emptyList(), aliasMap: Map<String, String> = emptyMap()): List<Declaration> =
+    private fun extractFromNode(node: TSNode, sourceCode: String, parentPath: List<String> = emptyList(),
+                                aliasMap: Map<String, String> = emptyMap()): List<Declaration> =
         when (node.type) {
             LEXICAL_DECLARATION, VARIABLE_DECLARATION -> extractVariableDeclarations(node, sourceCode, parentPath, aliasMap)
             else -> {
@@ -139,7 +178,8 @@ internal object DeclarationExtractor {
             }
         }
 
-    private fun extractVariableDeclarations(node: TSNode, sourceCode: String, parentPath: List<String> = emptyList(), aliasMap: Map<String, String> = emptyMap()): List<Declaration> =
+    private fun extractVariableDeclarations(node: TSNode, sourceCode: String, parentPath: List<String> = emptyList(),
+                                            aliasMap: Map<String, String> = emptyMap()): List<Declaration> =
         node
             .children()
             .filter { it.type == VARIABLE_DECLARATOR }
