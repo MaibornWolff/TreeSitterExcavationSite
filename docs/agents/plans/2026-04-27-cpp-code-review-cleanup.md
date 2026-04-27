@@ -282,14 +282,14 @@ Dependencies: **Phase 2** (touches `OutOfClassMethodPromoter`), **Phase 3** (ref
 Add one-line comments documenting the DC-legacy quirks the C++ extractors implement, and remove the C++-only dead `current != null` half of `while` loops walking `node.parent`. Both small, low-risk; bundled to keep commit count down.
 
 **Tasks**:
-- [ ] In `DependencyDeclarationExtractor` (post-Phase-3 name) or wherever `hasBody` is used, add a comment to the `if (!hasBody(node)) return null` line explaining: forward declarations have no body — DC legacy emits no Declaration for them.
-- [ ] In `CallExpressionTypeExtractor.kt` near the `IDENTIFIER` branch (~`:62-67`), add a comment explaining the bare-name `UsedType` emission for nested-call arg-list and throw-statement contexts (mirrors DC's empty-namespace-wildcard behavior — see `dependency-migration.md` lesson on tree-sitter-cpp parsing).
-- [ ] Remove dead `current != null && ` from the ancestor-walk loops in `OutOfClassMethodPromoter` and `ImportExtractor` (the C++-side files only). Pattern: `while (current != null && !current.isNull)` → `while (!current.isNull)`. Pre-existing equivalents in `csharp/` are left unchanged.
+- [x] Add `hasBody`-skip comment in `InClassDeclarationFinder` (Phase 2 moved `hasBody` out of the dependency-side `DeclarationExtractor`/`DependencyDeclarationExtractor` into this finder): `// Forward declarations have no body — DC legacy emits no Declaration for them.`
+- [x] In `CallExpressionTypeExtractor.kt` near the `IDENTIFIER` branch (~`:62-67`), add a comment explaining the bare-name `UsedType` emission for nested-call arg-list and throw-statement contexts (mirrors DC's empty-namespace-wildcard behavior — see `dependency-migration.md` lesson on tree-sitter-cpp parsing).
+- [x] Remove dead `current != null && ` from the ancestor-walk loops in `CppNamespaceWalker.walkAncestorsFrom` (Phase 1 absorbed the original `ImportExtractor.aggregateNamespacePath` and `DeclarationExtractor.findNamespacePath` walks) and in `InClassDeclarationFinder.findParentClassPath` (Phase 2 moved the original `DeclarationExtractor.findParentClassPath` here). Pattern: `while (current != null && !current.isNull)` → `while (!current.isNull)`. Pre-existing equivalents in `csharp/` are left unchanged.
 
 **Automated Verification**:
-- [ ] `./gradlew build` passes
-- [ ] `./gradlew test --tests "*Cpp*"` passes
-- [ ] `./gradlew ktlintCheck` passes
+- [x] `./gradlew build` passes
+- [x] `./gradlew test --tests "*Cpp*"` passes
+- [x] `./gradlew ktlintCheck` passes
 
 ---
 

@@ -55,16 +55,23 @@ internal object CallExpressionTypeExtractor {
                         generics
                     }
                 }
+
                 QUALIFIED_IDENTIFIER -> listOfNotNull(
                     CppTypeHelper.extractRightmostSegment(function, sourceCode),
                     CppTypeHelper.extractSingleSegmentScope(function, sourceCode)
                 )
+                /*
+                Bare-name UsedType for nested-call arg-list and throw-statement contexts:
+                mirrors DC's empty-namespace-wildcard fallthrough so a free function used
+                as `someCall(helper(...))` or `throw helper(...)` still emits `helper`.
+                 */
                 IDENTIFIER -> if (isInThrow || isInArgList) {
                     val text = TreeTraversal.getNodeText(function, sourceCode).trim()
                     if (text.isEmpty()) emptyList() else listOf(UsedType(name = text))
                 } else {
                     emptyList()
                 }
+
                 else -> emptyList()
             }
         }
@@ -88,6 +95,7 @@ internal object CallExpressionTypeExtractor {
             when (arg.type) {
                 QUALIFIED_IDENTIFIER ->
                     listOfNotNull(CppTypeHelper.extractSecondToLastSegment(arg, sourceCode)).asSequence()
+
                 CALL_EXPRESSION ->
                     if (isBraceInit) {
                         emptySequence()
@@ -97,6 +105,7 @@ internal object CallExpressionTypeExtractor {
                             .filter { it.type == QUALIFIED_IDENTIFIER }
                             .mapNotNull { CppTypeHelper.extractSecondToLastSegment(it, sourceCode) }
                     }
+
                 else -> emptySequence()
             }
         }

@@ -29,6 +29,7 @@ internal object InClassDeclarationFinder {
     }
 
     private fun toDeclaration(node: TSNode, sourceCode: String, nameByStartByte: Map<Int, String?>): Declaration? {
+        // Forward declarations have no body — DC legacy emits no Declaration for them.
         if (!hasBody(node)) return null
         val name = nameByStartByte[node.startByte] ?: return null
         return Declaration(
@@ -47,7 +48,7 @@ internal object InClassDeclarationFinder {
     private fun findParentClassPath(node: TSNode, nameByStartByte: Map<Int, String?>): List<String> {
         val parents = mutableListOf<String>()
         var current = node.parent
-        while (current != null && !current.isNull) {
+        while (!current.isNull) {
             if (current.type in DECLARATION_NODE_TYPES) {
                 val parentName = nameByStartByte[current.startByte]
                 if (!parentName.isNullOrBlank()) {

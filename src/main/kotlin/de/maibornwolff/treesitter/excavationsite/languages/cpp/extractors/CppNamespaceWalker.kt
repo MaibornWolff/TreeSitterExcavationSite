@@ -12,7 +12,7 @@ internal object CppNamespaceWalker {
     fun walkAncestorsFrom(node: TSNode, sourceCode: String): List<String> {
         val segments = mutableListOf<List<String>>()
         var current = node.parent
-        while (current != null && !current.isNull) {
+        while (!current.isNull) {
             if (current.type == NAMESPACE_DEFINITION) {
                 segments.add(0, extractSegments(current, sourceCode))
             }
