@@ -215,26 +215,23 @@ Eliminate the two confusingly-named files/symbols. No logic changes — file ren
 Replace `CppTypeHelper.walkQualified`'s `Pair<List<String>, TSNode?>` return with a named data class. Three selector methods (`extractRightmostSegment`, `extractSecondToLastSegment`, `extractSingleSegmentScope`) consume it.
 
 **Tasks**:
-- [ ] Create `languages/cpp/extractors/QualifiedIdentifierPath.kt`:
+- [x] Create `languages/cpp/extractors/QualifiedIdentifierPath.kt`:
   ```kotlin
-  internal data class QualifiedIdentifierPath(
-      val segments: List<String>,
-      val leaf: TSNode?
-  ) {
+  internal data class QualifiedIdentifierPath(val segments: List<String>, val leaf: TSNode?) {
       companion object {
           fun walk(qualifiedId: TSNode, sourceCode: String): QualifiedIdentifierPath
       }
   }
   ```
-  The `walk` factory contains the loop currently in `CppTypeHelper.walkQualified`.
-- [ ] Refactor `CppTypeHelper.extractRightmostSegment` and `extractSecondToLastSegment` to delegate to `QualifiedIdentifierPath.walk(...)` and read `.segments` / `.leaf`. Drop the private `walkQualified` method.
-- [ ] Leave `CppTypeHelper.extractSingleSegmentScope` as-is (it reads the `scope` field directly, doesn't need the walker).
-- [ ] Verify `CppTypeHelper.kt` line count stays <120 lines (was 113); the `walkQualified` extraction should reduce surface area, not grow it.
+  The `walk` factory contains the loop previously in `CppTypeHelper.walkQualified`. (Single-line constructor required by ktlint.)
+- [x] Refactor `CppTypeHelper.extractRightmostSegment` and `extractSecondToLastSegment` to delegate to `QualifiedIdentifierPath.walk(...)` and read `.segments` / `.leaf`. Drop the private `walkQualified` method.
+- [x] Leave `CppTypeHelper.extractSingleSegmentScope` as-is (it reads the `scope` field directly, doesn't need the walker).
+- [x] Verify `CppTypeHelper.kt` line count stays <120 lines (was 113, now 96).
 
 **Automated Verification**:
-- [ ] `./gradlew build` passes
-- [ ] `./gradlew test --tests "CppDependencyTest"` passes — exercises all three selector methods through used-type extraction
-- [ ] `./gradlew ktlintCheck` passes
+- [x] `./gradlew build` passes
+- [x] `./gradlew test --tests "CppDependencyTest"` passes — exercises all three selector methods through used-type extraction
+- [x] `./gradlew ktlintCheck` passes
 
 ---
 

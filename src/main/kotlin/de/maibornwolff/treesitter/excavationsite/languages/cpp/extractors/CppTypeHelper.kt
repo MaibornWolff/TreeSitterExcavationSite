@@ -15,7 +15,6 @@ internal object CppTypeHelper {
     private const val TYPE_DESCRIPTOR = "type_descriptor"
     private const val QUALIFIED_IDENTIFIER = "qualified_identifier"
     private const val NAMESPACE_IDENTIFIER = "namespace_identifier"
-    private const val NAME_FIELD = "name"
     private const val SCOPE_FIELD = "scope"
     private const val TYPE_FIELD = "type"
 
@@ -73,13 +72,13 @@ internal object CppTypeHelper {
     }
 
     fun extractRightmostSegment(qualifiedId: TSNode, sourceCode: String): UsedType? {
-        val (segments, leaf) = walkQualified(qualifiedId, sourceCode)
-        val leafNode = leaf ?: return null
+        val path = QualifiedIdentifierPath.walk(qualifiedId, sourceCode)
+        val leafNode = path.leaf ?: return null
         if (leafNode.type in TEMPLATE_LIKE_TYPES) {
-            return extractTemplateLike(leafNode, sourceCode)?.copy(namespacePrefix = segments)
+            return extractTemplateLike(leafNode, sourceCode)?.copy(namespacePrefix = path.segments)
         }
         val text = TreeTraversal.getNodeText(leafNode, sourceCode).trim()
-        return if (text.isEmpty()) null else UsedType(name = text, namespacePrefix = segments)
+        return if (text.isEmpty()) null else UsedType(name = text, namespacePrefix = path.segments)
     }
 
     fun extractSingleSegmentScope(qualifiedId: TSNode, sourceCode: String): UsedType? {
@@ -90,23 +89,8 @@ internal object CppTypeHelper {
     }
 
     fun extractSecondToLastSegment(qualifiedId: TSNode, sourceCode: String): UsedType? {
-        val (segments, _) = walkQualified(qualifiedId, sourceCode)
+        val segments = QualifiedIdentifierPath.walk(qualifiedId, sourceCode).segments
         val name = segments.lastOrNull() ?: return null
         return UsedType(name = name, namespacePrefix = segments.dropLast(1))
-    }
-
-    private fun walkQualified(qualifiedId: TSNode, sourceCode: String): Pair<List<String>, TSNode?> {
-        val scopeSegments = mutableListOf<String>()
-        var node = qualifiedId
-        while (node.type == QUALIFIED_IDENTIFIER) {
-            val scope = node.getChildByFieldName(SCOPE_FIELD)
-            if (!scope.isNull) {
-                scopeSegments.add(TreeTraversal.getNodeText(scope, sourceCode).trim())
-            }
-            val nameField = node.getChildByFieldName(NAME_FIELD)
-            if (nameField.isNull) return scopeSegments to null
-            node = nameField
-        }
-        return scopeSegments to node
     }
 }
