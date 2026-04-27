@@ -140,7 +140,7 @@ Dependencies: **Phase 1**
 Split the dependency-side `DeclarationExtractor` into a thin orchestrator plus three single-responsibility sub-extractors under `languages/cpp/extractors/declarations/`. The orchestrator stays named `DeclarationExtractor` in this phase; the file rename + symbol rename to `DependencyDeclarationExtractor` happen in Phase 3.
 
 **Tasks**:
-- [ ] Create `languages/cpp/extractors/declarations/InClassDeclarationFinder.kt`:
+- [x] Create `languages/cpp/extractors/declarations/InClassDeclarationFinder.kt`:
   ```kotlin
   internal object InClassDeclarationFinder {
       fun find(rootNode: TSNode, sourceCode: String): List<Declaration>
@@ -148,7 +148,7 @@ Split the dependency-side `DeclarationExtractor` into a thin orchestrator plus t
       // findParentClassPath, mapType. Uses CppNamespaceWalker for namespace path.
   }
   ```
-- [ ] Create `languages/cpp/extractors/declarations/OutOfClassMethodPromoter.kt`:
+- [x] Create `languages/cpp/extractors/declarations/OutOfClassMethodPromoter.kt`:
   ```kotlin
   internal object OutOfClassMethodPromoter {
       fun promote(rootNode: TSNode, sourceCode: String): List<Declaration>
@@ -156,14 +156,14 @@ Split the dependency-side `DeclarationExtractor` into a thin orchestrator plus t
       // Uses CppTypeHelper.extractSecondToLastSegment and CppNamespaceWalker.
   }
   ```
-- [ ] Create `languages/cpp/extractors/declarations/DeclarationMerger.kt`:
+- [x] Create `languages/cpp/extractors/declarations/DeclarationMerger.kt`:
   ```kotlin
   internal object DeclarationMerger {
       fun merge(declarations: List<Declaration>): List<Declaration>
       // The linkedMapOf<Pair<List<String>, String>, Declaration> consolidation.
   }
   ```
-- [ ] Reduce `DeclarationExtractor.kt` (the dependency-side object — to be renamed in Phase 3) to a thin orchestrator:
+- [x] Reduce `DeclarationExtractor.kt` (the dependency-side object — to be renamed in Phase 3) to a thin orchestrator:
   ```kotlin
   internal object DeclarationExtractor {
       fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> =
@@ -175,10 +175,10 @@ Split the dependency-side `DeclarationExtractor` into a thin orchestrator plus t
   ```
 
 **Automated Verification**:
-- [ ] `./gradlew build` passes
-- [ ] `./gradlew test --tests "CppDependencyTest"` passes — full 1816-line test file unchanged
-- [ ] `./gradlew test --tests "*Cpp*"` passes
-- [ ] `./gradlew ktlintCheck` passes
+- [x] `./gradlew build` passes
+- [x] `./gradlew test --tests "CppDependencyTest"` passes — full 1816-line test file unchanged
+- [x] `./gradlew test --tests "*Cpp*"` passes
+- [x] `./gradlew ktlintCheck` passes
 
 ---
 
