@@ -16,6 +16,7 @@ internal object ImportExtractor {
     private const val NAMESPACE_KEYWORD = "namespace"
     private const val NAMESPACE_SEPARATOR = "::"
     private const val PATH_SEPARATOR = "/"
+    private val LINE_CONTINUATION = Regex("""\\\s*\n\s*""")
 
     private val NON_IMPORT_SCOPES = setOf(
         "class_specifier",
@@ -37,7 +38,8 @@ internal object ImportExtractor {
     private fun toIncludeImport(node: TSNode, sourceCode: String): ImportDeclaration? {
         val rawPath = TreeTraversal.findFirstChildTextByType(node, sourceCode, SYSTEM_LIB_STRING, STRING_LITERAL)
             ?: return null
-        val segments = stripPathDelimiters(rawPath).split(PATH_SEPARATOR)
+        val cleanedPath = stripPathDelimiters(rawPath).replace(LINE_CONTINUATION, "")
+        val segments = cleanedPath.split(PATH_SEPARATOR).filter { it.isNotEmpty() }
         return ImportDeclaration(path = segments, isWildcard = false, kind = ImportKind.INCLUDE)
     }
 

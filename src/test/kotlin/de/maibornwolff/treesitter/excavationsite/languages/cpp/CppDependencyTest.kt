@@ -184,6 +184,23 @@ class CppDependencyTest {
                     ImportDeclaration(path = listOf("memory"), isWildcard = false, kind = ImportKind.INCLUDE)
                 )
             }
+
+            @Test
+            fun `should normalize multiline include with backslash continuation`() {
+                // Arrange — C/C++ preprocessor splices `\<newline>` and continuation indent.
+                val code = """
+                    #include "dir/\
+                        subdir/Foo.h"
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(path = listOf("dir", "subdir", "Foo.h"), isWildcard = false, kind = ImportKind.INCLUDE)
+                )
+            }
         }
 
         @Nested
