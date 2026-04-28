@@ -407,6 +407,81 @@ If composite wiring is missing, restore per `.claude/rules/dependency-migration.
 
 ---
 
+## Follow-ups: disabled DC tests
+
+Two `@Disabled` tests in `DependaCharta/.../analyzers/cpp/CppAnalyzerTest.kt` mark known gaps that were deliberately deferred out of the migration's scope. Each is a legitimate next-step item.
+
+### Follow-up A: multiline `#include` normalization (small, ready-to-fix)
+
+- **Test**: `should recognize multiline include statements`
+- **Symptom**: `#include "dir/\<newline>    subdir/Foo.h"` produces the dependency `dir.\.subdir.Foo_h` (literal `\` segment retained) instead of the expected `dir.subdir.Foo_h`.
+- **Cause**: TSE's `languages/cpp/extractors/ImportExtractor.kt` reads the include path verbatim from the tree-sitter-cpp AST. tree-sitter does not run the C preprocessor's translation phase 2 (`\<newline>` line-splicing), so the raw `\`, newline, and continuation indentation pass through into `ImportDeclaration.path`.
+- **Why deferred**: zero impact on the cppcheck dc-compare benchmark (no multiline includes in the corpus); rare construct in real code; isolatable one-line fix that doesn't need to coordinate with the rest of the migration.
+- **Fix scope**: TSE-only, ~5 lines + a TSE test. See "Plan: fix multiline `#include` normalization in TSE" below for the implementation plan.
+- **Unblock**: removing `@Disabled` from the DC test once TSE strips the line-continuation pattern.
+
+### Follow-up B: header / `.cpp` `pathWithName` merge gap (Issue 1)
+
+- **Test**: `should produce matching pathWithName for class declared in header and its implementation file`
+- **Symptom**: A class declared in `cli/executor.h` and implemented out-of-class in `cli/executor.cpp` produces two declarations with different `pathWithName` values (`cli.executor_h.Executor` vs `cli.executor_cpp.Executor`). DC's `ProcessingPipeline.mergeIdenticalTypes` only unites declarations with **identical** `pathWithName`, so the merge never fires and the .cpp's `usedTypes` never reach the header's node.
+- **Investigation status (from Round 5 / Round 5 follow-up)**: a strip-cpp-extension fix in DC's `CppAnalyzer` was implemented and reverted (commit reverted before `a4a73c9`). It made the merge happen at the `pathWithName` level but didn't actually close the dep-resolution gap because the resolver substring fallback in `Node.resolveTypeImport` (the `it.withDots().contains("")` path) is what actually drives most of the cross-file matches DC main produces, and that mechanism wasn't yet understood when the fix was tried. Re-enabling the test requires both:
+  1. Understanding the resolver mechanism on DC main (live debugging step documented in `plans/add-cpp-dependency-support.md` "Resume instructions for tomorrow").
+  2. A `pathWithName` strategy decision: strip extensions in TSE's `Declaration` output, strip in the DC adapter, or change DC's `mergeIdenticalTypes` to ignore the file-extension suffix.
+- **Why deferred**: the investigation surfaced **three DC legacy bugs** (header parse crash, empty-namespace wildcard substring fallback, dump-to-`lastOrNull()` misattribution) that collectively cap the cppcheck match rate at 45–50% — see `dependency-migration.md` "Match-rate ceiling" lesson. Issue 1 is a real gap, but pursuing it without first cracking the resolver substring mechanism risks more reverts. The disabled test documents the investigation's open state.
+- **Fix scope**: cross-repo, requires DC-side changes (resolver and/or `mergeIdenticalTypes`) plus possibly TSE-side path-stripping. Material follow-up, not a quick one-liner.
+- **Unblock**: see `plans/add-cpp-dependency-support.md` "Re-enable Issue 1 fix (when resolver mystery is solved)" for the resume recipe.
+
+### Plan: fix multiline `#include` normalization in TSE
+
+**Goal**: strip `\<newline>\s*` from raw `#include` path text in TSE's `ImportExtractor` so multiline include directives produce the same path list as their single-line equivalents.
+
+**Steps** (TDD, one commit per step):
+
+1. **Failing TSE test first** in `src/test/kotlin/.../languages/cpp/CppDependencyTest.kt` `ImportExtraction.IncludeDirectives`:
+   ```kotlin
+   @Test
+   fun `should normalize multiline include with backslash continuation`() {
+       // Arrange — C/C++ preprocessor splices `\<newline>` and continuation indent.
+       val code = """
+           #include "dir/\
+               subdir/Foo.h"
+       """.trimIndent()
+
+       // Act
+       val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+       // Assert
+       assertThat(result.imports.single().path).containsExactly("dir", "subdir", "Foo.h")
+   }
+   ```
+   Run — must fail with the literal-`\` segment as the symptom.
+
+2. **Locate the read site** in `languages/cpp/extractors/ImportExtractor.kt` — the function that reads the include's raw text from the AST and splits it on `/`. Add a normalization pass before the split:
+   ```kotlin
+   private val LINE_CONTINUATION = Regex("""\\\s*\n\s*""")
+   …
+   val cleanedPath = rawIncludePath.replace(LINE_CONTINUATION, "")
+   val pathParts = cleanedPath.split('/').filter { it.isNotEmpty() }
+   ```
+   The regex matches a backslash + optional whitespace + newline + optional leading whitespace on the continuation line — covering both standard-conformant `\<newline>` splicing and the indented-continuation convention.
+
+3. **Run the new test → green.** Run the whole `CppDependencyTest` suite — must stay green; this is purely additive normalization, no other tests should observe a change.
+
+4. **Run dc-compare on cppcheck** as a regression sanity check. Expect: zero change to matched/main-only/feat-only counts (cppcheck has no multiline includes). If anything moves, investigate before continuing.
+
+5. **DC-side**: remove the `@Disabled` annotation from `should recognize multiline include statements` in `DependaCharta/.../analyzers/cpp/CppAnalyzerTest.kt`. Run the test against the new TSE jar via composite build. Should pass.
+
+6. **Commit sequence** (TSE then DC):
+   - TSE: `test(cpp): add failing test for multiline #include normalization`
+   - TSE: `feat(cpp): strip backslash-newline line continuations from #include paths`
+   - DC: `test(cpp): re-enable multiline #include test now that TSE normalizes line continuations`
+
+**Risk**: low. The regex is conservative — `\\\s*\n\s*` only matches at line continuations, never inside a normal path segment (no `\n` in legal include paths). The `filter { isNotEmpty() }` guards against the existing `#include "//foo"` edge case if any. No dc-compare movement expected.
+
+**Out of scope for this fix**: the second disabled test (Follow-up B / Issue 1). That requires resolver investigation in DC and is tracked separately in `plans/add-cpp-dependency-support.md`.
+
+---
+
 ## Out of Scope (carried forward from cpp-extraction-followups.md)
 
 These items were in the prior plan but are **explicitly not in scope** for either today's plan or Phase 8:
