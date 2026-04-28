@@ -383,10 +383,13 @@ If composite wiring is missing, restore per `.claude/rules/dependency-migration.
   - **B (medium)** ← chosen: A + `sized_type_specifier` support. Fixes the 4th primitive test as `"unsigned"`/`"signed"`, not `"int"`. One more node-type constant + extractType branch.
   - **C (medium+)**: B + DC-legacy "bare unsigned/signed == int" normalization. All 4 DC tests pass as-written. Adds language-quirk normalization to TSE (semantically questionable).
 - [x] **Implement Option B** — commit `acd3dcf` `feat(cpp): extract primitive_type and sized_type_specifier as used types`. Updated 17 TSE `CppDependencyTest` assertions to include now-emitted primitives (mostly `void` from method return types, `int` from int-typed params). dc-compare on cppcheck unchanged from R15 baseline: matched=1118, main-only=1349, feat-only=980, rate=45.32% — primitives don't resolve to project nodes on cppcheck so they're invisible at the resolved-cg.json layer (zero feat-only drift, zero matched gain).
-- [ ] **Update 8 failing `DependaCharta/.../analyzers/cpp/CppAnalyzerTest.kt` tests** (categorized in `cpp-extraction-followups.md` "Wrap-up work" section):
-  - **Category (a) — primitive-type tests** (4 tests): pass automatically once A/B/C is picked (A fixes 3, B/C fix all 4).
-  - **Category (b) — flattening divergence** (2 tests): update assertions to drop standalone expectations for types that appear only as nested generics (e.g., assert `shared_ptr.genericTypes == [TEntity]` instead of looking for bare `shared_ptr[TEntity]`).
-  - **Category (c) — multiline include backslash continuation** (1 test): `@Disabled("TSE extraction gap: multiline include continuation")` with a TODO, OR fix TSE `ImportExtractor` to strip `\\\n\s*` from raw include path.
+- [x] **Update 8 failing `DependaCharta/.../analyzers/cpp/CppAnalyzerTest.kt` tests** — DC commit `92fdbe1`. Outcome:
+  - **Category (a) — primitive-type tests** (4): pass automatically with Option B, with the bare `unsigned`/`signed` tests renamed to assert `"unsigned"`/`"signed"` (not `"int"`).
+  - **Category (b) — flattening divergence** (2): assertions updated to drop standalone `string`/`CreatureEntity`/`shared_ptr[TEntity]` expectations; rules now documented in TSE deps README "Generic types representation".
+  - **Category (c) — multiline include backslash continuation** (1): `@Disabled` with explicit TSE-fix recipe in the annotation message. Re-enable is now a tracked follow-up below.
+  - **Bonus**: 2 `CppAnalysisPipelineTests` failures surfaced after the rest passed — Fightable + CreatureUtil expected `VALUECLASS`, updated to `CLASS` per the documented `struct → CLASS` accepted improvement; `char` added to `ignorableTypes` for primitive emission.
+- [x] **Follow-up A: fix multiline `#include` normalization in TSE** — done 2026-04-28. TSE `d2c6ab1` `feat(cpp): strip backslash-newline line continuations from #include paths` (`ImportExtractor.toIncludeImport` strips `\\\s*\n\s*` before splitting on `/`); DC `8aa7cd5` `test(cpp): re-enable multiline #include test now that TSE normalizes line continuations` (removed `@Disabled`, dropped now-unused `Disabled` import — Follow-up B uses fully-qualified `@org.junit.jupiter.api.Disabled`). DC `CppAnalyzerTest`: 18 tests, 1 skipped (Follow-up B), 0 failures. dc-compare on cppcheck unchanged from R15 baseline (matched=1118, main-only=1349, feat-only=980, rate=45.32%) — zero movement as predicted (no multiline includes in corpus).
+- [x] **Follow-up B: decide on Issue 1 (header / `.cpp` `pathWithName` merge gap)** — **decided 2026-04-28: defer.** Test stays `@Disabled` for this migration. Investigation results (5 steps, see "Follow-up B" subsection below for full report): the strip-cpp-extension fix is technically correct (matches design intent in commit `c8914fb`'s `mergeIdenticalTypes` step + its `ProcessingPipelineTest:71`) and cleanly merges 58 .h/.cpp pairs on cppcheck (-21 cycles, -9 SCCs), BUT it crashes dc-compare match rate from 45.32% → 11.11% because DC main keeps `_h`/`_cpp` suffixes in 189/624 leaves. The fix shifts TSE output away from DC main, not toward it. Defer to a separate post-merge DC PR that lands the merge in DC main first (or alongside) so both converge. Migration ships at 45.32% with .h/.cpp split as a documented divergence-from-design (not a TSE regression).
 - [ ] **Revert DC's composite-build wiring** in `analysis/settings.gradle.kts` + `analysis/build.gradle.kts` (composite paths must not be committed).
 - [ ] **Final dc-compare** on cppcheck — confirm match rate ≥ R15 baseline (45.6%, matched 1118).
 - [ ] **Merge TSE** `feat/cpp-dependency-support` → `main`, **tag release**.
@@ -402,14 +405,15 @@ If composite wiring is missing, restore per `.claude/rules/dependency-migration.
 
 **Manual Verification**:
 
-- [ ] Confirm primitive-type option choice with user before implementing (A/B/C is a judgment call, not deterministic)
-- [ ] Confirm TSE release tag name with user before tagging
+- [x] Confirm primitive-type option choice with user before implementing — Option B chosen 2026-04-27.
+- [x] Confirm Follow-up B decision with user (fix vs. accept as known limitation) before final merge — **deferred 2026-04-28** (see Follow-up B subsection for investigation details).
+- [ ] Confirm TSE release tag name with user before tagging.
 
 ---
 
-## Follow-ups: disabled DC tests
+## Phase 8 Follow-ups (detail for tasks above)
 
-Two `@Disabled` tests in `DependaCharta/.../analyzers/cpp/CppAnalyzerTest.kt` mark known gaps that were deliberately deferred out of the migration's scope. Each is a legitimate next-step item.
+The two follow-up bullets in Phase 8's task list above expand here. Both correspond to currently-`@Disabled` tests in `DependaCharta/.../analyzers/cpp/CppAnalyzerTest.kt`; each documents a known gap that was deferred out of the migration's main scope. Both must be addressed (fix or explicit accept) before the final merge sequence (composite revert → dc-compare → merge).
 
 ### Follow-up A: multiline `#include` normalization (small, ready-to-fix)
 
@@ -420,20 +424,59 @@ Two `@Disabled` tests in `DependaCharta/.../analyzers/cpp/CppAnalyzerTest.kt` ma
 - **Fix scope**: TSE-only, ~5 lines + a TSE test. See "Plan: fix multiline `#include` normalization in TSE" below for the implementation plan.
 - **Unblock**: removing `@Disabled` from the DC test once TSE strips the line-continuation pattern.
 
-### Follow-up B: header / `.cpp` `pathWithName` merge gap (Issue 1)
+### Follow-up B: header / `.cpp` `pathWithName` merge gap (Issue 1) — DEFERRED
+
+**Decision (2026-04-28): defer to post-merge DC PR.** Migration ships with the test `@Disabled`, the .h/.cpp split as a documented divergence from `mergeIdenticalTypes`'s design intent, and dc-compare match rate at 45.32%.
+
+#### The gap
 
 - **Test**: `should produce matching pathWithName for class declared in header and its implementation file`
 - **Symptom**: A class declared in `cli/executor.h` and implemented out-of-class in `cli/executor.cpp` produces two declarations with different `pathWithName` values (`cli.executor_h.Executor` vs `cli.executor_cpp.Executor`). DC's `ProcessingPipeline.mergeIdenticalTypes` only unites declarations with **identical** `pathWithName`, so the merge never fires and the .cpp's `usedTypes` never reach the header's node.
-- **Investigation status (from Round 5 / Round 5 follow-up)**: a strip-cpp-extension fix in DC's `CppAnalyzer` was implemented and reverted (commit reverted before `a4a73c9`). It made the merge happen at the `pathWithName` level but didn't actually close the dep-resolution gap because the resolver substring fallback in `Node.resolveTypeImport` (the `it.withDots().contains("")` path) is what actually drives most of the cross-file matches DC main produces, and that mechanism wasn't yet understood when the fix was tried. Re-enabling the test requires both:
-  1. Understanding the resolver mechanism on DC main (live debugging step documented in `plans/add-cpp-dependency-support.md` "Resume instructions for tomorrow").
-  2. A `pathWithName` strategy decision: strip extensions in TSE's `Declaration` output, strip in the DC adapter, or change DC's `mergeIdenticalTypes` to ignore the file-extension suffix.
-- **Why deferred**: the investigation surfaced **three DC legacy bugs** (header parse crash, empty-namespace wildcard substring fallback, dump-to-`lastOrNull()` misattribution) that collectively cap the cppcheck match rate at 45–50% — see `dependency-migration.md` "Match-rate ceiling" lesson. Issue 1 is a real gap, but pursuing it without first cracking the resolver substring mechanism risks more reverts. The disabled test documents the investigation's open state.
-- **Fix scope**: cross-repo, requires DC-side changes (resolver and/or `mergeIdenticalTypes`) plus possibly TSE-side path-stripping. Material follow-up, not a quick one-liner.
-- **Unblock**: see `plans/add-cpp-dependency-support.md` "Re-enable Issue 1 fix (when resolver mystery is solved)" for the resume recipe.
+
+#### Investigation (2026-04-28, 5 steps)
+
+1. **Intent of `mergeIdenticalTypes`**: deliberately designed feature, not abandoned scaffolding. Test `ProcessingPipelineTest:71` ("should treat duplicate identical types as one - can happen when same type is declared in two separate files") synthetically constructs identical pathWithNames for `.h`/`.cpp` pairs and verifies merging combines deps + extensions. The merge step is gated to `applicableLanguages = listOf(SupportedLanguage.CPP)` from day 1. **Verdict: unfinished integration** — purpose-built for C++ but the C++ analyzer never produces the matching pathWithNames the merge step expects.
+2. **Git history**: added in initial commit `c8914fb` (Oct 27, 2025, "feat: initial commit"). The C++ gating was present from project inception. Issue 1 was acknowledged in `a4a73c9` (Apr 22, 2026), which added the disabled test we're discussing here and notes a previous strip-extension fix attempt was reverted ("Fix attempted (strip C++ extensions from path) but introduced its own resolver mismatch — needs deeper investigation").
+3. **Quantified merge candidates on cppcheck**: DC main has **0** would-merge groups (header parse crash + extension-suffixed pathWithNames mean the merge step has no work to do in main). TSE feature has **58 symmetric size-2 pairs** (e.g., `cli.executor_h.Executor` + `cli.executor_cpp.Executor` → `cli.executor.Executor`). Fix would consolidate 946 leaves → 888 (~6% reduction).
+4. **User-facing docs**: no design doc, README, CHANGELOG, or DOMAIN.md describes the .h/.cpp split as a deliberate user-facing feature. No documented user contract exists for the .h/.cpp representation. The merge intent is documented only internally (test name + KDoc on the disabled test).
+5. **What-if measurement (fix applied + reverted)**:
+
+   | Metric | Baseline (no fix) | Post-fix | Delta |
+   |---|---|---|---|
+   | Leaf count | 946 | 888 | -58 ✓ |
+   | Edge count | 2,098 | 1,924 | -174 |
+   | Cycle count | 509 | 488 | -21 |
+   | Strongly-connected components | 20 | 11 | -9 |
+   | **Match rate vs DC main** | **45.32%** | **11.11%** | **-34.21 pp** |
+
+   Match-rate collapse explained: DC main keeps `_h`/`_cpp` suffixes in 189/624 leaves. Stripping in TSE renames every C++ leaf and edge endpoint, so virtually no edges still string-match. The fix shifts TSE output AWAY from DC main, not toward it. The merge is semantically correct (cycle/SCC drop confirms), but at the cost of breaking dc-compare alignment.
+
+#### Why defer
+
+The fix is technically correct and aligns with `mergeIdenticalTypes`'s original design intent — but applying it on the TSE feature branch alone produces output **incompatible with both DC main AND existing TSE-feature output**:
+- For users still on DC main: 0 mergeable cases, no impact (merge wasn't firing for them either way) — fix doesn't help nor harm them.
+- For users moving to TSE feature: the fix changes ~6% of nodes (consolidation) AND renames every edge endpoint that previously included a `_h`/`_cpp` suffix.
+- For dc-compare match rate: drops 34 percentage points, putting the migration well below the documented R15 baseline.
+
+Per `dependency-migration.md` rule 1 ("match DC main's output, fix bugs where possible"), this fix qualifies as an accepted improvement, but it's a large enough behavior change that bundling it into the migration would mean shipping at ~11% match rate — far below the documented 45–50% ceiling.
+
+#### Path forward (post-merge)
+
+Recommended sequence as a separate DC PR after the C++ migration ships:
+
+1. Land extension-stripping in DC main's `CppAnalyzer` directly (or modify `mergeIdenticalTypes` to use stripped grouping keys), so DC main and TSE feature converge to the merged pathWithName scheme together.
+2. Tag a new DC release.
+3. On the TSE side, implement the same extension-stripping in the TSE-based `CppAnalyzer` (the strip-extension recipe in `plans/add-cpp-dependency-support.md:727-728`).
+4. Re-run dc-compare — match rate should hold at ~45% since both sides apply the same merging.
+5. Re-enable the disabled test in DC.
+
+**Resume recipe**: `plans/add-cpp-dependency-support.md` "Re-enable Issue 1 fix (when resolver mystery is solved)". The resolver mystery is now solved (Issue 1 mechanism cracked, selfWildcard fix in DC `20ea8a4`); the remaining concern was dc-compare incompatibility, which the post-merge sequence above resolves.
 
 ### Plan: fix multiline `#include` normalization in TSE
 
 **Goal**: strip `\<newline>\s*` from raw `#include` path text in TSE's `ImportExtractor` so multiline include directives produce the same path list as their single-line equivalents.
+
+**Status (2026-04-28)**: complete. Bundled into a single TSE commit (`d2c6ab1`) instead of the planned 2-commit sequence — `code-style.md` "Avoid: Committing with failing tests" overrides the plan's split-commit suggestion. DC commit `8aa7cd5` re-enables the test.
 
 **Steps** (TDD, one commit per step):
 
