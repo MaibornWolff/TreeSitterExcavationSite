@@ -7,8 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Added
+## [0.6.0] - 2026-04-17
 
+### Added
+- C# dependency analysis including namespace extraction, using directives with namespace scoping, declarations, and used types (11
+  categories)
+- Using directives inside nested namespaces or wrapped in preprocessor directives are now extracted with their full aggregated
+  namespace path (improvement over DC legacy, which only scans immediate children of the compilation unit and namespace bodies and
+  therefore misses these)
 - Delphi (`.pas`, `.dpr`) language support for metrics, extraction, and dependency analysis. Based on the `tree-sitter-pascal`
   grammar (v0.10.2); covers classes, interfaces, records, enums, helpers, and procedure / function implementations. Pascal's three
   comment styles (`//`, `{ }`, `(* *)`) and single-quoted string literals are handled via custom extractors.
@@ -21,16 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - PackageExtractor now recovers the unit/program/library name from tree-sitter-pascal parse-error wrapping, so files containing
   unsupported asm/IFDEF combinations no longer produce declarations with an empty package path.
-
-## [0.6.0] - 2026-04-17
-
-### Added
-
-- C# dependency analysis including namespace extraction, using directives with namespace scoping, declarations, and used types (11
-  categories)
-- Using directives inside nested namespaces or wrapped in preprocessor directives are now extracted with their full aggregated
-  namespace path (improvement over DC legacy, which only scans immediate children of the compilation unit and namespace bodies and
-  therefore misses these)
 
 ## [0.5.0] - 2026-03-31
 
