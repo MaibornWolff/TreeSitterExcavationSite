@@ -112,6 +112,39 @@ All non-C++ languages leave the field at its default (`STANDARD`), so adding the
 
 The resolver itself needs no changes — the existing wildcard-matching loop in `Node.resolveTypeImport` already prepends wildcards to type names and looks for project matches.
 
+### Primitive and sized-type representation
+
+For languages with built-in primitive types (currently C++; relevant whenever a new language adds support), TSE emits the trimmed source text of the AST node verbatim — no semantic normalization.
+
+| AST shape | Emitted `UsedType.name` |
+|---|---|
+| `void`, `int`, `bool`, `char`, `double`, `size_t`, `int64_t`, … (`primitive_type`) | `"void"`, `"int"`, `"bool"`, … (the literal source token) |
+| `unsigned int`, `signed long` (`sized_type_specifier` with primitive child) | `"unsigned int"`, `"signed long"` (the full source span) |
+| Bare `unsigned`, bare `signed` (`sized_type_specifier` without primitive child) | `"unsigned"`, `"signed"` |
+
+**What TSE does not do:** the DC-legacy C++ analyzer normalized bare `unsigned` and `signed` to `"int"` (the C standard's implicit type). TSE deliberately doesn't replicate that — semantic normalization is a language-quirk concern that doesn't belong in a generic AST extractor, and the resolver doesn't need it (no project class is named `int`/`unsigned` so primitives don't produce dependency edges anyway).
+
+**Resolver impact:** primitives don't resolve to project nodes in any realistic codebase, so they're effectively invisible at the `.cg.json` layer. They do appear in `usedTypes` though, which means test assertions over `usedTypes` need to account for them — write `containsExactlyInAnyOrder(...)` with the primitive included, or filter the collection before asserting if the test only cares about user-defined types.
+
+### Generic types representation
+
+`UsedType` stores generic type arguments **nested only** inside the parameterized type, never duplicated as standalone entries. For `List<String>` an extractor produces a single entry:
+
+```kotlin
+UsedType(name = "List", genericTypes = listOf(UsedType(name = "String")))
+```
+
+— not two parallel entries (`List` plus a flat `String`). The same rule applies recursively: `Map<Key, Container<Item>>` is one nested tree; the inner `Key`, `Container`, and `Item` do not appear as standalone `UsedType`s in the set.
+
+**Why this differs from DC legacy:** some DC legacy analyzers (notably C++) emitted both forms — the wrapped type **and** flat duplicates of its generic arguments — so their `usedTypes` sets were larger and had redundant entries. TSE represents the AST shape directly.
+
+**Why it's not a behavioral regression:** when DC's pipeline turns `usedTypes` into `Dependency` edges, `Node.resolveTypes` walks each `Type` via `Type.containedTypes()`, which recursively descends into `genericTypes` and treats every contained name as a candidate for resolution. The dependency graph is computed from the flattened view; the storage shape is just the AST one. So `List[String]` still resolves to a dep on a project class `String` (if one exists) — flattening is deferred from extract-time to resolve-time.
+
+**What this means for adapters and tests:**
+
+- DC adapters: nothing to do — the existing `Node.resolveTypes` flattening handles both shapes transparently. Don't add a pre-flattening pass; it would create duplicate edges.
+- Test assertions: when checking `usedTypes` in a TSE-backed analyzer test, write the assertion against the nested shape (`Type.generic("List", listOf(Type.simple("String")))`), not against flat-duplicate expectations carried over from DC legacy.
+
 
 ## Adding a new language
 
