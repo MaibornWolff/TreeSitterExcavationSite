@@ -26,4 +26,5 @@ Thumbs.db
 
 # Claude Code
 .claude/settings.local.json
+.claude/skills/
 gradle.properties.local

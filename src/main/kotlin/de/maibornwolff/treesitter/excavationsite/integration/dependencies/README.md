@@ -168,6 +168,7 @@ A different concatenation order with the same types produces identical dependenc
 | **Python** | N/A — imports only, no multi-category concatenation | `PythonAnalyzer.kt` |
 | **JavaScript** | N/A — imports only, no multi-category concatenation | `JavascriptAnalyzer.kt` |
 | **Vue** | script imports, template components | `VueAnalyzer.kt` |
+| **Delphi** | inheritance, parameters, returnTypes, fieldTypes, propertyTypes, constTypes, variableTypes, constructorCalls, methodCalls, castTypes, attributeTypes, genericConstraintTypes | N/A — TSE-native, no DC legacy |
 
 ## Namespace models: single-namespace vs multi-namespace languages
 
@@ -184,6 +185,7 @@ One namespace per file. `packagePath` is authoritative; `parentPath` carries onl
 | Go | package declaration or file path | empty (planned) |
 | PHP | `namespace` declaration or file path | empty (planned) |
 | Python / JavaScript / Vue | file path | empty (planned) |
+| Delphi | `unit` declaration | empty (top-level types only in v1) |
 
 DC adapters for Class 1 build the node path as `packagePath + parentPath + name` (Kotlin) or `packagePath + name` (Java). The self-wildcard import is emitted once per file from `packagePath`.
 

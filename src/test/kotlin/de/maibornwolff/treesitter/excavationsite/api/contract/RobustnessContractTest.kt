@@ -11,7 +11,7 @@ import org.junit.jupiter.params.provider.EnumSource
 
 /**
  * Contract tests for robustness, determinism, error handling, and zero-case behavior.
- * These tests ensure the library handles edge cases gracefully across all 14 languages.
+ * These tests ensure the library handles edge cases gracefully across all 18 languages.
  */
 class RobustnessContractTest {
     @Nested
@@ -692,14 +692,8 @@ class RobustnessContractTest {
                     }
                     </script>
             """.trimIndent()
-            Language.ABL -> """
-                    // Comment
-                    PROCEDURE foo:
-                        DEFINE VARIABLE s AS CHARACTER NO-UNDO.
-                        s = "hello".
-                        IF TRUE THEN MESSAGE s.
-                    END PROCEDURE.
-            """.trimIndent()
+            Language.ABL -> "// Comment\nPROCEDURE foo:\nDEFINE VARIABLE s AS CHARACTER NO-UNDO.\ns = \"hello\".\nEND PROCEDURE."
+            Language.DELPHI -> "// Comment\nprocedure foo;\nbegin if True then WriteLn('hello'); end;"
         }
     }
 }

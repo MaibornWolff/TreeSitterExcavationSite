@@ -22,26 +22,6 @@ Circular dependencies exist between `languages/` and `features/extraction/extrac
 2. Make extractors injectable via the `LanguageDefinition` interface
 3. Define extraction strategies in `shared/domain/` and reference them from language definitions
 
-### Missing Contract Tests for Public API
-
-**Severity: High**
-
-No contract tests exist to ensure the public API behavior remains stable across all 14 supported languages.
-
-**Current state:**
-- `TreeSitterMetricsTest.kt` only tests 3 languages (Java, Kotlin, Python) with basic smoke tests
-- **No `TreeSitterExtractionTest.kt`** exists at all in `api/`
-- Language-specific tests (e.g., `JavaMetricsTest.kt`) test internal behavior but don't guarantee API contract stability
-
-**Impact:** Internal refactoring could break metric outputs for specific languages without any test catching it. External consumers (like CodeCharta) could receive different values after library updates.
-
-**What's needed:**
-1. Contract tests that verify all 14 languages return expected metric values through `TreeSitterMetrics.parse()`
-2. Contract tests for `TreeSitterExtraction.extract()` across all languages
-3. Baseline/snapshot tests that pin down expected outputs and detect regressions
-
----
-
 ### API Layer Does More Than Pure Delegation
 
 **Severity: Low**
@@ -72,6 +52,22 @@ fun parse(content: String, language: Language): MetricsResult {
 **Impact:** Minor. The orchestration is reasonable for an API layer, and keeps feature facades decoupled from the `Language` enum. However, metric filtering is business logic that belongs in `MetricsFacade`.
 
 **Proposed fix:** Move language resolution and result transformation into the feature facades, accepting `Language` directly.
+
+---
+
+---
+
+## Accepted Limitations
+
+### Delphi (v1)
+
+**Severity: Low**
+
+Known scope limits of the Delphi language support. None are blockers for DC's current use cases; tracked here so external consumers know not to rely on them.
+
+- **Multi-constraint generics with comma separator capture only the trailing constraint.** `TFoo<T: TBase, U: IFoo>` produces `IFoo` only because tree-sitter-pascal 0.10.2 ERROR-recovers the leading constraint into a sibling node. Use the semicolon form `TFoo<T: TBase; U: IFoo>` to capture both constraints. Single-constraint generics (`TFoo<T: TBase>`) are unaffected.
+
+See `plans/add-delphi-dependency-support.md` ("Accepted v1 limitations") for the full list and rationale.
 
 ---
 

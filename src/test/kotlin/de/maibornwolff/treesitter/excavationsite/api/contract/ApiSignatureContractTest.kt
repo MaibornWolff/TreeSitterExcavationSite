@@ -311,9 +311,9 @@ class ApiSignatureContractTest {
     @Nested
     inner class LanguageEnumContract {
         @Test
-        fun `should have exactly 17 language values`() {
+        fun `should have exactly 18 language values`() {
             // Assert
-            assertThat(Language.entries).hasSize(17)
+            assertThat(Language.entries).hasSize(18)
         }
 
         @Test
@@ -398,6 +398,12 @@ class ApiSignatureContractTest {
         fun `should contain OBJECTIVE_C`() {
             // Assert
             assertThat(Language.valueOf("OBJECTIVE_C")).isEqualTo(Language.OBJECTIVE_C)
+        }
+
+        @Test
+        fun `should contain DELPHI`() {
+            // Assert
+            assertThat(Language.valueOf("DELPHI")).isEqualTo(Language.DELPHI)
         }
 
         @Test

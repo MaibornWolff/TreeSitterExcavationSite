@@ -67,7 +67,7 @@ class MetricsToCalculatorsMap(nodeTypeProvider: MetricNodeTypes, val calcExtensi
                 CalculationContext(
                     node,
                     nodeType,
-                    shouldIgnoreNode = { _, _ -> false }
+                    shouldIgnoreNode = calcExtensions.ignoreNodeForMessageChainCall
                 )
             )
         },

@@ -15,5 +15,6 @@ data class CalculationExtensions(
     val ignoreNodeForNumberOfFunctions: (TSNode, String) -> Boolean = { _, _ -> false },
     val ignoreNodeForRealLinesOfCode: (TSNode, String) -> Boolean = { _, _ -> false },
     val ignoreNodeForParameterOfFunctions: (TSNode, String) -> Boolean = { _, _ -> false },
+    val ignoreNodeForMessageChainCall: (TSNode, String) -> Boolean = { _, _ -> false },
     val countNodeAsLeafNode: (TSNode) -> Boolean = { false }
 )

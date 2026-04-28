@@ -5,6 +5,7 @@ import de.maibornwolff.treesitter.excavationsite.languages.bash.BashDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.c.CDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.cpp.CppDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.csharp.CSharpDefinition
+import de.maibornwolff.treesitter.excavationsite.languages.delphi.DelphiDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.go.GoDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.java.JavaDefinition
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.JavascriptDefinition
@@ -30,6 +31,7 @@ import org.treesitter.TreeSitterJava
 import org.treesitter.TreeSitterJavascript
 import org.treesitter.TreeSitterKotlin
 import org.treesitter.TreeSitterObjc
+import org.treesitter.TreeSitterPascal
 import org.treesitter.TreeSitterPhp
 import org.treesitter.TreeSitterPython
 import org.treesitter.TreeSitterRuby
@@ -65,6 +67,7 @@ object LanguageRegistry {
         Language.OBJECTIVE_C -> TreeSitterObjc()
         Language.VUE -> TreeSitterJavascript()
         Language.ABL -> TreeSitterAbl()
+        Language.DELPHI -> TreeSitterPascal()
     }
 
     /**
@@ -88,5 +91,6 @@ object LanguageRegistry {
         Language.OBJECTIVE_C -> ObjectiveCDefinition
         Language.VUE -> VueDefinition
         Language.ABL -> AblDefinition
+        Language.DELPHI -> DelphiDefinition
     }
 }
