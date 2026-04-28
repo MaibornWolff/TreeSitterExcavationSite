@@ -32,7 +32,8 @@ class LanguageSupportContractTest {
             ".cs, CSHARP",
             ".cpp, CPP",
             ".c, C",
-            ".m, OBJECTIVE_C"
+            ".m, OBJECTIVE_C",
+            ".pas, DELPHI"
         )
         fun `should map primary extension to correct language`(extension: String, expectedLanguage: String) {
             // Act
@@ -116,6 +117,12 @@ class LanguageSupportContractTest {
             // Assert
             assertThat(Language.fromExtension(".mm")).isEqualTo(Language.OBJECTIVE_C)
         }
+
+        @Test
+        fun `should map dpr extension to DELPHI`() {
+            // Assert
+            assertThat(Language.fromExtension(".dpr")).isEqualTo(Language.DELPHI)
+        }
     }
 
     @Nested
@@ -147,7 +154,9 @@ class LanguageSupportContractTest {
             ".h",
             ".c",
             ".m",
-            ".mm"
+            ".mm",
+            ".pas",
+            ".dpr"
         )
         fun `should return true for supported extensions`(extension: String) {
             // Assert
@@ -232,12 +241,12 @@ class LanguageSupportContractTest {
         }
 
         @Test
-        fun `should return at least 26 extensions`() {
+        fun `should return at least 28 extensions`() {
             // Act
             val extensions = TreeSitterMetrics.getSupportedExtensions()
 
-            // Assert - 14 primary + 12 secondary = 26 total
-            assertThat(extensions.size).isGreaterThanOrEqualTo(26)
+            // Assert - 15 primary + 13 secondary = 28 total
+            assertThat(extensions.size).isGreaterThanOrEqualTo(28)
         }
     }
 

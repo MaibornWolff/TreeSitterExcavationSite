@@ -34,6 +34,13 @@ data class CalculationConfig(
      */
     val ignoreForNumberOfFunctions: List<IgnoreRule> = emptyList(),
     /**
+     * Rules for ignoring nodes when counting them as a call inside a message-chain
+     * detection. Used when a single source-level call is represented by multiple
+     * AST node types (e.g., Pascal's `exprCall(exprDot(...))` for parenthesised calls)
+     * and one of the node types must be skipped to avoid double-counting.
+     */
+    val ignoreForMessageChainCall: List<IgnoreRule> = emptyList(),
+    /**
      * Rule for counting certain nodes as leaf nodes in RLOC calculation.
      */
     val countAsLeafNode: LeafNodeRule? = null

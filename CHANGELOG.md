@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+
+- Delphi (`.pas`, `.dpr`) language support for metrics, extraction, and dependency analysis. Based on the `tree-sitter-pascal`
+  grammar (v0.10.2); covers classes, interfaces, records, enums, helpers, and procedure / function implementations. Pascal's three
+  comment styles (`//`, `{ }`, `(* *)`) and single-quoted string literals are handled via custom extractors.
+
+### Changed
+
+- Reorder Delphi used-type concatenation to match Kotlin's category sequence (inheritance → data → callable → annotations → calls).
+
+### Fixed
+
+- PackageExtractor now recovers the unit/program/library name from tree-sitter-pascal parse-error wrapping, so files containing
+  unsupported asm/IFDEF combinations no longer produce declarations with an empty package path.
+
 ## [0.6.0] - 2026-04-17
 
 ### Added

@@ -22,6 +22,7 @@ object CalculationExtensionsFactory {
         ignoreNodeForNumberOfFunctions = buildIgnoreFunction(config.ignoreForNumberOfFunctions),
         ignoreNodeForRealLinesOfCode = buildIgnoreFunction(config.ignoreForRloc),
         ignoreNodeForParameterOfFunctions = buildIgnoreFunction(config.ignoreForParameters),
+        ignoreNodeForMessageChainCall = buildIgnoreFunction(config.ignoreForMessageChainCall),
         countNodeAsLeafNode = buildLeafNodeFunction(config.countAsLeafNode)
     )
 

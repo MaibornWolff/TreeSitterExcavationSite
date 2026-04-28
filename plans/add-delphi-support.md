@@ -1,9 +1,14 @@
 ---
 name: Delphi Language Support
 issue:
-state: progress
+state: complete
 version:
 ---
+
+> **Superseded by [`add-delphi-dependency-support.md`](./add-delphi-dependency-support.md).**
+> That plan folds in the metrics and extraction work from this plan together with
+> full dependency-analysis support. The JAR-build prerequisite here is still accurate
+> and was carried over unchanged.
 
 ## Goal
 

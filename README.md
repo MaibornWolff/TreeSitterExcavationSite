@@ -6,12 +6,12 @@ A Kotlin library for calculating code metrics and extracting text from source co
 
 - **Code Metrics**: Complexity, lines of code, comment lines, function counts, code smells, per-function aggregations
 - **Text Extraction**: Identifiers, comments, and string literals with context
-- **16 Languages and Frameworks**: Java, Kotlin, TypeScript, JavaScript, Python, Go, PHP, Ruby, Swift, Bash, C#, C++, C, Objective-C, Vue, ABL
+- **18 Languages and Frameworks**: Java, Kotlin, TypeScript, TSX, JavaScript, Python, Go, PHP, Ruby, Swift, Bash, C#, C++, C, Objective-C, Vue, ABL, Delphi
 - **Zero External Dependencies**: Only TreeSitter bindings required
 
 ## Requirements
 
-- Java 11-21
+- Java 17 or higher
 - Gradle 8.x (wrapper included)
 
 ## Installation
@@ -197,7 +197,7 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 │   └── dependencies/              # Dependencies feature
 │       ├── ports/                 # Interfaces (DependencyExtractor)
 │       └── adapters/              # Language definition adapters
-├── languages/                     # Language definitions (16 languages and frameworks)
+├── languages/                     # Language definitions (18 languages and frameworks)
 │   └── <lang>/                    # Per-language directory
 │       ├── *Definition.kt         # Combines metric and extraction mappings
 │       ├── *MetricMapping.kt      # Metric node mappings
