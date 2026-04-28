@@ -27,7 +27,7 @@ status: progress
   - **Realistic fixable budget**: ~40-60 main-only edges via case-by-case extraction work — not the 150-300 the followups plan estimated. Closing them would lift match-rate to ~46-47%, not 50-55%.
   - Strategic decision: **do NOT mirror DC bugs in TSE**. Stick with the "fix bugs, document accepted improvements" agenda from `dependency-migration.md`. Ship at 45.32% match rate; document the ceiling as realistic 45-50%.
 - **Decision recorded for Phase 8 first task**: primitive-type extraction → **Option B** (add `PRIMITIVE_TYPE` + `sized_type_specifier` support; the 4th DC test's expected name is updated to `unsigned`/`signed` rather than mirroring DC's `→ int` normalization). Rationale: minimum-risk to TSE cleanliness; no DC-quirk mirroring.
-- **Next pickup**: Phase 8 starting from Task 2 (implement option B in TSE). The Phase 7 plan-status update + the two new lessons in `dependency-migration.md` are uncommitted; roll into Phase 8's first commit.
+- **Phase 8 progress**: Option B implemented (commit `acd3dcf`). dc-compare on cppcheck unchanged at R15 baseline (1118/1349/980/45.32%). Next: DC `CppAnalyzerTest` updates on `feat/cpp-dependency-integration`.
 - **DC composite-build wiring**: currently active on DC `feat/cpp-dependency-integration` — left in place because Phase 8 needs it again. Must be reverted before any DC-side commit lands.
 
 ## Open question for next session
@@ -378,12 +378,11 @@ If composite wiring is missing, restore per `.claude/rules/dependency-migration.
 
 **Tasks**:
 
-- [ ] **Decide primitive-type extraction option** (A/B/C from `cpp-extraction-followups.md` section 2):
+- [x] **Decide primitive-type extraction option** — Option B (decided 2026-04-27).
   - **A (minimal)**: add `PRIMITIVE_TYPE` to `CppTypeHelper.TYPE_NODE_TYPES` + extractType branch. Fixes 3 of 4 category-(a) DC tests. ~5 LOC in TSE, but ~29 TSE `CppDependencyTest` `containsExactly` assertions need primitives added.
-  - **B (medium)**: A + `sized_type_specifier` support. Fixes the 4th primitive test as `"unsigned"`/`"signed"`, not `"int"`. One more node-type constant + extractType branch.
+  - **B (medium)** ← chosen: A + `sized_type_specifier` support. Fixes the 4th primitive test as `"unsigned"`/`"signed"`, not `"int"`. One more node-type constant + extractType branch.
   - **C (medium+)**: B + DC-legacy "bare unsigned/signed == int" normalization. All 4 DC tests pass as-written. Adds language-quirk normalization to TSE (semantically questionable).
-  - R15 measured impact on cppcheck: 0 matched deps gained from primitives. The decision is driven by DC test compatibility, not extraction quality. Re-measure on other corpora before generalizing.
-- [ ] **Implement chosen option** in TSE; update affected `CppDependencyTest` assertions; re-run dc-compare on cppcheck to quantify any feat-only drift.
+- [x] **Implement Option B** — commit `acd3dcf` `feat(cpp): extract primitive_type and sized_type_specifier as used types`. Updated 17 TSE `CppDependencyTest` assertions to include now-emitted primitives (mostly `void` from method return types, `int` from int-typed params). dc-compare on cppcheck unchanged from R15 baseline: matched=1118, main-only=1349, feat-only=980, rate=45.32% — primitives don't resolve to project nodes on cppcheck so they're invisible at the resolved-cg.json layer (zero feat-only drift, zero matched gain).
 - [ ] **Update 8 failing `DependaCharta/.../analyzers/cpp/CppAnalyzerTest.kt` tests** (categorized in `cpp-extraction-followups.md` "Wrap-up work" section):
   - **Category (a) — primitive-type tests** (4 tests): pass automatically once A/B/C is picked (A fixes 3, B/C fix all 4).
   - **Category (b) — flattening divergence** (2 tests): update assertions to drop standalone expectations for types that appear only as nested generics (e.g., assert `shared_ptr.genericTypes == [TEntity]` instead of looking for bare `shared_ptr[TEntity]`).
