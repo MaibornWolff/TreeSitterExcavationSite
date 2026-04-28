@@ -595,7 +595,7 @@ class CppDependencyTest {
                 Declaration(
                     name = "Foo",
                     type = DeclarationType.CLASS,
-                    usedTypes = emptySet(),
+                    usedTypes = setOf(UsedType(name = "void")),
                     parentPath = emptyList()
                 )
             )
@@ -617,7 +617,7 @@ class CppDependencyTest {
                 Declaration(
                     name = "Foo",
                     type = DeclarationType.CLASS,
-                    usedTypes = emptySet(),
+                    usedTypes = setOf(UsedType(name = "void"), UsedType(name = "int"), UsedType(name = "double")),
                     parentPath = emptyList()
                 )
             )
@@ -710,7 +710,9 @@ class CppDependencyTest {
 
                 // Assert
                 val child = result.declarations.single { it.name == "Child" }
-                assertThat(child.usedTypes).containsExactly(UsedType(name = "Base"))
+                assertThat(child.usedTypes).containsExactly(
+                    UsedType(name = "Base", genericTypes = listOf(UsedType(name = "int")))
+                )
             }
         }
 
@@ -831,7 +833,8 @@ class CppDependencyTest {
                 val foo = result.declarations.single { it.name == "FooClass" }
                 assertThat(foo.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "BarClass"),
-                    UsedType(name = "C", namespacePrefix = listOf("A", "B"))
+                    UsedType(name = "C", namespacePrefix = listOf("A", "B")),
+                    UsedType(name = "int")
                 )
             }
 
@@ -849,7 +852,10 @@ class CppDependencyTest {
 
                 // Assert
                 val foo = result.declarations.single { it.name == "FooClass" }
-                assertThat(foo.usedTypes).containsExactly(UsedType(name = "BarClass"))
+                assertThat(foo.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "BarClass"),
+                    UsedType(name = "int")
+                )
             }
 
             @Test
@@ -1064,7 +1070,10 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "void")
+                )
             }
 
             @Test
@@ -1205,7 +1214,10 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "void")
+                )
             }
 
             @Test
@@ -1224,7 +1236,11 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "int"),
+                    UsedType(name = "void")
+                )
             }
 
             @Test
@@ -1245,7 +1261,8 @@ class CppDependencyTest {
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "Base"),
-                    UsedType(name = "Derived")
+                    UsedType(name = "Derived"),
+                    UsedType(name = "void")
                 )
             }
 
@@ -1265,7 +1282,10 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "void")
+                )
             }
 
             @Test
@@ -1284,7 +1304,10 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "void")
+                )
             }
         }
 
@@ -1306,7 +1329,10 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "void")
+                )
             }
 
             @Test
@@ -1325,8 +1351,9 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(
-                    UsedType(name = "Vec", genericTypes = listOf(UsedType(name = "Foo")))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Vec", genericTypes = listOf(UsedType(name = "Foo"))),
+                    UsedType(name = "void")
                 )
             }
 
@@ -1346,7 +1373,10 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "void")
+                )
             }
 
             @Test
@@ -1368,7 +1398,8 @@ class CppDependencyTest {
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "Catch"),
-                    UsedType(name = "registerTest", namespacePrefix = listOf("Catch"))
+                    UsedType(name = "registerTest", namespacePrefix = listOf("Catch")),
+                    UsedType(name = "void")
                 )
             }
 
@@ -1391,7 +1422,8 @@ class CppDependencyTest {
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "helper", namespacePrefix = listOf("A", "B", "C")),
-                    UsedType(name = "A")
+                    UsedType(name = "A"),
+                    UsedType(name = "void")
                 )
             }
 
@@ -1416,7 +1448,8 @@ class CppDependencyTest {
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "Path"),
-                    UsedType(name = "removeQuotationMarks", namespacePrefix = listOf("Path"))
+                    UsedType(name = "removeQuotationMarks", namespacePrefix = listOf("Path")),
+                    UsedType(name = "void")
                 )
             }
 
@@ -1442,7 +1475,8 @@ class CppDependencyTest {
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "List"),
-                    UsedType(name = "Widget")
+                    UsedType(name = "Widget"),
+                    UsedType(name = "void")
                 )
             }
 
@@ -1462,9 +1496,9 @@ class CppDependencyTest {
                 // Act
                 val result = TreeSitterDependencies.analyze(code, Language.CPP)
 
-                // Assert
+                // Assert — only the return type leaks through; no bare-identifier callee.
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).isEmpty()
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "void"))
             }
         }
 
@@ -1564,7 +1598,10 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "void")
+                )
             }
 
             @Test
@@ -1583,7 +1620,10 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "void")
+                )
             }
         }
 
@@ -1607,7 +1647,10 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "MyException"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "MyException"),
+                    UsedType(name = "void")
+                )
             }
 
             @Test
@@ -1629,7 +1672,8 @@ class CppDependencyTest {
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "std"),
-                    UsedType(name = "runtime_error", namespacePrefix = listOf("std"))
+                    UsedType(name = "runtime_error", namespacePrefix = listOf("std")),
+                    UsedType(name = "void")
                 )
             }
 
@@ -1654,7 +1698,8 @@ class CppDependencyTest {
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "Detail"),
-                    UsedType(name = "make_ex", genericTypes = listOf(UsedType(name = "Detail")))
+                    UsedType(name = "make_ex", genericTypes = listOf(UsedType(name = "Detail"))),
+                    UsedType(name = "void")
                 )
             }
         }
@@ -1675,7 +1720,8 @@ class CppDependencyTest {
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "Foo"),
-                    UsedType(name = "Bar")
+                    UsedType(name = "Bar"),
+                    UsedType(name = "void")
                 )
             }
 
@@ -1711,7 +1757,10 @@ class CppDependencyTest {
 
                 // Assert
                 val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactly(UsedType(name = "Foo"))
+                assertThat(container.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Foo"),
+                    UsedType(name = "void")
+                )
             }
 
             @Test
@@ -1729,7 +1778,8 @@ class CppDependencyTest {
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "Foo"),
-                    UsedType(name = "Bar")
+                    UsedType(name = "Bar"),
+                    UsedType(name = "void")
                 )
             }
         }

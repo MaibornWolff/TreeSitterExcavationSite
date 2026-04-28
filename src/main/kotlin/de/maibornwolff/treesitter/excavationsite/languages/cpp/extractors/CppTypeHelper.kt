@@ -15,10 +15,13 @@ internal object CppTypeHelper {
     private const val TYPE_DESCRIPTOR = "type_descriptor"
     private const val QUALIFIED_IDENTIFIER = "qualified_identifier"
     private const val NAMESPACE_IDENTIFIER = "namespace_identifier"
+    private const val PRIMITIVE_TYPE = "primitive_type"
+    private const val SIZED_TYPE_SPECIFIER = "sized_type_specifier"
     private const val SCOPE_FIELD = "scope"
     private const val TYPE_FIELD = "type"
 
-    private val TYPE_NODE_TYPES = setOf(TYPE_IDENTIFIER, TEMPLATE_TYPE, QUALIFIED_IDENTIFIER)
+    private val TYPE_NODE_TYPES =
+        setOf(TYPE_IDENTIFIER, TEMPLATE_TYPE, QUALIFIED_IDENTIFIER, PRIMITIVE_TYPE, SIZED_TYPE_SPECIFIER)
     private val TEMPLATE_LIKE_TYPES = setOf(TEMPLATE_TYPE, TEMPLATE_FUNCTION)
     private val TEMPLATE_NAME_TYPES = setOf(TYPE_IDENTIFIER, IDENTIFIER)
 
@@ -27,7 +30,8 @@ internal object CppTypeHelper {
     fun extractType(typeNode: TSNode, sourceCode: String): UsedType? {
         if (typeNode.isNull) return null
         return when (typeNode.type) {
-            TYPE_IDENTIFIER, IDENTIFIER -> UsedType(name = TreeTraversal.getNodeText(typeNode, sourceCode).trim())
+            TYPE_IDENTIFIER, IDENTIFIER, PRIMITIVE_TYPE, SIZED_TYPE_SPECIFIER ->
+                UsedType(name = TreeTraversal.getNodeText(typeNode, sourceCode).trim())
             TEMPLATE_TYPE, TEMPLATE_FUNCTION -> extractTemplateLike(typeNode, sourceCode)
             QUALIFIED_IDENTIFIER -> extractRightmostSegment(typeNode, sourceCode)
             else -> null
