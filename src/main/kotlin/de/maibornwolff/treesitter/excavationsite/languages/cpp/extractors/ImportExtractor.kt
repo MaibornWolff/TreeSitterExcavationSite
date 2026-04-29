@@ -18,11 +18,15 @@ internal object ImportExtractor {
     private const val PATH_SEPARATOR = "/"
     private val LINE_CONTINUATION = Regex("""\\\s*\n\s*""")
 
-    private val NON_IMPORT_SCOPES = setOf(
+    private const val NAMESPACE_DEFINITION = "namespace_definition"
+
+    private val CLASS_SCOPES = setOf(
         "class_specifier",
         "struct_specifier",
         "union_specifier",
-        "base_class_clause",
+        "base_class_clause"
+    )
+    private val LOCAL_SCOPES = setOf(
         "function_definition",
         "compound_statement"
     )
@@ -46,7 +50,8 @@ internal object ImportExtractor {
     }
 
     private fun toUsingImport(node: TSNode, sourceCode: String): ImportDeclaration? {
-        if (TreeTraversal.hasAncestorOfTypes(node, *NON_IMPORT_SCOPES.toTypedArray())) return null
+        if (TreeTraversal.hasAncestorOfTypes(node, *CLASS_SCOPES.toTypedArray())) return null
+        if (isOrphanedLocalScope(node)) return null
         val namespacePath = CppNamespaceWalker.walkAncestorsFrom(node, sourceCode)
         return if (isUsingDirective(node)) {
             toUsingDirective(node, sourceCode, namespacePath)
@@ -55,11 +60,17 @@ internal object ImportExtractor {
         }
     }
 
+    // A function/block-scope using outside any namespace has no enclosing scope to attach to.
+    private fun isOrphanedLocalScope(node: TSNode): Boolean {
+        val isLocal = TreeTraversal.hasAncestorOfTypes(node, *LOCAL_SCOPES.toTypedArray())
+        return isLocal && !TreeTraversal.hasAncestorOfTypes(node, NAMESPACE_DEFINITION)
+    }
+
     private fun toUsingDirective(node: TSNode, sourceCode: String, namespacePath: List<String>): ImportDeclaration? {
         val nameText = TreeTraversal.findFirstChildTextByType(node, sourceCode, QUALIFIED_IDENTIFIER, IDENTIFIER)
             ?: return null
         return ImportDeclaration(
-            path = nameText.split(NAMESPACE_SEPARATOR),
+            path = splitNamespacePath(nameText),
             isWildcard = true,
             namespacePath = namespacePath
         )
@@ -69,13 +80,16 @@ internal object ImportExtractor {
         val qualifiedName = TreeTraversal.findFirstChildTextByType(node, sourceCode, QUALIFIED_IDENTIFIER)
             ?: return null
         return ImportDeclaration(
-            path = qualifiedName.split(NAMESPACE_SEPARATOR),
+            path = splitNamespacePath(qualifiedName),
             isWildcard = false,
             namespacePath = namespacePath
         )
     }
 
     private fun isUsingDirective(node: TSNode): Boolean = node.children().any { it.type == NAMESPACE_KEYWORD }
+
+    private fun splitNamespacePath(qualifiedName: String): List<String> =
+        qualifiedName.split(NAMESPACE_SEPARATOR).filter { it.isNotEmpty() }
 
     private fun stripPathDelimiters(raw: String): String = raw.trim('<', '>', '"')
 }

@@ -320,6 +320,33 @@ class CppDependencyTest {
             }
 
             @Test
+            fun `should emit function-scope using inside namespace with enclosing namespacePath`() {
+                // Arrange — function-local using inside a namespace contributes to that
+                // namespace's file-level dependency surface; downstream adapters scope it
+                // by matching namespacePath against each declaration's parentPath.
+                val code = """
+                    namespace App {
+                        void doWork() {
+                            using namespace Utils;
+                        }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(
+                        path = listOf("Utils"),
+                        isWildcard = true,
+                        namespacePath = listOf("App"),
+                        kind = ImportKind.STANDARD
+                    )
+                )
+            }
+
+            @Test
             fun `should extract qualified using enum declaration as non-wildcard import`() {
                 // Arrange
                 val code = """
@@ -364,6 +391,38 @@ class CppDependencyTest {
                 // Assert
                 assertThat(result.imports).containsExactly(
                     ImportDeclaration(path = listOf("A", "B", "C"), isWildcard = true, kind = ImportKind.STANDARD)
+                )
+            }
+
+            @Test
+            fun `should drop leading empty segment from globally qualified using directive`() {
+                // Arrange
+                val code = """
+                    using namespace ::std;
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(path = listOf("std"), isWildcard = true, kind = ImportKind.STANDARD)
+                )
+            }
+
+            @Test
+            fun `should drop leading empty segment from globally qualified using declaration`() {
+                // Arrange
+                val code = """
+                    using ::std::vector;
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(path = listOf("std", "vector"), isWildcard = false, kind = ImportKind.STANDARD)
                 )
             }
         }
