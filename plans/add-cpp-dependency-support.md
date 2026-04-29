@@ -734,7 +734,7 @@ The Issue 1 fix code was reverted but the disabled test is preserved. To re-enab
 **Step 1 — get back to current state:**
 ```bash
 # TSE
-cd C:/Users/ChristianSpa/IdeaProjects/DCTSE/TreeSitterExcavationSite
+cd <workspace>/TreeSitterExcavationSite
 git checkout feat/cpp-dependency-support
 ./gradlew build  # confirm green
 
@@ -749,7 +749,7 @@ cd analysis && ./gradlew compileKotlin  # confirm composite build still works
 - Open `DependaCharta` in IntelliJ on `main` branch (NOT `feat/cpp-dependency-integration` — we want the legacy analyzer).
 - Set breakpoint in `Node.kt:resolveTypeImport` line 92 (`val plainTypeName = fullName.split(".").last()`).
 - Add conditional: `plainTypeName == "Settings" && pathWithName.withDots().contains("CmdLineParser")`.
-- Run `dependacharta-analysis` Cli main with args `-d "C:/Users/ChristianSpa/IdeaProjects/DCTSE/cppcheck" -o "C:/Users/ChristianSpa/IdeaProjects/DCTSE/dc-compare/main-debug" -f analysis -c`.
+- Run `dependacharta-analysis` Cli main with args `-d "<workspace>/cppcheck" -o "<workspace>/dc-compare/main-debug" -f analysis -c`.
 - Step through resolution. Record which line returns the matching Path.
 
 **Step 3 — for Issue 2 fix (if working alone):**
@@ -758,7 +758,7 @@ cd analysis && ./gradlew compileKotlin  # confirm composite build still works
 
 **Step 4 — to re-run dc-compare (still cppcheck baseline):**
 ```bash
-cd C:/Users/ChristianSpa/IdeaProjects/DCTSE/DependaCharta/analysis
+cd <workspace>/DependaCharta/analysis
 ./gradlew fatJar
 java -jar build/libs/dependacharta.jar -d "../../cppcheck" -o "../../dc-compare/feature" -f analysis -c
 # then comparison script (Step 3 in earlier session-break section)
