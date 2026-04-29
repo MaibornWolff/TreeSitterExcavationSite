@@ -31,7 +31,66 @@ Bucket analysis of the 1364 main-only:
 
 Ceiling against cppcheck is ~50-55% match rate without mirroring DC bugs; everything in this plan targets the remaining ~503 real gaps.
 
-## Prerequisite — refactor session (MUST come first)
+## Final wrap-up status (2026-04-28)
+
+Supersedes the speculative "Remaining wrap-up work for next session" subsection further down — that section is kept as historical context but the bullets below are the current state.
+
+**Done since R15**:
+- Phases 1–7 structural refactor (TSE commits `9b79371` → `4a58eb9`): consolidated namespace walking into `CppNamespaceWalker`, split `DeclarationExtractor` into `declarations/` sub-extractors, renamed for disambiguation, lifted `QualifiedIdentifierPath`, moved complexity-ignore constants to `CppCalculationConfig`, documented DC-legacy quirks inline. Verified zero behavior change on cppcheck.
+- Phase 8 primitive-type Option B (TSE `acd3dcf`): `primitive_type` + `sized_type_specifier` extracted as raw source text; cppcheck dc-compare unchanged from R15 baseline.
+- DC `CppAnalyzerTest` 8 failures fixed (DC `92fdbe1`): primitive tests pass with `unsigned`/`signed` (not `int`); flattening-divergence tests dropped standalone duplicate expectations; `@Disabled` kept only on the Issue 1 deferral test.
+- Multiline `#include` normalization (TSE `d2c6ab1`, DC `8aa7cd5`): strips `\<newline>\s*` line continuations from include path text before splitting on `/`. dc-compare unchanged (cppcheck has no multiline includes in corpus).
+
+**Match rate**: cppcheck dc-compare R15 stable at matched 1118 / main-only 1349 / feat-only 980 / **45.32%** through the refactor and Phase 8 implementation.
+
+### Follow-up B: header / `.cpp` `pathWithName` merge gap — DEFERRED
+
+**Decision (2026-04-28): defer to a separate post-merge DC PR.** Migration ships at 45.32% with the DC test `should produce matching pathWithName for class declared in header and its implementation file` left `@Disabled`.
+
+**The gap**: A class declared in `cli/executor.h` and implemented out-of-class in `cli/executor.cpp` produces two declarations with different `pathWithName` values (`cli.executor_h.Executor` vs `cli.executor_cpp.Executor`). DC's `ProcessingPipeline.mergeIdenticalTypes` only unites declarations with **identical** `pathWithName`, so the merge never fires and the .cpp's `usedTypes` never reach the header's node. The `mergeIdenticalTypes` step is purpose-built for C++ (gated `applicableLanguages = listOf(SupportedLanguage.CPP)` from initial commit `c8914fb`) but has never had a producer that emits matching pathWithNames — design intent unfinished.
+
+**Why the simple fix doesn't ship**: the strip-cpp-extension recipe in `add-cpp-dependency-support.md` "Re-enable Issue 1 fix" is technically correct — it consolidates 58 .h/.cpp pairs on cppcheck (-21 cycles, -9 SCCs) — but applying it on the TSE side alone crashes the dc-compare match rate from **45.32% → 11.11%**, because DC main keeps `_h`/`_cpp` suffixes in 189/624 leaves. The fix shifts TSE output AWAY from DC main, not toward it.
+
+| Metric | Baseline (no fix) | Post-fix | Delta |
+|---|---|---|---|
+| Leaf count | 946 | 888 | -58 ✓ |
+| Edge count | 2,098 | 1,924 | -174 |
+| Cycle count | 509 | 488 | -21 |
+| Strongly-connected components | 20 | 11 | -9 |
+| **Match rate vs DC main** | **45.32%** | **11.11%** | **-34.21 pp** |
+
+**Path forward (post-merge)**, recommended sequence as a separate DC PR:
+
+1. Land extension-stripping in DC main's `CppAnalyzer` directly (or modify `mergeIdenticalTypes` to use stripped grouping keys) so DC main and TSE feature converge to the merged pathWithName scheme together.
+2. Tag a new DC release.
+3. Apply the same extension-stripping in the TSE-based `CppAnalyzer` (recipe at `add-cpp-dependency-support.md:727-728`).
+4. Re-run dc-compare — match rate should hold at ~45% since both sides apply the same merging.
+5. Re-enable the disabled test.
+
+### Open backlog: DC resolver empty-wildcard substring fallback
+
+DC's `Node.kt:127-133` empty-wildcard substring fallback (`it.withDots().contains(wildcard.withDots())` with empty `wildcard.withDots() == ""` matching everything) is the documented root cause of the simplecpp-pollution misdirection (~120-180 main-only deps on cppcheck — see the "Better parsing pushes match-rate DOWN" lesson in `dependency-migration.md`). DC's own in-code TODO acknowledges the looseness.
+
+Three fix candidates ranked:
+
+1. **Namespace-proximity tie-break** when empty-wildcard finds >1 candidate — most defensible; preserves current behavior for unambiguous cases.
+2. Strict-suffix match instead of substring — doesn't help the empty-wildcard case (the actual issue).
+3. Skip empty wildcards entirely — would break ~358 currently-matched C++ deps that depend on the fallback for file-scope-decl resolution.
+
+**Decision**: ship as a separate post-merge DC PR. The fix is DC-quality-wide (benefits all future migrations regardless of language) and shouldn't bundle into the C++ migration's commit history. Cross-language safety check before landing: confirm Java's adapter doesn't emit empty wildcards for default-package projects (empty-wildcard emission is essentially C++-specific today; Java/Kotlin/C#/Go/PHP/TS/JS/Vue all emit non-empty package-derived wildcards).
+
+### Remaining release sequence
+
+- [ ] Revert DC's composite-build wiring in `analysis/settings.gradle.kts` + `analysis/build.gradle.kts` (must not be committed).
+- [ ] Final dc-compare on cppcheck — confirm match rate ≥ 45.32% baseline.
+- [ ] Merge TSE `feat/cpp-dependency-support` → `main`, tag release.
+- [ ] Update DC's JitPack TSE dependency to the new tag in `analysis/build.gradle.kts`.
+- [ ] Merge DC `feat/cpp-dependency-integration` → `main`.
+- [ ] Post-merge: file the two DC follow-up PRs (header/`.cpp` merge fix; resolver empty-wildcard tie-break).
+
+## Prerequisite — refactor session (DONE)
+
+Captured here as historical record of the refactor scope. Implemented in TSE commits `9b79371` → `4a58eb9`; structural details visible in current `languages/cpp/` layout (`CppNamespaceWalker`, `declarations/` subdirectory, `DependencyDeclarationExtractor`, `QualifiedIdentifierPath`, `CppCalculationConfig`).
 
 From `Reports/TreeSitterExcavationSite-analysis-2026-04-23.md`:
 
@@ -186,7 +245,9 @@ Investigating the CppAnalyzerTest failures surfaced two additional tree-sitter-c
 
 Commit `e8018a9` extends `CppTypeHelper` to handle both via `extractTemplateLike` (accepts `TYPE_IDENTIFIER` or `IDENTIFIER` as name) and looser `extractGenericArgument` filtering. Gained +2 matched on cppcheck (R14→R15), no feat-only regression.
 
-### Remaining wrap-up work for next session
+### Remaining wrap-up work for next session — SUPERSEDED
+
+> The bullets below are historical (2026-04-25 snapshot). For current state see "Final wrap-up status (2026-04-28)" near the top of this file.
 
 #### 1. CppAnalyzerTest — 8 failing, categorized
 
@@ -232,7 +293,7 @@ R15 data shows primitive-name resolution impact on cppcheck is 0 matched deps (w
 #### 3. Verify state before continuing (repeat Step 1 from top of this plan)
 
 ```bash
-cd C:/Users/ChristianSpa/IdeaProjects/DCTSE/TreeSitterExcavationSite
+cd <workspace>/TreeSitterExcavationSite
 git branch --show-current         # feat/cpp-dependency-support
 git log --oneline -5              # top should be e8018a9 feat(cpp): handle template_function leaves ...
 ./gradlew build                   # green
@@ -251,7 +312,7 @@ If the composite wiring is missing, restore per the instructions at the top of t
 ### Step 1 — verify state
 
 ```bash
-cd C:/Users/ChristianSpa/IdeaProjects/DCTSE/TreeSitterExcavationSite
+cd <workspace>/TreeSitterExcavationSite
 git branch --show-current          # should be feat/cpp-dependency-support
 git log --oneline -5
 ./gradlew build                     # should be green
