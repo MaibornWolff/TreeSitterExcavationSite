@@ -50,6 +50,34 @@ The C++ migration was validated via dc-compare against [cppcheck](https://github
 - `lib/valueflow.cpp` — single `.cpp` file with ~30 class/struct declarations interleaved with free functions; canonical example of DC's `BodyProcessor.addTypesAndDependenciesToRelatedNode` dumping types onto `lastOrNull()` instead of the semantic owner.
 - `externals/simplecpp/simplecpp.cpp` — embedded vendored single-file C preprocessor; canonical example of TSE's tree-sitter parsing files DC main's parser version fails on, which inflates the project dictionary and triggers the empty-wildcard substring fallback to pick a different candidate.
 
+## C++-specific DC legacy quirks
+
+Bugs, idioms, and tree-sitter quirks specific to C++. Captured here rather than in `.claude/rules/dependency-migration.md` so the cross-language rules stay generalizable. Future C++-related work (extraction patterns, resolver fixes, follow-up DC PRs) should consult this section; non-C++ migrations can skip it.
+
+### Tree-sitter-cpp parses qualified identifiers right-associatively
+
+For `A::B::C::helper()`, the outermost `qualified_identifier`'s `scope` field is `namespace_identifier("A")` (not a nested qualified_identifier); its `name` field holds the nested `qualified_identifier("B::C::helper")`. Extractors that walk via `name` (`CppTypeHelper.extractRightmostSegment`) must handle this — each level contributes one scope segment. DC's TSQuery `(qualified_identifier scope: (namespace_identifier)@type)` matches at every level because every non-leaf qualified_identifier has a `namespace_identifier` scope, so DC emits the OUTERMOST segment (`A`) as its own Type for nested calls — not the innermost class name. TSE mirrors this via `CppTypeHelper.extractSingleSegmentScope`.
+
+### Empty-namespace wildcard + `String.contains("")` is DC's hidden simple-name resolver
+
+DC legacy C++ `CppUtils.createNode` unconditionally appends `Dependency(namespace, isWildcard=true)` even when `namespace = Path(emptyList())`. `Node.resolveTypeImport` then uses `it.withDots().contains(wildcard.withDots())` — a **String** substring check. For an empty-path wildcard, `withDots() == ""` and `"anything".contains("")` is trivially true, so the resolver effectively falls back to "find any project node by simple name". Migrated C++ adapters MUST emit the self-wildcard unconditionally, including when `parentPath` is empty — our first DC adapter guarded on `parentPath.isNotEmpty()` and file-scope declarations silently failed to resolve cross-file references. Closing this gap recovered ~358 matched deps on cppcheck. See `Node.kt:134-141` with the resolver's in-code TODO flagging the looseness.
+
+### DC legacy C++ has a tree-sitter parser failure on some `.h` files
+
+DC main logs `<file.h>: Node is a null node` for many C++ headers (cppcheck: DC main produces 2 `_h` nodes; TSE produces 179). This is a DC bug, not a feature over-production. TSE correctly extracts declarations from headers. Don't try to mirror this by filtering `.h` files — per migration rules, "match DC but fix bugs". Document the extra header nodes as an accepted improvement.
+
+### `BodyProcessor.addTypesAndDependenciesToRelatedNode` dumps types onto `lastOrNull()`
+
+In `analyzers/cpp/processing/BodyProcessor.kt:86`, accumulated usedTypes are attached to the most-recently-added node — not the semantic owner. In multi-class-per-file scenarios (e.g., `lib/valueflow.cpp` with ~30 sequential class/struct declarations interleaved with free functions), every free function's type usage pollutes the preceding declaration. TSE's extractor correctly scopes to the semantic owner; do not replicate this bug. On cppcheck this accounts for ~700-900 of the remaining main-only deps — a hard ceiling on correctness-respecting match rates (~45-50% on cppcheck). When planning extraction work, filter out misattribution-victim sources before estimating gaps: a source where feature has 0-2 deps but main has 10-30 on the same node is almost certainly a DC dump victim.
+
+### Better parsing pushes match-rate DOWN via DC's resolver substring fallback
+
+TSE's tree-sitter version successfully parses files DC main's older parser fails on (notably `externals/simplecpp/simplecpp.cpp` for cppcheck). Each successfully-parsed file adds nodes to the project dictionary that DC main doesn't have. The same DC resolver runs in both, but the input differs: candidates for simple name `Token` are `[lib.token_cpp.Token, addons.cppcheckdata.Token, simplecpp.Token]` in our run vs `[lib.token_cpp.Token, addons.cppcheckdata.Token]` in DC main. The empty-wildcard substring fallback in `Node.resolveTypeImport` (the `it.withDots().contains(wildcard.withDots())` block, with `wildcard.withDots() == ""` matching trivially) picks the *first* candidate in the dictionary order — which differs once an extra candidate is added. On cppcheck this redirects ~121 `Token` deps to `simplecpp.Token` and ~49 `TokenList` deps similarly, inflating both main-only and feat-only counts by the same amount. **The misdirection is not a TSE extraction bug** — both runs agree the source uses `Token`; only the resolver outcome diverges. The DC resolver itself acknowledges the looseness in an in-code TODO at `Node.kt:127-133`. Do not chase this as an extraction gap — recognize it via the symmetric inflation of main-only and feat-only counts on the same target name. Fix candidates: (1) skip empty wildcards entirely (breaks C++'s file-scope-decl resolution — 358 matched deps depend on the fallback), (2) require namespace-proximity tie-break when the empty-wildcard fallback finds multiple candidates, (3) replace substring with strict-suffix match (still doesn't help empty case). Fix should land as its own DC change once the C++ migration ships, not before.
+
+### When this dynamic generalizes
+
+The "better parsing pushes match-rate DOWN" pattern can recur in any future migration where (a) TSE's tree-sitter parses files DC's parser version chokes on, AND (b) the extra-parsed file declares a class whose simple name collides with a project class. Watch for symmetric inflation of main-only and feat-only counts on the same target name — that's the diagnostic signature.
+
 ## Implementation Approach
 
 **TDD — strict red → green → refactor, same as the Kotlin and C# migrations:**
