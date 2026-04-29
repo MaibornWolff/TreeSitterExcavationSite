@@ -22,6 +22,7 @@ internal object CppTypeHelper {
 
     private val TYPE_NODE_TYPES =
         setOf(TYPE_IDENTIFIER, TEMPLATE_TYPE, QUALIFIED_IDENTIFIER, PRIMITIVE_TYPE, SIZED_TYPE_SPECIFIER)
+    private val LEAF_TYPE_NODES = setOf(TYPE_IDENTIFIER, IDENTIFIER, PRIMITIVE_TYPE, SIZED_TYPE_SPECIFIER)
     private val TEMPLATE_LIKE_TYPES = setOf(TEMPLATE_TYPE, TEMPLATE_FUNCTION)
     private val TEMPLATE_NAME_TYPES = setOf(TYPE_IDENTIFIER, IDENTIFIER)
 
@@ -30,13 +31,15 @@ internal object CppTypeHelper {
     fun extractType(typeNode: TSNode, sourceCode: String): UsedType? {
         if (typeNode.isNull) return null
         return when (typeNode.type) {
-            TYPE_IDENTIFIER, IDENTIFIER, PRIMITIVE_TYPE, SIZED_TYPE_SPECIFIER ->
-                UsedType(name = TreeTraversal.getNodeText(typeNode, sourceCode).trim())
-            TEMPLATE_TYPE, TEMPLATE_FUNCTION -> extractTemplateLike(typeNode, sourceCode)
+            in LEAF_TYPE_NODES -> extractLeafName(typeNode, sourceCode)
+            in TEMPLATE_LIKE_TYPES -> extractTemplateLike(typeNode, sourceCode)
             QUALIFIED_IDENTIFIER -> extractRightmostSegment(typeNode, sourceCode)
             else -> null
         }
     }
+
+    private fun extractLeafName(node: TSNode, sourceCode: String): UsedType =
+        UsedType(name = TreeTraversal.getNodeText(node, sourceCode).trim())
 
     fun extractTypeFromTypeField(node: TSNode, sourceCode: String): UsedType? {
         val typeField = node.getChildByFieldName(TYPE_FIELD).takeIf { !it.isNull }
