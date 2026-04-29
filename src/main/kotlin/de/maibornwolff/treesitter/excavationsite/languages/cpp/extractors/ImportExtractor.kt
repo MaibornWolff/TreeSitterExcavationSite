@@ -47,28 +47,35 @@ internal object ImportExtractor {
 
     private fun toUsingImport(node: TSNode, sourceCode: String): ImportDeclaration? {
         if (TreeTraversal.hasAncestorOfTypes(node, *NON_IMPORT_SCOPES.toTypedArray())) return null
-        val hasNamespaceKeyword = node.children().any { it.type == NAMESPACE_KEYWORD }
-        val qualifiedName = TreeTraversal.findFirstChildTextByType(node, sourceCode, QUALIFIED_IDENTIFIER)
         val namespacePath = CppNamespaceWalker.walkAncestorsFrom(node, sourceCode)
-        if (hasNamespaceKeyword) {
-            val nameText = qualifiedName
-                ?: TreeTraversal.findFirstChildTextByType(node, sourceCode, IDENTIFIER)
-                ?: return null
-            return ImportDeclaration(
-                path = nameText.split(NAMESPACE_SEPARATOR),
-                isWildcard = true,
-                namespacePath = namespacePath
-            )
+        return if (isUsingDirective(node)) {
+            toUsingDirective(node, sourceCode, namespacePath)
+        } else {
+            toUsingDeclaration(node, sourceCode, namespacePath)
         }
-        if (qualifiedName != null) {
-            return ImportDeclaration(
-                path = qualifiedName.split(NAMESPACE_SEPARATOR),
-                isWildcard = false,
-                namespacePath = namespacePath
-            )
-        }
-        return null
     }
+
+    private fun toUsingDirective(node: TSNode, sourceCode: String, namespacePath: List<String>): ImportDeclaration? {
+        val nameText = TreeTraversal.findFirstChildTextByType(node, sourceCode, QUALIFIED_IDENTIFIER, IDENTIFIER)
+            ?: return null
+        return ImportDeclaration(
+            path = nameText.split(NAMESPACE_SEPARATOR),
+            isWildcard = true,
+            namespacePath = namespacePath
+        )
+    }
+
+    private fun toUsingDeclaration(node: TSNode, sourceCode: String, namespacePath: List<String>): ImportDeclaration? {
+        val qualifiedName = TreeTraversal.findFirstChildTextByType(node, sourceCode, QUALIFIED_IDENTIFIER)
+            ?: return null
+        return ImportDeclaration(
+            path = qualifiedName.split(NAMESPACE_SEPARATOR),
+            isWildcard = false,
+            namespacePath = namespacePath
+        )
+    }
+
+    private fun isUsingDirective(node: TSNode): Boolean = node.children().any { it.type == NAMESPACE_KEYWORD }
 
     private fun stripPathDelimiters(raw: String): String = raw.trim('<', '>', '"')
 }
