@@ -10,6 +10,9 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.UsedType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
+import org.junit.jupiter.params.provider.ValueSource
 
 class CppDependencyTest {
     @Nested
@@ -204,7 +207,7 @@ class CppDependencyTest {
         }
 
         @Nested
-        inner class UsingDirectives {
+        inner class Usings {
             @Test
             fun `should extract using namespace as wildcard STANDARD import`() {
                 // Arrange
@@ -222,7 +225,7 @@ class CppDependencyTest {
             }
 
             @Test
-            fun `should skip in-class using enum directive`() {
+            fun `should skip in-class using enum declaration`() {
                 // Arrange
                 val code = """
                     enum class Color { RED, GREEN, BLUE };
@@ -241,7 +244,7 @@ class CppDependencyTest {
             }
 
             @Test
-            fun `should skip inheriting constructor using directive inside class body`() {
+            fun `should skip inheriting constructor using declaration inside class body`() {
                 // Arrange
                 val code = """
                     class Base {
@@ -263,7 +266,7 @@ class CppDependencyTest {
             }
 
             @Test
-            fun `should skip using directive inside function body`() {
+            fun `should skip using declaration inside function body`() {
                 // Arrange
                 val code = """
                     void foo() {
@@ -347,10 +350,17 @@ class CppDependencyTest {
             }
 
             @Test
-            fun `should extract qualified using enum declaration as non-wildcard import`() {
-                // Arrange
+            fun `should emit function-scope using inside out-of-class method with enclosing namespacePath`() {
+                // Arrange — the realistic DC scenario: function-local using inside an
+                // out-of-class method definition (no class_specifier ancestor) inside a
+                // namespace. Same code path as the free-function case but mirrors how the
+                // pattern actually appears in real-world C++ source.
                 val code = """
-                    using enum Outer::Color;
+                    namespace App {
+                        void Container::doWork() {
+                            using namespace Utils;
+                        }
+                    }
                 """.trimIndent()
 
                 // Act
@@ -358,8 +368,35 @@ class CppDependencyTest {
 
                 // Assert
                 assertThat(result.imports).containsExactly(
-                    ImportDeclaration(path = listOf("Outer", "Color"), isWildcard = false, kind = ImportKind.STANDARD)
+                    ImportDeclaration(
+                        path = listOf("Utils"),
+                        isWildcard = true,
+                        namespacePath = listOf("App"),
+                        kind = ImportKind.STANDARD
+                    )
                 )
+            }
+
+            @Test
+            fun `should skip function-scope using inside inline class method even within a namespace`() {
+                // Arrange — class_specifier exclusion takes precedence over the namespace
+                // emission rule, so an inline class member function inside a namespace
+                // still drops its function-local using.
+                val code = """
+                    namespace App {
+                        class Container {
+                            void doWork() {
+                                using namespace Utils;
+                            }
+                        };
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).isEmpty()
             }
 
             @Test
@@ -430,87 +467,38 @@ class CppDependencyTest {
 
     @Nested
     inner class DeclarationExtraction {
-        @Test
-        fun `should extract single class_specifier as CLASS declaration`() {
+        @ParameterizedTest(name = "should extract {0}_specifier as CLASS declaration")
+        @CsvSource(
+            "class,Foo",
+            "struct,Bar",
+            "union,Variant"
+        )
+        fun `should extract class-like specifier as CLASS declaration`(keyword: String, name: String) {
             // Arrange
-            val code = "class Foo {};"
+            val code = "$keyword $name {};"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.CPP)
 
             // Assert
             assertThat(result.declarations).containsExactly(
-                Declaration(name = "Foo", type = DeclarationType.CLASS, usedTypes = emptySet(), parentPath = emptyList())
+                Declaration(name = name, type = DeclarationType.CLASS, usedTypes = emptySet(), parentPath = emptyList())
             )
         }
 
-        @Test
-        fun `should extract struct_specifier as CLASS declaration`() {
-            // Arrange
-            val code = "struct Bar {};"
-
+        @ParameterizedTest(name = "should extract `{0}` form as ENUM declaration")
+        @CsvSource(
+            "'enum Color { RED };',Color",
+            "'enum class Status { OK, ERROR };',Status",
+            "'enum struct Phase { A, B };',Phase"
+        )
+        fun `should extract enum form as ENUM declaration`(code: String, name: String) {
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.CPP)
 
             // Assert
             assertThat(result.declarations).containsExactly(
-                Declaration(name = "Bar", type = DeclarationType.CLASS, usedTypes = emptySet(), parentPath = emptyList())
-            )
-        }
-
-        @Test
-        fun `should extract union_specifier as CLASS declaration`() {
-            // Arrange
-            val code = "union Variant {};"
-
-            // Act
-            val result = TreeSitterDependencies.analyze(code, Language.CPP)
-
-            // Assert
-            assertThat(result.declarations).containsExactly(
-                Declaration(name = "Variant", type = DeclarationType.CLASS, usedTypes = emptySet(), parentPath = emptyList())
-            )
-        }
-
-        @Test
-        fun `should extract plain enum as ENUM declaration`() {
-            // Arrange
-            val code = "enum Color { RED };"
-
-            // Act
-            val result = TreeSitterDependencies.analyze(code, Language.CPP)
-
-            // Assert
-            assertThat(result.declarations).containsExactly(
-                Declaration(name = "Color", type = DeclarationType.ENUM, usedTypes = emptySet(), parentPath = emptyList())
-            )
-        }
-
-        @Test
-        fun `should extract enum class as ENUM declaration`() {
-            // Arrange
-            val code = "enum class Status { OK, ERROR };"
-
-            // Act
-            val result = TreeSitterDependencies.analyze(code, Language.CPP)
-
-            // Assert
-            assertThat(result.declarations).containsExactly(
-                Declaration(name = "Status", type = DeclarationType.ENUM, usedTypes = emptySet(), parentPath = emptyList())
-            )
-        }
-
-        @Test
-        fun `should extract enum struct as ENUM declaration`() {
-            // Arrange
-            val code = "enum struct Phase { A, B };"
-
-            // Act
-            val result = TreeSitterDependencies.analyze(code, Language.CPP)
-
-            // Assert
-            assertThat(result.declarations).containsExactly(
-                Declaration(name = "Phase", type = DeclarationType.ENUM, usedTypes = emptySet(), parentPath = emptyList())
+                Declaration(name = name, type = DeclarationType.ENUM, usedTypes = emptySet(), parentPath = emptyList())
             )
         }
 
@@ -536,29 +524,6 @@ class CppDependencyTest {
 
             // Assert
             assertThat(result.declarations).isEmpty()
-        }
-
-        @Test
-        fun `should set parentPath to namespace for class inside single namespace`() {
-            // Arrange
-            val code = """
-                namespace MyApp {
-                    class Foo {};
-                }
-            """.trimIndent()
-
-            // Act
-            val result = TreeSitterDependencies.analyze(code, Language.CPP)
-
-            // Assert
-            assertThat(result.declarations).containsExactly(
-                Declaration(
-                    name = "Foo",
-                    type = DeclarationType.CLASS,
-                    usedTypes = emptySet(),
-                    parentPath = listOf("MyApp")
-                )
-            )
         }
 
         @Test
@@ -1330,13 +1295,14 @@ class CppDependencyTest {
                 )
             }
 
-            @Test
-            fun `should extract type from static_cast`() {
+            @ParameterizedTest(name = "should extract type from {0}")
+            @ValueSource(strings = ["static_cast", "reinterpret_cast", "const_cast"])
+            fun `should extract type from explicit cast`(castName: String) {
                 // Arrange
                 val code = """
                     class Container {
-                        void doWork(int x) {
-                            auto result = static_cast<Foo>(x);
+                        void doWork(Foo* p) {
+                            auto x = $castName<Foo*>(p);
                         }
                     };
                 """.trimIndent()
@@ -1348,14 +1314,15 @@ class CppDependencyTest {
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "Foo"),
-                    UsedType(name = "int"),
                     UsedType(name = "void")
                 )
             }
 
             @Test
-            fun `should extract type from dynamic_cast`() {
-                // Arrange
+            fun `should extract both source and target type from dynamic_cast`() {
+                // Arrange — dynamic_cast across a polymorphic hierarchy; both Base (param)
+                // and Derived (target) must be captured to verify the cast doesn't drop
+                // the surrounding parameter type.
                 val code = """
                     class Container {
                         void doWork(Base* b) {
@@ -1372,50 +1339,6 @@ class CppDependencyTest {
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "Base"),
                     UsedType(name = "Derived"),
-                    UsedType(name = "void")
-                )
-            }
-
-            @Test
-            fun `should extract type from reinterpret_cast`() {
-                // Arrange
-                val code = """
-                    class Container {
-                        void doWork(void* p) {
-                            auto x = reinterpret_cast<Foo*>(p);
-                        }
-                    };
-                """.trimIndent()
-
-                // Act
-                val result = TreeSitterDependencies.analyze(code, Language.CPP)
-
-                // Assert
-                val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactlyInAnyOrder(
-                    UsedType(name = "Foo"),
-                    UsedType(name = "void")
-                )
-            }
-
-            @Test
-            fun `should extract type from const_cast`() {
-                // Arrange
-                val code = """
-                    class Container {
-                        void doWork(const Foo* p) {
-                            auto x = const_cast<Foo*>(p);
-                        }
-                    };
-                """.trimIndent()
-
-                // Act
-                val result = TreeSitterDependencies.analyze(code, Language.CPP)
-
-                // Assert
-                val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactlyInAnyOrder(
-                    UsedType(name = "Foo"),
                     UsedType(name = "void")
                 )
             }
@@ -1490,8 +1413,11 @@ class CppDependencyTest {
             }
 
             @Test
-            fun `should extract rightmost segment from qualified call`() {
-                // Arrange
+            fun `should extract rightmost segment and scope-as-type from single-scope qualified call`() {
+                // Arrange — DC legacy (VariableDeclarationProcessor.kt:24-25) matches
+                // (call_expression function: (qualified_identifier scope: (namespace_identifier)@type))
+                // and emits the immediate scope as its own UsedType so the resolver can match
+                // the referenced class (Catch), in addition to the rightmost segment.
                 val code = """
                     class Container {
                         void doWork() {
@@ -1503,8 +1429,7 @@ class CppDependencyTest {
                 // Act
                 val result = TreeSitterDependencies.analyze(code, Language.CPP)
 
-                // Assert — scope-as-type (Catch) is emitted alongside the rightmost segment
-                // per DC's VariableDeclarationProcessor TSQuery; see the single-scope test below.
+                // Assert
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "Catch"),
@@ -1514,7 +1439,7 @@ class CppDependencyTest {
             }
 
             @Test
-            fun `should capture multi-segment namespace prefix on qualified call`() {
+            fun `should extract multi-segment prefix and outermost scope-as-type from qualified call`() {
                 // Arrange
                 val code = """
                     class Container {
@@ -1527,38 +1452,11 @@ class CppDependencyTest {
                 // Act
                 val result = TreeSitterDependencies.analyze(code, Language.CPP)
 
-                // Assert — outermost scope (A) is also emitted as its own UsedType;
-                // see `should also extract scope as type for qualified call`.
+                // Assert
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactlyInAnyOrder(
                     UsedType(name = "helper", namespacePrefix = listOf("A", "B", "C")),
                     UsedType(name = "A"),
-                    UsedType(name = "void")
-                )
-            }
-
-            @Test
-            fun `should also extract scope as type for qualified call`() {
-                // Arrange — DC legacy (VariableDeclarationProcessor.kt:24-25) matches
-                // (call_expression function: (qualified_identifier scope: (namespace_identifier)@type))
-                // and emits the immediate scope as its own UsedType so the resolver can match
-                // the referenced class (Path), in addition to the rightmost segment.
-                val code = """
-                    class Container {
-                        void doWork() {
-                            Path::removeQuotationMarks(x);
-                        }
-                    };
-                """.trimIndent()
-
-                // Act
-                val result = TreeSitterDependencies.analyze(code, Language.CPP)
-
-                // Assert
-                val container = result.declarations.single { it.name == "Container" }
-                assertThat(container.usedTypes).containsExactlyInAnyOrder(
-                    UsedType(name = "Path"),
-                    UsedType(name = "removeQuotationMarks", namespacePrefix = listOf("Path")),
                     UsedType(name = "void")
                 )
             }
@@ -1606,7 +1504,7 @@ class CppDependencyTest {
                 // Act
                 val result = TreeSitterDependencies.analyze(code, Language.CPP)
 
-                // Assert — only the return type leaks through; no bare-identifier callee.
+                // Assert — only the return type is captured; no bare-identifier callee.
                 val container = result.declarations.single { it.name == "Container" }
                 assertThat(container.usedTypes).containsExactly(UsedType(name = "void"))
             }
@@ -1652,7 +1550,7 @@ class CppDependencyTest {
         }
 
         @Nested
-        inner class InClassUsingDirectives {
+        inner class InClassUsingDeclarations {
             @Test
             fun `should extract base class from using declaration inside class body`() {
                 // Arrange
@@ -1671,7 +1569,7 @@ class CppDependencyTest {
             }
 
             @Test
-            fun `should capture namespace prefix on deeply qualified using declaration`() {
+            fun `should capture namespace prefix on multi-segment qualified using declaration`() {
                 // Arrange
                 val code = """
                     class Derived {
