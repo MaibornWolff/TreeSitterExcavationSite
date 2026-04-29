@@ -50,12 +50,6 @@ internal object ClassScopeExtractor {
         return friendTypes + inClassUsingTypes
     }
 
-    private fun isInsideClassBody(usingDecl: TSNode): Boolean {
-        var anc = usingDecl.parent
-        while (anc != null && !anc.isNull) {
-            if (anc.type in CLASS_BODY_TYPES) return true
-            anc = anc.parent
-        }
-        return false
-    }
+    private fun isInsideClassBody(usingDecl: TSNode): Boolean =
+        TreeTraversal.hasAncestorOfTypes(usingDecl, *CLASS_BODY_TYPES.toTypedArray())
 }
