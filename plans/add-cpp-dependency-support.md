@@ -29,6 +29,27 @@ Migrate DependaCharta's legacy C++ dependency analyzer to TSE. Add `CppDependenc
 
 **Naming convention note**: This plan uses `PackageExtractor` / `ImportExtractor` (following Java/Kotlin precedent and matching the `DependencyResult.packagePath` / `DependencyResult.imports` field names). C# uses `NamespaceExtractor` / `UsingDirectiveExtractor`. Both are valid; the Java/Kotlin names fit C++ better because C++'s `imports` come from two distinct AST sources (`#include` + `using`), so a unified `ImportExtractor` is more accurate than a source-specific name.
 
+## Reference corpus
+
+The C++ migration was validated via dc-compare against [cppcheck](https://github.com/danmar/cppcheck) (depth-1 clone). Catch2 was the original baseline through R2 but was rejected after R3 because its amalgamated header (`extras/catch_amalgamated.hpp`) duplicates every class, triggering DC's `mergeDuplicates` and polluting the diff.
+
+**Final dc-compare numbers (R15, pre-merge baseline)**: matched 1118 / main-only 1349 / feat-only 980 / **45.32% match rate**. Stable through the structural refactor and Phase 8 implementation.
+
+**Corpus-specific evidence behind the generic ranges in `.claude/rules/dependency-migration.md`** (kept here so the rules file can stay corpus-agnostic):
+
+| Lesson | Concrete cppcheck measurement |
+|---|---|
+| selfWildcard fix for empty parentPath (DC `20ea8a4`) | +358 matched deps |
+| Header parse failure in DC main (`Node is a null node`) | DC main: 2 `_h` nodes; TSE: 179 `_h` nodes |
+| BodyProcessor dump-to-lastNode misattribution | ~700-900 main-only deps (`lib/valueflow.cpp` alone accounts for ~411) |
+| simplecpp-pollution misdirection | ~121 `Token` + ~49 `TokenList` deps redirected to `simplecpp.*` instead of `lib.*` |
+| Match-rate ceiling | ~45-55% on cppcheck after exclusion of misattribution + misdirection buckets |
+
+**Cppcheck file paths referenced in lesson examples**:
+
+- `lib/valueflow.cpp` — single `.cpp` file with ~30 class/struct declarations interleaved with free functions; canonical example of DC's `BodyProcessor.addTypesAndDependenciesToRelatedNode` dumping types onto `lastOrNull()` instead of the semantic owner.
+- `externals/simplecpp/simplecpp.cpp` — embedded vendored single-file C preprocessor; canonical example of TSE's tree-sitter parsing files DC main's parser version fails on, which inflates the project dictionary and triggers the empty-wildcard substring fallback to pick a different candidate.
+
 ## Implementation Approach
 
 **TDD — strict red → green → refactor, same as the Kotlin and C# migrations:**
