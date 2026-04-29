@@ -15,6 +15,10 @@ internal object UsedTypeExtractor {
     private const val PROPERTY_IDENTIFIER = "property_identifier"
     private const val EXTENDS_CLAUSE = "extends_clause"
     private const val IMPLEMENTS_CLAUSE = "implements_clause"
+    private const val JSX_OPENING_ELEMENT = "jsx_opening_element"
+    private const val JSX_SELF_CLOSING_ELEMENT = "jsx_self_closing_element"
+    private const val JSX_MEMBER_EXPRESSION = "jsx_member_expression"
+    private const val JSX_IDENTIFIER = "jsx_identifier"
 
     private val ALL_NODE_TYPES = setOf(
         TYPE_ANNOTATION,
@@ -23,7 +27,9 @@ internal object UsedTypeExtractor {
         CALL_EXPRESSION,
         EXTENDS_CLAUSE,
         IMPLEMENTS_CLAUSE,
-        IDENTIFIER
+        IDENTIFIER,
+        JSX_OPENING_ELEMENT,
+        JSX_SELF_CLOSING_ELEMENT,
     )
 
     fun extract(declaration: TSNode, sourceCode: String, aliasMap: Map<String, String> = emptyMap()): Set<UsedType> {
@@ -37,7 +43,9 @@ internal object UsedTypeExtractor {
         val extensions = extractExtensions(buckets, sourceCode)
         val relevantIdentifiers = extractRelevantIdentifiers(buckets, sourceCode)
 
-        return (typeIdentifiers + constructorCalls + memberAccesses + methodCalls + extensions + relevantIdentifiers)
+        val jsxComponents = extractJsxComponents(buckets, sourceCode)
+
+        return (typeIdentifiers + constructorCalls + memberAccesses + methodCalls + extensions + relevantIdentifiers + jsxComponents)
             .map { usedType -> aliasMap[usedType.name]?.let { UsedType(name = it) } ?: usedType }
             .toSet()
     }
@@ -98,4 +106,24 @@ internal object UsedTypeExtractor {
             if (name.firstOrNull()?.isUpperCase() != true) return@mapNotNull null
             UsedType(name = name)
         }
+
+    // uppercase JSX component names: <Routes />, <Form.Input /> → Routes, Form
+    private fun extractJsxComponents(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
+        val jsxNodes = buckets[JSX_OPENING_ELEMENT].orEmpty() + buckets[JSX_SELF_CLOSING_ELEMENT].orEmpty()
+        return jsxNodes.mapNotNull { node ->
+            val tagNode = node.children().firstOrNull {
+                it.type == JSX_IDENTIFIER || it.type == IDENTIFIER ||
+                    it.type == JSX_MEMBER_EXPRESSION || it.type == MEMBER_EXPRESSION
+            } ?: return@mapNotNull null
+            val name = when (tagNode.type) {
+                JSX_MEMBER_EXPRESSION, MEMBER_EXPRESSION -> {
+                    val root = findLeftmostIdentifier(tagNode) ?: return@mapNotNull null
+                    TreeTraversal.getNodeText(root, sourceCode).trim()
+                }
+                else -> TreeTraversal.getNodeText(tagNode, sourceCode).trim()
+            }
+            if (name.firstOrNull()?.isUpperCase() != true) return@mapNotNull null
+            UsedType(name = name)
+        }
+    }
 }
