@@ -17,7 +17,7 @@ internal fun extractFromForRangeLoop(node: TSNode, sourceCode: String): String? 
     }
 
     val declarator = node.getChildByFieldName(FIELD_DECLARATOR)
-    if (declarator != null && !declarator.isNull) {
+    if (!declarator.isNull) {
         return CDeclaratorParser.findIdentifierInDeclarator(declarator, sourceCode)
     }
 
