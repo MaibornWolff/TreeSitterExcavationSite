@@ -22,7 +22,9 @@ internal object ImportExtractor {
         "class_specifier",
         "struct_specifier",
         "union_specifier",
-        "base_class_clause"
+        "base_class_clause",
+        "function_definition",
+        "compound_statement"
     )
 
     fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal

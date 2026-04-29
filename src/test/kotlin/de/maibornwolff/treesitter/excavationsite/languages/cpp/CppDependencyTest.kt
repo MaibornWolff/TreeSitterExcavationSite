@@ -263,6 +263,40 @@ class CppDependencyTest {
             }
 
             @Test
+            fun `should skip using directive inside function body`() {
+                // Arrange
+                val code = """
+                    void foo() {
+                        using std::cout;
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).isEmpty()
+            }
+
+            @Test
+            fun `should skip using directive inside nested block`() {
+                // Arrange
+                val code = """
+                    void foo() {
+                        if (true) {
+                            using namespace std;
+                        }
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).isEmpty()
+            }
+
+            @Test
             fun `should populate namespacePath for using directive inside a namespace`() {
                 // Arrange
                 val code = """
