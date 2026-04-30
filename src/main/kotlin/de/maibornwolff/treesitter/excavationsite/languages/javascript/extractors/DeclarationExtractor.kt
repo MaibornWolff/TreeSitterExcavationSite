@@ -9,10 +9,12 @@ import org.treesitter.TSNode
 
 internal object DeclarationExtractor {
     private const val CLASS_DECLARATION = "class_declaration"
+    private const val ABSTRACT_CLASS_DECLARATION = "abstract_class_declaration"
     private const val INTERFACE_DECLARATION = "interface_declaration"
     private const val ENUM_DECLARATION = "enum_declaration"
     private const val FUNCTION_DECLARATION = "function_declaration"
     private const val FUNCTION_SIGNATURE = "function_signature"
+    private const val GENERATOR_FUNCTION_DECLARATION = "generator_function_declaration"
     private const val TYPE_ALIAS_DECLARATION = "type_alias_declaration"
     private const val LEXICAL_DECLARATION = "lexical_declaration"
     private const val VARIABLE_DECLARATION = "variable_declaration"
@@ -41,10 +43,12 @@ internal object DeclarationExtractor {
 
     private val DECLARATION_NODE_TYPES = setOf(
         CLASS_DECLARATION,
+        ABSTRACT_CLASS_DECLARATION,
         INTERFACE_DECLARATION,
         ENUM_DECLARATION,
         FUNCTION_DECLARATION,
         FUNCTION_SIGNATURE,
+        GENERATOR_FUNCTION_DECLARATION,
         TYPE_ALIAS_DECLARATION,
         LEXICAL_DECLARATION,
         VARIABLE_DECLARATION
@@ -199,17 +203,18 @@ internal object DeclarationExtractor {
 
     private fun extractName(node: TSNode, sourceCode: String): String {
         val nameTypes = when (node.type) {
-            CLASS_DECLARATION, INTERFACE_DECLARATION, TYPE_ALIAS_DECLARATION -> arrayOf(TYPE_IDENTIFIER, IDENTIFIER)
+            CLASS_DECLARATION, ABSTRACT_CLASS_DECLARATION,
+            INTERFACE_DECLARATION, TYPE_ALIAS_DECLARATION -> arrayOf(TYPE_IDENTIFIER, IDENTIFIER)
             else -> arrayOf(IDENTIFIER)
         }
         return TreeTraversal.findFirstChildTextByType(node, sourceCode, *nameTypes)?.trim() ?: ""
     }
 
     private fun declarationType(nodeType: String): DeclarationType = when (nodeType) {
-        CLASS_DECLARATION, TYPE_ALIAS_DECLARATION -> DeclarationType.CLASS
+        CLASS_DECLARATION, ABSTRACT_CLASS_DECLARATION, TYPE_ALIAS_DECLARATION -> DeclarationType.CLASS
         INTERFACE_DECLARATION -> DeclarationType.INTERFACE
         ENUM_DECLARATION -> DeclarationType.ENUM
-        FUNCTION_DECLARATION, FUNCTION_SIGNATURE -> DeclarationType.FUNCTION
+        FUNCTION_DECLARATION, FUNCTION_SIGNATURE, GENERATOR_FUNCTION_DECLARATION -> DeclarationType.FUNCTION
         LEXICAL_DECLARATION, VARIABLE_DECLARATION -> DeclarationType.VARIABLE
         else -> DeclarationType.UNKNOWN
     }

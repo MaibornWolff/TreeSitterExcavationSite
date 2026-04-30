@@ -489,6 +489,48 @@ class TypescriptDependencyTest {
             val names = result.declarations.map { it.name }
             assertThat(names).containsExactlyInAnyOrder("Outer")
         }
+
+        @Test
+        fun `should extract abstract class as CLASS declaration`() {
+            // Arrange
+            val code = "export abstract class AbstractBase { abstract doWork(): void }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("AbstractBase")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.CLASS)
+        }
+
+        @Test
+        fun `should extract abstract class without export as CLASS declaration`() {
+            // Arrange
+            val code = "abstract class Base {}\nexport default Base"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName).containsKey("Base")
+            assertThat(byName["Base"]?.type).isEqualTo(DeclarationType.CLASS)
+        }
+
+        @Test
+        fun `should extract generator function as FUNCTION declaration`() {
+            // Arrange
+            val code = "export function* generate(): Generator<number> { yield 1 }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("generate")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.FUNCTION)
+        }
     }
 
     @Nested

@@ -29,7 +29,7 @@ internal object UsedTypeExtractor {
         IMPLEMENTS_CLAUSE,
         IDENTIFIER,
         JSX_OPENING_ELEMENT,
-        JSX_SELF_CLOSING_ELEMENT,
+        JSX_SELF_CLOSING_ELEMENT
     )
 
     fun extract(declaration: TSNode, sourceCode: String, aliasMap: Map<String, String> = emptyMap()): Set<UsedType> {
