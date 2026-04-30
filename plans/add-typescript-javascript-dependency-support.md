@@ -238,6 +238,54 @@ DC already supported JSX/TSX; DC regression tests go red without it. TSX uses `L
 - After collecting all usedTypes in `UsedTypeExtractor`, replace names present in `aliasMap` with their originals
 - Call from `DeclarationExtractor.extract()` with the pre-built alias map
 
+### 17. Fix: abstract_class_declaration not extracted (TDD)
+
+`export abstract class Foo {}` uses the node type `abstract_class_declaration` in tree-sitter-typescript — **distinct** from `class_declaration`. TSE's `DECLARATION_NODE_TYPES` only lists `class_declaration`, so all abstract classes are silently skipped. This causes ~8 UNKNOWN nodes in the dc-compare golden standard to be missing entirely from the feature output (e.g. `ObjectEnumValue`, `Generator`, `TypeBuilder`, `PrismaLibSqlAdapterFactoryBase`, `PrismaClientError`, `AccelerateError`, `Value`, `ValueBuilder`). It also causes their wildcard-expanded REEXPORT counterparts in index files to be missing.
+
+- Write failing tests in `TypescriptDependencyTest.DeclarationExtraction`:
+  - `export abstract class AbstractBase { abstract doWork(): void }` → `Declaration(name="AbstractBase", type=CLASS)`
+  - `abstract class Base {}\nexport default Base` → declarations contain `Declaration(name="Base", type=CLASS)` (with additional DEFAULT_EXPORT REEXPORT from task 18)
+- In `DeclarationExtractor`:
+  - Add `private const val ABSTRACT_CLASS_DECLARATION = "abstract_class_declaration"` constant
+  - Add `ABSTRACT_CLASS_DECLARATION` to `DECLARATION_NODE_TYPES`
+  - In `extractName`: handle `ABSTRACT_CLASS_DECLARATION` same as `CLASS_DECLARATION` (try `TYPE_IDENTIFIER` then `IDENTIFIER`)
+  - In `declarationType`: map `ABSTRACT_CLASS_DECLARATION -> DeclarationType.CLASS`
+
+### 18. Fix: export default behavior — keep original + add REEXPORT (TDD)
+
+Two related bugs share a root cause in `applyDefaultExport`:
+
+**Bug A — rename instead of keep**: `const events = {}; export default events` currently produces only `Declaration(DEFAULT_EXPORT, VARIABLE)` — the original `events` declaration is *renamed*. DC main produces **both** `events: VARIABLE` AND `_DEFAULT_EXPORT: REEXPORT`. This causes ~7 nodes to be in main but not feature: `events`, `fs`, `path`, `tty`, `util` (fill-plugin fillers), `Decimal` (decimal-small), etc.
+
+**Bug B — no DEFAULT_EXPORT for expression values**: `export default defineConfig({...})` (call expression) and `export default { performance }` (object literal) produce **no** DEFAULT_EXPORT declaration at all, because `findDefaultExportIdentifier` only looks for a direct `identifier` child. DC main creates a `_DEFAULT_EXPORT: REEXPORT` node for *all* `export default <value>` expressions. This accounts for the 25 `_DEFAULT_EXPORT` nodes in main missing from feature (`vitest.config.ts`, `prisma.config.ts`, etc.).
+
+**Key distinction**: `export default class Foo {}` and `export default function foo() {}` use the AST `declaration` field (not `value`) — they must NOT produce a DEFAULT_EXPORT REEXPORT. Only `export default <expression>` (identifier, call, object, etc.) should.
+
+- Write failing tests in `TypescriptDependencyTest.DeclarationExtraction`:
+  - `const events = {EventEmitter}\nexport default events` → declarations contain BOTH `Declaration(name="events", type=VARIABLE)` AND `Declaration(name="DEFAULT_EXPORT", type=REEXPORT, usedTypes=["events"])`; total size=2
+  - `export default defineConfig({})` (no local declaration) → exactly `Declaration(name="DEFAULT_EXPORT", type=REEXPORT)`, usedTypes empty
+  - `export default { performance }` → exactly `Declaration(name="DEFAULT_EXPORT", type=REEXPORT)`, usedTypes empty
+  - `export default class Foo {}` → only `Declaration(name="Foo", type=CLASS)`, NO DEFAULT_EXPORT
+  - `export default function foo() {}` → only `Declaration(name="foo", type=FUNCTION)`, NO DEFAULT_EXPORT
+- Write failing test in `JavascriptDependencyTest.DeclarationExtraction`:
+  - Update `should rename declaration to DEFAULT_EXPORT when it is the default export target` — old behavior asserted size=1 with name=DEFAULT_EXPORT; new expected: size=2, contains both original name and DEFAULT_EXPORT REEXPORT
+- In `DeclarationExtractor`:
+  - Replace `applyDefaultExport(declarations, identifierName)`: instead of renaming the found declaration, **add** a new `Declaration(DEFAULT_EXPORT, REEXPORT, usedTypes=[identifierName])` to the list. Keep the original unchanged.
+  - Add `private fun hasValueDefaultExport(rootNode: TSNode): Boolean`: returns true when any `export_statement` child has a `default` keyword AND none of its children are in `DECLARATION_NODE_TYPES` (including `ABSTRACT_CLASS_DECLARATION`). This covers `export default <expression>` without catching inline class/function exports.
+  - In `extract()`: when `defaultExportIdentifier == null` but `hasValueDefaultExport` is true, append `Declaration(DEFAULT_EXPORT, REEXPORT, usedTypes=emptySet())` to the list.
+
+### 19. Fix: generator_function_declaration not extracted (TDD)
+
+`export function* permutations<T>() {}` uses node type `generator_function_declaration` — not in `DECLARATION_NODE_TYPES`. DC main extracts it as UNKNOWN (1 node in prisma: `helpers.blaze.permutations.permutations`).
+
+- Write failing test in `TypescriptDependencyTest.DeclarationExtraction`:
+  - `export function* generate(): Generator<number> { yield 1 }` → `Declaration(name="generate", type=FUNCTION)`
+- In `DeclarationExtractor`:
+  - Add `private const val GENERATOR_FUNCTION_DECLARATION = "generator_function_declaration"` constant
+  - Add `GENERATOR_FUNCTION_DECLARATION` to `DECLARATION_NODE_TYPES`
+  - In `extractName`: the `else -> arrayOf(IDENTIFIER)` branch already works (generator functions have an `identifier` child)
+  - In `declarationType`: map `GENERATOR_FUNCTION_DECLARATION -> DeclarationType.FUNCTION`
+
 ## Steps
 
 - [x] Explore TypeScript + JavaScript AST (dump samples, verify all node type assumptions)
@@ -260,11 +308,110 @@ DC already supported JSX/TSX; DC regression tests go red without it. TSX uses `L
 - [x] Fix: declare module declarations → AST dump, then implement with parentPath (TDD)
 - [x] Fix: JSX elements as usedTypes → extend UsedTypeExtractor + create TsxDependencyMapping (TDD)
 - [x] Fix: Import alias → original usedType → buildAliasMap + thread through UsedTypeExtractor (TDD)
-- [ ] Set up DC branch, run first dc-compare (TypeScript project) — iterate
+- [x] Set up DC branch, run first dc-compare (TypeScript project/prisma) — golden standard + feature output generated, diff analysed
+- [x] Fix: abstract_class_declaration not extracted → add to DECLARATION_NODE_TYPES as CLASS (TDD)
+- [x] Fix: export default behavior → keep original + add REEXPORT(DEFAULT_EXPORT); handle non-identifier value exports (TDD)
+- [x] Fix: generator_function_declaration not extracted → add to DECLARATION_NODE_TYPES as FUNCTION (TDD)
+- [ ] Rebuild TSE (publishToMavenLocal), regenerate feature output, re-run comparison — iterate until diff is acceptable
 - [ ] Run first dc-compare (JavaScript project) — iterate
 - [ ] Final verification: full test suite + ktlintCheck + architecture tests
 
 ## Session Notes
+
+### 2026-04-29 (session 2) — tasks 17–19 implemented, dc-compare interrupted
+
+**State**: Tasks 17–19 are implemented and all tests pass. DC fatJar was rebuilt with TSE 0.5.0 (mavenLocal workaround). The analysis run against prisma was interrupted before completion. **Resume next session: run the analysis + compare script below, then revert DC files.**
+
+**Resume steps:**
+```bash
+# 1. Publish TSE to local Maven (already done, but re-run if TSE changes)
+cd <path-to-tse> && ./gradlew publishToMavenLocal
+
+# 2. Temporarily update DC (revert after step 5!):
+#   settings.gradle.kts: comment out includeBuild block
+#   build.gradle.kts: add mavenLocal() repo + change TSE dep to:
+#     implementation("de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite:0.5.0")
+
+# 3. Rebuild fatJar
+cd <path-to-dc>/analysis && ./gradlew fatJar
+
+# 4. Run analysis
+JAR=$(ls build/libs/analysis-*.jar | head -1)
+java -jar "$JAR" --input <path-to-prisma-repo> --output <path-to-dc-compare>/feature/analysis.cg.json
+
+# 5. Revert DC files
+
+# 6. Compare
+python3 -c "
+import json; from collections import Counter
+m = json.load(open('<path-to-dc-compare>/main/analysis.cg.json'))['leaves']
+f = json.load(open('<path-to-dc-compare>/feature/analysis.cg.json'))['leaves']
+only_m = set(m)-set(f); only_f = set(f)-set(m)
+print(f'only in main: {len(only_m)}, only in feature: {len(only_f)}')
+print(Counter(m[k].get('nodeType') for k in only_m))
+print(Counter(f[k].get('nodeType') for k in only_f))
+"
+```
+
+**Expected result after tasks 17–19:** ~17 regressions remaining (namespace + destructured-var patterns — accepted DC-legacy quirks).
+
+---
+
+### 2026-04-29 — dc-compare first run (TypeScript/prisma) — ANALYSIS COMPLETE
+
+**State**: Root causes fully identified. Fixes planned as tasks 17–19.
+
+**Setup:**
+- Golden standard: `<path-to-dc-compare>/main/analysis.cg.json` (DC `main`, prisma repo)
+- Feature output: `<path-to-dc-compare>/feature/analysis.cg.json` (DC `feat/tse-typescript-javascript-integration` + TSE 0.5.0 via mavenLocal)
+- Composite build workaround: `includeBuild` in DC's `settings.gradle.kts` causes sonarqube `beforeEvaluate` crash. Instead: `./gradlew publishToMavenLocal` in TSE, then temporarily add `mavenLocal()` repo + explicit TSE dependency to DC's `build.gradle.kts`, remove `includeBuild`, build fatJar, run, revert.
+
+**Counts (node IDs):**
+- main leaves: 4459 | feature leaves: 4647
+- only in main (regressions): **62** | only in feature (extras): **250**
+
+**Regressions — 62 nodes in main missing from feature:**
+
+| Count | Type    | Root cause |
+|-------|---------|------------|
+| 25    | REEXPORT `_DEFAULT_EXPORT` | `export default <expression>` (call, object) → no DEFAULT_EXPORT produced (Bug B in task 18) |
+| ~8    | UNKNOWN → missing entirely | `abstract_class_declaration` not in DECLARATION_NODE_TYPES (task 17) |
+| ~4    | REEXPORT (wildcard expansion) | wildcard index files re-parse source files; abstract class gap cascades |
+| ~7    | VARIABLE / CLASS | `export default identifier` renames the local var instead of keeping it (Bug A in task 18) |
+| 1     | UNKNOWN | `generator_function_declaration` not in DECLARATION_NODE_TYPES (task 19) |
+| ~3    | REEXPORT / UNKNOWN | `export namespace Foo` — low priority; DC main extracts as UNKNOWN |
+| ~14   | VARIABLE (destructured) | `export const { cwd } = process` → DC main stores `{ cwd }` as var name; low priority |
+
+Notable abstract-class regressions: `ObjectEnumValue`, `Generator`, `TypeBuilder`, `ValueBuilder`, `PrismaLibSqlAdapterFactoryBase`, `PrismaClientError`, `AccelerateError`, `Value`.
+
+**Extras — 250 nodes in feature not in main (accepted improvements):**
+- **47 JAVASCRIPT** nodes from `.github/workflows/scripts/*.js` — DC legacy JS analyzer skips these; TSE correctly extracts them ✅
+- **161 REEXPORT + 33 VARIABLE + 30 FUNCTION + 26 CLASS** extra TypeScript nodes — feature's wildcard expansion finds more declarations because TSE extracts more declaration types than DC legacy ✅
+
+**After tasks 17–19**, estimated remaining diff: ~17 nodes (namespace + destructured-var patterns — accepted DC-legacy quirks).
+
+**Re-running dc-compare after fixes:**
+```bash
+# In TSE:
+./gradlew publishToMavenLocal
+# Temporarily in DC analysis/build.gradle.kts: add mavenLocal() + explicit TSE 0.5.0 dep
+# Temporarily in DC analysis/settings.gradle.kts: remove includeBuild block
+cd <path-to-dc>/analysis
+./gradlew fatJar
+# Run analysis on prisma:
+java -jar build/libs/analysis-*.jar --input <path-to-prisma-repo> --output <path-to-dc-compare>/feature/analysis.cg.json
+# Compare:
+python3 -c "
+import json; from collections import Counter
+m = json.load(open('<path-to-dc-compare>/main/analysis.cg.json'))['leaves']
+f = json.load(open('<path-to-dc-compare>/feature/analysis.cg.json'))['leaves']
+only_m = set(m)-set(f); only_f = set(f)-set(m)
+print(f'only in main: {len(only_m)}, only in feature: {len(only_f)}')
+print(Counter(m[k].get('nodeType') for k in only_m))
+print(Counter(f[k].get('nodeType') for k in only_f))
+"
+# Revert DC files after analysis
+```
 
 ### 2026-04-21 — DC integration fixes (5 failing test groups)
 

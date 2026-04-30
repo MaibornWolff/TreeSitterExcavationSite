@@ -181,7 +181,7 @@ class JavascriptDependencyTest {
         }
 
         @Test
-        fun `should rename declaration to DEFAULT_EXPORT when it is the default export target`() {
+        fun `should keep original declaration and add DEFAULT_EXPORT REEXPORT when local var is default-exported`() {
             // Arrange
             val code = """
                 const buildFunction = () => { return "hello"; };
@@ -192,9 +192,11 @@ class JavascriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
 
             // Assert
-            assertThat(result.declarations).hasSize(1)
-            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
-            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.VARIABLE)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName.keys).containsExactlyInAnyOrder("buildFunction", "DEFAULT_EXPORT")
+            assertThat(byName["buildFunction"]?.type).isEqualTo(DeclarationType.VARIABLE)
+            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("buildFunction")
         }
 
         @Test

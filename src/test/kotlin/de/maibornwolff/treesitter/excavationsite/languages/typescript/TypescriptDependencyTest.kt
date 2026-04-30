@@ -459,6 +459,80 @@ class TypescriptDependencyTest {
         }
 
         @Test
+        fun `should keep original variable and add DEFAULT_EXPORT REEXPORT when local var is default-exported`() {
+            // Arrange
+            val code = "const events = { EventEmitter }\nexport default events"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName.keys).containsExactlyInAnyOrder("events", "DEFAULT_EXPORT")
+            assertThat(byName["events"]?.type).isEqualTo(DeclarationType.VARIABLE)
+            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("events")
+        }
+
+        @Test
+        fun `should produce DEFAULT_EXPORT REEXPORT for export default call expression`() {
+            // Arrange
+            val code = "export default defineConfig({})"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes).isEmpty()
+        }
+
+        @Test
+        fun `should produce DEFAULT_EXPORT REEXPORT for export default object literal`() {
+            // Arrange
+            val code = "export default { performance }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes).isEmpty()
+        }
+
+        @Test
+        fun `should not produce DEFAULT_EXPORT REEXPORT for inline export default class`() {
+            // Arrange
+            val code = "export default class Foo {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val names = result.declarations.map { it.name }
+            assertThat(names).doesNotContain("DEFAULT_EXPORT")
+            assertThat(names).containsExactlyInAnyOrder("Foo")
+        }
+
+        @Test
+        fun `should not produce DEFAULT_EXPORT REEXPORT for inline export default function`() {
+            // Arrange
+            val code = "export default function foo() {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val names = result.declarations.map { it.name }
+            assertThat(names).doesNotContain("DEFAULT_EXPORT")
+            assertThat(names).containsExactlyInAnyOrder("foo")
+        }
+
+        @Test
         fun `should extract wildcard re-export as REEXPORT declaration`() {
             // Arrange
             val code = "export * from './utils'"
