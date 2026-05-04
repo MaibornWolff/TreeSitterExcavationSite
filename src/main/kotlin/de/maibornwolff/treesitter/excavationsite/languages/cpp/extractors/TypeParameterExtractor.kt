@@ -9,7 +9,7 @@ private const val FIELD_NAME = "name"
 
 internal fun extractFromTypeParameter(node: TSNode, sourceCode: String): String? {
     val nameField = node.getChildByFieldName(FIELD_NAME)
-    if (nameField != null && !nameField.isNull) {
+    if (!nameField.isNull) {
         return TreeTraversal.getNodeText(nameField, sourceCode)
     }
 

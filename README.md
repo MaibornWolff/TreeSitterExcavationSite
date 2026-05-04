@@ -104,12 +104,12 @@ val code = """
 val result = TreeSitterDependencies.analyze(code, Language.JAVA)
 
 println(result.packagePath)   // [com, example]
-println(result.imports)       // [ImportDeclaration(path=[java, util, List], isWildcard=false)]
+println(result.imports)       // [ImportDeclaration(path=[java, util, List], isWildcard=false, namespacePath=[], kind=STANDARD)]
 println(result.declarations)  // [Declaration(name=UserService, type=CLASS, usedTypes=[...])]
 
 // Check language support
 println(TreeSitterDependencies.isDependencyAnalysisSupported(Language.JAVA))   // true
-println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA, KOTLIN, CSHARP]
+println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA, KOTLIN, CSHARP, CPP]
 ```
 
 ## Supported Languages and Frameworks
@@ -127,7 +127,7 @@ println(TreeSitterDependencies.getSupportedLanguages())                        /
 | Swift | `.swift` | Stable | Stable | — |
 | Bash | `.sh`, `.bash` | Stable | Stable | — |
 | C# | `.cs` | Stable | Stable | Experimental |
-| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.h` | Stable | Stable | — |
+| C++ | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.h` | Stable | Stable | Experimental |
 | C | `.c` | Stable | Stable | — |
 | Objective-C | `.m`, `.mm` | Stable | Stable | — |
 | Vue | `.vue` | Stable | Stable | — |
