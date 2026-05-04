@@ -54,6 +54,19 @@ internal object DeclarationExtractor {
         VARIABLE_DECLARATION
     )
 
+    internal fun findInlineDefaultExportName(rootNode: TSNode, sourceCode: String): String? {
+        return rootNode
+            .children()
+            .filter { it.type == EXPORT_STATEMENT }
+            .firstNotNullOfOrNull { exportNode ->
+                val children = exportNode.children().toList()
+                if (!children.any { it.type == DEFAULT_KEYWORD }) return@firstNotNullOfOrNull null
+                val declarationChild = children.firstOrNull { it.type in DECLARATION_NODE_TYPES }
+                    ?: return@firstNotNullOfOrNull null
+                extractName(declarationChild, sourceCode).takeIf { it.isNotBlank() }
+            }
+    }
+
     fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> {
         val aliasMap = buildAliasMap(rootNode, sourceCode)
         val defaultExportIdentifier = findDefaultExportIdentifier(rootNode, sourceCode)

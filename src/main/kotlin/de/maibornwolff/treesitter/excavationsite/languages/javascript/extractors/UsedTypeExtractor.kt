@@ -112,8 +112,10 @@ internal object UsedTypeExtractor {
         val jsxNodes = buckets[JSX_OPENING_ELEMENT].orEmpty() + buckets[JSX_SELF_CLOSING_ELEMENT].orEmpty()
         return jsxNodes.mapNotNull { node ->
             val tagNode = node.children().firstOrNull {
-                it.type == JSX_IDENTIFIER || it.type == IDENTIFIER ||
-                    it.type == JSX_MEMBER_EXPRESSION || it.type == MEMBER_EXPRESSION
+                it.type == JSX_IDENTIFIER ||
+                    it.type == IDENTIFIER ||
+                    it.type == JSX_MEMBER_EXPRESSION ||
+                    it.type == MEMBER_EXPRESSION
             } ?: return@mapNotNull null
             val name = when (tagNode.type) {
                 JSX_MEMBER_EXPRESSION, MEMBER_EXPRESSION -> {

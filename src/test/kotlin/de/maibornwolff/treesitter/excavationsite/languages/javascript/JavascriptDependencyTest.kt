@@ -200,6 +200,36 @@ class JavascriptDependencyTest {
         }
 
         @Test
+        fun `should add DEFAULT_EXPORT node alongside original for export default function`() {
+            // Arrange
+            val code = "export default function IssueList(props) {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert — both the named function AND a DEFAULT_EXPORT node (DC main produces both)
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName.keys).containsExactlyInAnyOrder("IssueList", "DEFAULT_EXPORT")
+            assertThat(byName["IssueList"]?.type).isEqualTo(DeclarationType.FUNCTION)
+            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.FUNCTION)
+        }
+
+        @Test
+        fun `should add DEFAULT_EXPORT node alongside original for export default class`() {
+            // Arrange
+            val code = "export default class Charts extends Component {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert — both the named class AND a DEFAULT_EXPORT node
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName.keys).containsExactlyInAnyOrder("Charts", "DEFAULT_EXPORT")
+            assertThat(byName["Charts"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.CLASS)
+        }
+
+        @Test
         fun `should extract wildcard re-export as REEXPORT declaration`() {
             // Arrange
             val code = "export * from './module'"

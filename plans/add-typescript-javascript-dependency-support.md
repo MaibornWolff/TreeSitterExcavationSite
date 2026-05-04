@@ -1,7 +1,7 @@
 ---
 name: add-typescript-javascript-dependency-support
 issue:
-state: progress
+state: complete
 version: 1
 ---
 
@@ -312,11 +312,73 @@ Two related bugs share a root cause in `applyDefaultExport`:
 - [x] Fix: abstract_class_declaration not extracted → add to DECLARATION_NODE_TYPES as CLASS (TDD)
 - [x] Fix: export default behavior → keep original + add REEXPORT(DEFAULT_EXPORT); handle non-identifier value exports (TDD)
 - [x] Fix: generator_function_declaration not extracted → add to DECLARATION_NODE_TYPES as FUNCTION (TDD)
-- [ ] Rebuild TSE (publishToMavenLocal), regenerate feature output, re-run comparison — iterate until diff is acceptable
-- [ ] Run first dc-compare (JavaScript project) — iterate
-- [ ] Final verification: full test suite + ktlintCheck + architecture tests
+- [x] Rebuild TSE (publishToMavenLocal), regenerate feature output, re-run comparison — **12 regressions remain (accepted quirks)**
+- [x] Run first dc-compare (JavaScript project) — iterate
+- [x] Final verification: full test suite + ktlintCheck + architecture tests
 
 ## Session Notes
+
+### 2026-05-04 — dc-compare JavaScript/react COMPLETE
+
+**State**: JavaScript dc-compare done and acceptable. All tests pass, ktlint clean, architecture tests pass. Plan complete.
+
+**Test repo**: `facebook/react` (shallow clone at `<path-to-react>`)
+
+**Results (after fix):**
+- main leaves: varies | feature leaves: varies
+- only in main (regressions): **108** (accepted) | only in feature (extras): **4453**
+- Regressions breakdown:
+  - **54 `.default` FUNCTION/CLASS**: files WITHOUT `export default` that DC legacy JS analyzer spuriously adds "default" nodes to — DC artifact, not worth replicating
+  - **25 REEXPORT**: TypeScript chained wildcard expansion (index.ts → HIR.ts → Types.ts) — DC-side limitation
+  - **15 VARIABLE**: CJS `exports.xxx = value` pattern, Flow files, qualified DEFAULT_EXPORT names
+  - **14 FUNCTION**: CJS and Flow-specific patterns
+- Extras: 4453 — TSE correctly extracts many more declarations (accepted improvements)
+
+**Fix implemented (TDD)**: `export default function/class Foo()` now produces BOTH the actual name AND a DEFAULT_EXPORT node.
+- Root cause: DC legacy JS analyzer adds a "default" node for every `export default function/class Foo()` — the actual function/class AND a "default" alias
+- Fix: `JavascriptDependencyMapping.extractJsDeclarations()` calls `DeclarationExtractor.findInlineDefaultExportName()` to detect inline default exports, then ADDS a copy with `name=DEFAULT_EXPORT` (additive, not rename)
+- Tests: `should add DEFAULT_EXPORT node alongside original for export default function` and `...for export default class` in `JavascriptDependencyTest.DeclarationExtraction`
+
+**DC adapter mapping**: DC's `JavascriptAnalyzer.buildPathWithName` maps `Declaration(name="DEFAULT_EXPORT") → "default"` node name — so TSE must produce "DEFAULT_EXPORT" to match DC's graph output.
+
+**Remaining accepted regressions** (54 spurious DC artifact + 54 structured):
+- The 54 spurious "default" nodes in DC main come from files with no `export default` at all — these are a bug in DC's legacy JS analyzer, not behavior worth replicating.
+
+---
+
+### 2026-04-30 — dc-compare TypeScript/prisma re-run COMPLETE
+
+**State**: TypeScript dc-compare is done and acceptable. All tests pass. DC files reverted.
+
+**Results:**
+- main leaves: 4459 | feature leaves: 4711
+- only in main (regressions): **12** | only in feature (extras): **264**
+- Regressions: `VARIABLE: 6, REEXPORT: 3, UNKNOWN: 3` — all accepted DC-legacy quirks:
+  - 6 VARIABLE + 1 REEXPORT: destructured `export const { cwd } = process` (DC uses pattern text as name — not worth replicating)
+  - 3 UNKNOWN + 2 REEXPORT: `export namespace Foo {}` (DC extracts as UNKNOWN — TSE skips; acceptable)
+- Extras: mostly JS files DC legacy skipped + more TS declarations than DC legacy extracted ✅
+
+**Next session: JS dc-compare**
+
+1. Find a medium-sized JS repo (ES6 + CommonJS mix). Could clone something like `expressjs/express` or `npm/cli` or `facebook/react` (has JS).
+2. Run DC main against it (on the `main` branch) to generate golden standard:
+   ```bash
+   # on DC main branch:
+   cd <path-to-dc>/analysis
+   ./gradlew fatJar
+   java -jar build/libs/dependacharta.jar --directory <js-repo-path> --outputDirectory <path-to-dc-compare>/js-main --filename analysis.cg.json
+   ```
+3. Switch DC to feat branch, apply mavenLocal workaround (same as TypeScript), rebuild, run analysis → `dc-compare/js-feature/analysis.cg.json`
+4. Compare with the same Python snippet
+5. Revert DC files
+6. Once JS diff is acceptable → final verification: `./gradlew test` + `ktlintCheck`
+
+**mavenLocal workaround reminder:**
+- `settings.gradle.kts`: comment out `includeBuild` block
+- `build.gradle.kts`: add `mavenLocal()` to repositories + change TSE dep to `de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite:0.5.0`
+- Revert both files after the analysis run
+
+---
 
 ### 2026-04-29 (session 2) — tasks 17–19 implemented, dc-compare interrupted
 
