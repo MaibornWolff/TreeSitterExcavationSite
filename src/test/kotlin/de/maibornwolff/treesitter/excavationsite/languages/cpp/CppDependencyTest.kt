@@ -1665,6 +1665,25 @@ class CppDependencyTest {
                     UsedType(name = "Inner", namespacePrefix = listOf("Outer"))
                 )
             }
+
+            @Test
+            fun `should not extract using declaration nested in member function body as in-class type`() {
+                // Arrange — using std::cout is local to doWork's block scope, not Container's class scope.
+                val code = """
+                    class Container {
+                        void doWork() {
+                            using std::cout;
+                        }
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(UsedType(name = "void"))
+            }
         }
 
         @Nested

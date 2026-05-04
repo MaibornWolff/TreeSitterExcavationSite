@@ -15,8 +15,11 @@ internal object ClassScopeExtractor {
     private const val CLASS_SPECIFIER = "class_specifier"
     private const val STRUCT_SPECIFIER = "struct_specifier"
     private const val UNION_SPECIFIER = "union_specifier"
+    private const val FUNCTION_DEFINITION = "function_definition"
+    private const val COMPOUND_STATEMENT = "compound_statement"
 
     private val CLASS_BODY_TYPES = setOf(CLASS_SPECIFIER, STRUCT_SPECIFIER, UNION_SPECIFIER)
+    private val SCOPE_BOUNDARY_TYPES = CLASS_BODY_TYPES + setOf(FUNCTION_DEFINITION, COMPOUND_STATEMENT)
 
     val nodeTypes: Set<String> = setOf(FRIEND_DECLARATION, USING_DECLARATION)
 
@@ -46,6 +49,14 @@ internal object ClassScopeExtractor {
         return friendTypes + inClassUsingTypes
     }
 
-    private fun isInsideClassBody(usingDecl: TSNode): Boolean =
-        TreeTraversal.hasAncestorOfTypes(usingDecl, *CLASS_BODY_TYPES.toTypedArray())
+    private fun isInsideClassBody(usingDecl: TSNode): Boolean {
+        var current = usingDecl.parent
+        while (!current.isNull) {
+            if (current.type in SCOPE_BOUNDARY_TYPES) {
+                return current.type in CLASS_BODY_TYPES
+            }
+            current = current.parent
+        }
+        return false
+    }
 }
