@@ -23,7 +23,7 @@ includeBuild("/path/to/TreeSitterLibrary")
 
 // build.gradle.kts
 dependencies {
-    implementation("de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite:0.1.0")
+    implementation("de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite:0.8.0")
 }
 ```
 
@@ -109,7 +109,7 @@ println(result.declarations)  // [Declaration(name=UserService, type=CLASS, used
 
 // Check language support
 println(TreeSitterDependencies.isDependencyAnalysisSupported(Language.JAVA))   // true
-println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA, KOTLIN, CSHARP, CPP]
+println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA, KOTLIN, CSHARP, CPP, DELPHI]
 ```
 
 ## Supported Languages and Frameworks
@@ -132,6 +132,7 @@ println(TreeSitterDependencies.getSupportedLanguages())                        /
 | Objective-C | `.m`, `.mm` | Stable | Stable | — |
 | Vue | `.vue` | Stable | Stable | — |
 | ABL | `.p`, `.cls`, `.w`, `.i` | Experimental | Experimental | — |
+| Delphi | `.pas`, `.dpr` | Stable | Stable | Experimental |
 
 ## Available Metrics
 

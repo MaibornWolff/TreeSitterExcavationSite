@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-05-04
+
+### Added
+
 - C++ dependency analysis including namespace path, `#include`/`using` directives, declarations, and used types (11 categories)
 - `UsedType.namespacePrefix` and `ImportDeclaration.kind` (with `ImportKind` enum) on the public dependency model to support C++ qualified inline references
   and the `#include`/`using` distinction; source- and binary-compatible for non-C++ callers
@@ -84,7 +88,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Metrics API: `TreeSitterMetrics.parse(code, language) -> MetricsResult`
 - Support for 14 languages
 
-[unreleased]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.7.0...HEAD
+[unreleased]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.8.0...HEAD
+
+[0.8.0]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.7.0...v0.8.0
 
 [0.7.0]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.6.0...v0.7.0
 
