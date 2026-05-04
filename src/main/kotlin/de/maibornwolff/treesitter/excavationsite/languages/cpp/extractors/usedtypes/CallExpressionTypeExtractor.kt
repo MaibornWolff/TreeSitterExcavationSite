@@ -81,10 +81,10 @@ internal object CallExpressionTypeExtractor {
     fun extractConstructorInitializerTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
         buckets[FIELD_INITIALIZER_LIST].orEmpty().flatMap { initList ->
             initList
-                .children()
+                .namedChildren()
                 .filter { it.type == FIELD_INITIALIZER }
                 .flatMap { fieldInit ->
-                    val argList = fieldInit.children().firstOrNull { it.type == ARGUMENT_LIST || it.type == INITIALIZER_LIST }
+                    val argList = fieldInit.namedChildren().firstOrNull { it.type == ARGUMENT_LIST || it.type == INITIALIZER_LIST }
                     if (argList == null) emptySequence() else collectInitializerArgumentTypes(argList, sourceCode)
                 }.toList()
         }

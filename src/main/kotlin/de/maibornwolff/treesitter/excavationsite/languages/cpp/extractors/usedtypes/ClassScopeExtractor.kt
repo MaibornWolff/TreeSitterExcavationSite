@@ -25,11 +25,7 @@ internal object ClassScopeExtractor {
             friend
                 .namedChildren()
                 .mapNotNull { child ->
-                    when {
-                        CppTypeHelper.isTypeNode(child) -> CppTypeHelper.extractType(child, sourceCode)
-                        child.type == QUALIFIED_IDENTIFIER -> CppTypeHelper.extractRightmostSegment(child, sourceCode)
-                        else -> null
-                    }
+                    if (CppTypeHelper.isTypeNode(child)) CppTypeHelper.extractType(child, sourceCode) else null
                 }.toList()
         }
         val inClassUsingTypes = buckets[USING_DECLARATION]
