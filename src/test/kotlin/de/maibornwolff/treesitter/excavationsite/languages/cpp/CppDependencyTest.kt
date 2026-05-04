@@ -96,6 +96,21 @@ class CppDependencyTest {
         }
 
         @Test
+        fun `should use first namespace when multiple top-level namespaces are present`() {
+            // Arrange
+            val code = """
+                namespace A { class Foo {}; }
+                namespace B { class Bar {}; }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+            // Assert
+            assertThat(result.packagePath).containsExactly("A")
+        }
+
+        @Test
         fun `should find namespace wrapped in ifdef preprocessor directive`() {
             // Arrange
             val code = """
@@ -317,6 +332,29 @@ class CppDependencyTest {
                         path = listOf("Utils"),
                         isWildcard = true,
                         namespacePath = listOf("Outer", "Middle"),
+                        kind = ImportKind.STANDARD
+                    )
+                )
+            }
+
+            @Test
+            fun `should populate namespacePath for using declaration inside a namespace`() {
+                // Arrange
+                val code = """
+                    namespace App {
+                        using Utils::Foo;
+                    }
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                assertThat(result.imports).containsExactly(
+                    ImportDeclaration(
+                        path = listOf("Utils", "Foo"),
+                        isWildcard = false,
+                        namespacePath = listOf("App"),
                         kind = ImportKind.STANDARD
                     )
                 )
@@ -774,6 +812,24 @@ class CppDependencyTest {
             }
 
             @Test
+            fun `should extract all base classes from multiple inheritance`() {
+                // Arrange
+                val code = """
+                    class Child : public Base1, protected Base2 {};
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val child = result.declarations.single { it.name == "Child" }
+                assertThat(child.usedTypes).containsExactlyInAnyOrder(
+                    UsedType(name = "Base1"),
+                    UsedType(name = "Base2")
+                )
+            }
+
+            @Test
             fun `should extract template specialization as base class`() {
                 // Arrange
                 val code = """
@@ -1216,6 +1272,29 @@ class CppDependencyTest {
                         genericTypes = listOf(
                             UsedType(name = "FileLocation", namespacePrefix = listOf("ErrorMessage"))
                         )
+                    )
+                )
+            }
+
+            @Test
+            fun `should extract both type arguments from two-argument namespaced template`() {
+                // Arrange
+                val code = """
+                    class Container {
+                        std::map<Key, Value> items_;
+                    };
+                """.trimIndent()
+
+                // Act
+                val result = TreeSitterDependencies.analyze(code, Language.CPP)
+
+                // Assert
+                val container = result.declarations.single { it.name == "Container" }
+                assertThat(container.usedTypes).containsExactly(
+                    UsedType(
+                        name = "map",
+                        namespacePrefix = listOf("std"),
+                        genericTypes = listOf(UsedType(name = "Key"), UsedType(name = "Value"))
                     )
                 )
             }
