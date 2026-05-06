@@ -26,35 +26,28 @@ internal object DeclarationExtractor {
     fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> {
         val fromImportAliases = collectFromImportAliases(rootNode, sourceCode)
         val standardImportAliases = collectStandardImportAliases(rootNode, sourceCode)
+        val topLevel = rootNode.children().toList()
 
-        return rootNode
-            .children()
-            .mapNotNull { child ->
-                when (child.type) {
-                    CLASS_DEFINITION ->
-                        classOrFunctionDeclaration(
-                            child,
-                            child,
-                            sourceCode,
-                            DeclarationType.CLASS,
-                            fromImportAliases,
-                            standardImportAliases
-                        )
-                    FUNCTION_DEFINITION ->
-                        classOrFunctionDeclaration(
-                            child,
-                            child,
-                            sourceCode,
-                            DeclarationType.FUNCTION,
-                            fromImportAliases,
-                            standardImportAliases
-                        )
-                    DECORATED_DEFINITION ->
-                        unwrappedDecoratedDeclaration(child, sourceCode, fromImportAliases, standardImportAliases)
-                    EXPRESSION_STATEMENT -> simpleVariableDeclaration(child, sourceCode)
-                    else -> null
-                }
-            }.toList()
+        val basic = topLevel.mapNotNull { child ->
+            when (child.type) {
+                CLASS_DEFINITION ->
+                    classOrFunctionDeclaration(child, child, sourceCode, DeclarationType.CLASS, fromImportAliases, standardImportAliases)
+                FUNCTION_DEFINITION ->
+                    classOrFunctionDeclaration(child, child, sourceCode, DeclarationType.FUNCTION, fromImportAliases, standardImportAliases)
+                else -> null
+            }
+        }
+        val decorated = topLevel.mapNotNull { child ->
+            if (child.type == DECORATED_DEFINITION) {
+                unwrappedDecoratedDeclaration(child, sourceCode, fromImportAliases, standardImportAliases)
+            } else {
+                null
+            }
+        }
+        val assignments = topLevel.mapNotNull { child ->
+            if (child.type == EXPRESSION_STATEMENT) simpleVariableDeclaration(child, sourceCode) else null
+        }
+        return basic + decorated + assignments
     }
 
     private fun classOrFunctionDeclaration(
@@ -98,9 +91,8 @@ internal object DeclarationExtractor {
 
     private fun collectFromImportAliases(rootNode: TSNode, sourceCode: String): Map<String, String> {
         val result = mutableMapOf<String, String>()
-        rootNode
-            .children()
-            .filter { it.type == IMPORT_FROM_STATEMENT }
+        TreeTraversal
+            .findAllDescendantsOfType(rootNode, IMPORT_FROM_STATEMENT)
             .flatMap { collectAliasedNameFieldChildren(it) }
             .forEach { aliased ->
                 val alias = aliased.getChildByFieldName(FIELD_ALIAS).takeIf { !it.isNull } ?: return@forEach
@@ -113,9 +105,8 @@ internal object DeclarationExtractor {
 
     private fun collectStandardImportAliases(rootNode: TSNode, sourceCode: String): Map<String, String> {
         val result = mutableMapOf<String, String>()
-        rootNode
-            .children()
-            .filter { it.type == IMPORT_STATEMENT }
+        TreeTraversal
+            .findAllDescendantsOfType(rootNode, IMPORT_STATEMENT)
             .flatMap { it.children().filter { child -> child.type == ALIASED_IMPORT } }
             .forEach { aliased ->
                 val alias = aliased.getChildByFieldName(FIELD_ALIAS).takeIf { !it.isNull } ?: return@forEach
