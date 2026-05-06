@@ -4,7 +4,7 @@
 
 The dependencies feature extracts structural dependency information from source files: package declarations, imports, class/interface/enum declarations, and the types each declaration uses. This data is consumed by DependaCharta (DC) to build dependency graphs, detect cycles, and assign architectural levels.
 
-Java, Kotlin, and C# are implemented. Other languages will be migrated from DC's legacy analyzers over time.
+Java, Kotlin, C#, C++, Delphi, and Python are implemented. Other languages will be migrated from DC's legacy analyzers over time.
 
 ## Architecture
 
@@ -60,17 +60,19 @@ data class ImportDeclaration(
     val path: List<String>,                 // ["java", "util", "List"]
     val isWildcard: Boolean,                // true for "import java.util.*"
     val namespacePath: List<String> = [],   // namespace scope: [] = global, ["My", "Namespace"] = scoped to that namespace
-    val kind: ImportKind = STANDARD         // INCLUDE for C++ #include; STANDARD for everything else (Java/Kotlin/C#/C++ `using`)
+    val kind: ImportKind = STANDARD,        // STANDARD / INCLUDE / IMPORT_FROM — see "Import kinds" below
+    val isAliased: Boolean = false          // true for Python `from M import X as Y` and `import M as N`; alias name itself is dropped
 )
 
 enum class ImportKind {
-    STANDARD,  // e.g., Java `import`, Kotlin `import`, C# `using`, C++ `using namespace`/`using X::Y`
-    INCLUDE    // C++ `#include` — downstream adapter applies path resolution + extension normalization
+    STANDARD,    // e.g., Java `import`, Kotlin `import`, C# `using`, C++ `using namespace`/`using X::Y`, Python `import M`
+    INCLUDE,     // C++ `#include` — downstream adapter applies path resolution + extension normalization
+    IMPORT_FROM  // Python `from M import X` — module path and imported name combined into a single `path`
 }
 
 data class Declaration(
     val name: String,                       // "MyService"
-    val type: DeclarationType,              // CLASS, INTERFACE, ENUM, RECORD, ANNOTATION
+    val type: DeclarationType,              // CLASS, INTERFACE, ENUM, RECORD, ANNOTATION, FUNCTION, VARIABLE
     val usedTypes: Set<UsedType>,           // types referenced inside this declaration
     val parentPath: List<String> = []       // namespace/package path: ["com", "example"]
 )
@@ -88,12 +90,15 @@ data class UsedType(
 
 | Kind | Source | Adapter handling |
 |---|---|---|
-| `STANDARD` (default) | Java `import`, Kotlin `import`, C# `using`, C++ `using namespace` / `using X::Y` | Consumed as-is — the `path` is already the canonical reference |
+| `STANDARD` (default) | Java `import`, Kotlin `import`, C# `using`, C++ `using namespace` / `using X::Y`, Python `import os.path` | Consumed as-is — the `path` is already the canonical reference |
 | `INCLUDE` | C++ `#include "…"` or `#include <…>` only | Adapter resolves relative paths (`./`, `../`) against the file's physical path and rewrites the final segment's `.` → `_` to match DC's node-naming convention |
+| `IMPORT_FROM` | Python `from M import X` only | Adapter synthesizes the `__init__` twin (`["M", "__init__", "X"]`) alongside the canonical entry — see ADR-0004 in `docs/adr/`. Discriminates from plain `import M.X` (which would produce the same `path` shape) so twin synthesis fires only on `from`-imports. |
 
-Without this tag, a C++ DC adapter cannot tell `#include "foo"` (needs path normalization) from `using foo;` (must not be normalized) — both produce the same `(path, isWildcard, namespacePath)` triple. TSE extractors tag the AST source; adapters branch on `kind`.
+Without these tags an adapter cannot tell `#include "foo"` (needs path normalization) from `using foo;` (must not be normalized), nor `from M import X` (needs `__init__` twin) from `import M.X` (must not be twinned) — all three produce structurally similar `(path, isWildcard)` shapes. TSE extractors tag the AST source; adapters branch on `kind`.
 
-All non-C++ languages leave the field at its default (`STANDARD`), so adding the field is source- and binary-compatible with existing callers.
+The `isAliased` flag on `ImportDeclaration` is a separate, orthogonal discriminator used by the Python adapter (ADR-0006). For `from M import X as Y` TSE emits `ImportDeclaration(path=["M","X"], kind=IMPORT_FROM, isAliased=true)`; the alias name `Y` itself is dropped because TSE's Python `UsedTypeExtractor` rewrites use-site occurrences of `Y` to `X` internally (ADR-0002). Only the *fact* of aliasing is preserved, so the DC adapter can match DC main's "pre-load non-aliased twins unconditionally; conditionally pre-load aliased twins on use" behavior.
+
+All non-Python, non-C++ languages leave `kind` at its default (`STANDARD`) and `isAliased` at its default (`false`), so the fields are source- and binary-compatible with existing callers.
 
 ### Namespace-prefix handling
 
@@ -238,7 +243,7 @@ A different concatenation order with the same types produces identical dependenc
 | **C#** | constructors, methods, casts, genericParams, genericConstraints, inherited, variables, objectCreations, memberAccesses, attributes, isTypeChecks | `CsharpAnalyzer.kt` |
 | **C++** | processor list order: typeDecl, inheritance, methods, typeDef, alias, generic, define | `BodyProcessor.kt` |
 | **Go** | functionQuery, typeQuery | `GoAnalyzer.kt` |
-| **Python** | N/A — imports only, no multi-category concatenation | `PythonAnalyzer.kt` |
+| **Python** | identifier stream, attribute stream — `LinkedHashSet` preserves source order within each. Adapter then re-orders into a four-category sequence at `Node.dependencies` build time: (1) non-aliased FROM-import twins in source order, (2) wildcard FROM-import twins in source order, (3) aliased FROM-import twins in identifier-stream order (conditional on use), (4) STANDARD-import + STANDARD-alias attribute matches in attribute-stream order. | `PythonAnalyzer.kt` (legacy queries: `PythonTypeIdentifierQuery` + `PythonTypeAttributeQuery`) |
 | **JavaScript** | N/A — imports only, no multi-category concatenation | `JavascriptAnalyzer.kt` |
 | **Vue** | script imports, template components | `VueAnalyzer.kt` |
 | **Delphi** | inheritance, parameters, returnTypes, fieldTypes, propertyTypes, constTypes, variableTypes, constructorCalls, methodCalls, castTypes, attributeTypes, genericConstraintTypes | N/A — TSE-native, no DC legacy |
