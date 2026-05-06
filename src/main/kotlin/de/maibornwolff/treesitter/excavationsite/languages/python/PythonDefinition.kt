@@ -4,17 +4,19 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.CalculationConfig
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Extract
 import de.maibornwolff.treesitter.excavationsite.shared.domain.IgnoreRule
 import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDefinition
+import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDependencyMapping
 import de.maibornwolff.treesitter.excavationsite.shared.domain.LeafNodeRule
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Metric
 
 /**
- * Unified Python language definition combining metrics and extraction.
+ * Unified Python language definition combining metrics, extraction, and dependencies.
  *
- * Composes PythonMetricMapping and PythonExtractionMapping.
+ * Composes PythonMetricMapping, PythonExtractionMapping, and PythonDependencyMapping.
  */
 object PythonDefinition : LanguageDefinition {
     override val nodeMetrics: Map<String, Set<Metric>> = PythonMetricMapping.nodeMetrics
     override val nodeExtractions: Map<String, Extract> = PythonExtractionMapping.nodeExtractions
+    override val dependencyMapping: LanguageDependencyMapping = PythonDependencyMapping.dependencyMapping
 
     // ========== Calculation Configuration ==========
 

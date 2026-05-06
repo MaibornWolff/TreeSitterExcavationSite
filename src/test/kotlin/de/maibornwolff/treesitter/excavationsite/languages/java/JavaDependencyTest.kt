@@ -717,7 +717,7 @@ class JavaDependencyTest {
         @Test
         fun `should report unsupported language`() {
             // Act & Assert
-            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.PYTHON)).isFalse()
+            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.JAVASCRIPT)).isFalse()
         }
 
         @Test
@@ -726,9 +726,9 @@ class JavaDependencyTest {
             val code = "x = 1"
 
             // Act & Assert
-            assertThatThrownBy { TreeSitterDependencies.analyze(code, Language.PYTHON) }
+            assertThatThrownBy { TreeSitterDependencies.analyze(code, Language.JAVASCRIPT) }
                 .isInstanceOf(UnsupportedOperationException::class.java)
-                .hasMessageContaining("PYTHON")
+                .hasMessageContaining("JAVASCRIPT")
         }
     }
 }
