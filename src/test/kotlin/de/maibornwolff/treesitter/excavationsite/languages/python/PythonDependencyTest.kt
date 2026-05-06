@@ -4,6 +4,7 @@ import de.maibornwolff.treesitter.excavationsite.api.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.api.ImportKind
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
+import de.maibornwolff.treesitter.excavationsite.api.UsedType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -385,6 +386,111 @@ class PythonDependencyTest {
             // Assert
             assertThat(result.declarations).hasSize(1)
             assertThat(result.declarations[0].name).isEqualTo("Outer")
+        }
+    }
+
+    @Nested
+    inner class UsedTypeExtraction {
+        @Test
+        fun `should emit identifier references inside a class as UsedType`() {
+            // Arrange
+            val code = """
+            class Holder:
+                def get():
+                    return Foo
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            val foos = result.declarations[0].usedTypes.filter { it.name == "Foo" }
+            assertThat(foos).containsExactly(UsedType("Foo"))
+        }
+
+        @Test
+        fun `should emit attribute reference with last segment as name and earlier segments as namespacePrefix`() {
+            // Arrange
+            val code = """
+            def handler():
+                return os.path.join("a", "b")
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            val attributes = result.declarations[0].usedTypes.filter { it.namespacePrefix.isNotEmpty() }
+            assertThat(attributes).containsExactlyInAnyOrder(
+                UsedType(name = "join", namespacePrefix = listOf("os", "path")),
+                UsedType(name = "path", namespacePrefix = listOf("os"))
+            )
+        }
+
+        @Test
+        fun `should rewrite FROM-import alias to original name in identifier stream`() {
+            // Arrange
+            val code = """
+            from numpy import ndarray as Array
+            def make() -> Array:
+                return Array()
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            val rewritten = result.declarations[0].usedTypes.filter { it.name == "ndarray" || it.name == "Array" }
+            assertThat(rewritten).containsExactly(UsedType("ndarray"))
+        }
+
+        @Test
+        fun `should rewrite STANDARD-import alias prefix to original module name in attribute stream`() {
+            // Arrange
+            val code = """
+            import numpy as np
+            def make():
+                return np.array([1, 2])
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            val attributes = result.declarations[0].usedTypes.filter { it.namespacePrefix.isNotEmpty() }
+            assertThat(attributes).containsExactly(UsedType(name = "array", namespacePrefix = listOf("numpy")))
+        }
+
+        @Test
+        fun `should run UsedTypeExtractor over the outer decorated subtree so decorators contribute`() {
+            // Arrange
+            val code = """
+            @app.route
+            def handler():
+                pass
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            val attributes = result.declarations[0].usedTypes.filter { it.namespacePrefix.isNotEmpty() }
+            assertThat(attributes).containsExactly(UsedType(name = "route", namespacePrefix = listOf("app")))
+        }
+
+        @Test
+        fun `should leave VARIABLE declarations with empty usedTypes`() {
+            // Arrange
+            val code = """
+            CONSTANT = some_factory(SomeType)
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.VARIABLE)
+            assertThat(result.declarations[0].usedTypes).isEmpty()
         }
     }
 }

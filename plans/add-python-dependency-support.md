@@ -100,7 +100,7 @@ DC branch already exists: `feat/python-dependency-integration`. Two distinct pie
 - [x] Complete grill Q1–Q12
 - [x] Write ADRs 0001–0006
 - [x] Domain-type changes (Task 1)
-- [ ] Python language module (Task 2)
+- [x] Python language module (Task 2)
 - [ ] Tests (Task 3)
 - [ ] README correction (Task 4)
 - [ ] DC adapter migration (Task 5)
