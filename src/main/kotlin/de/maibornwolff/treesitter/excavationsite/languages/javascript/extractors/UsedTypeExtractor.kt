@@ -128,4 +128,13 @@ internal object UsedTypeExtractor {
             UsedType(name = name)
         }
     }
+
+    // Walk the leftmost spine of a member expression to find the root identifier
+    private fun findLeftmostIdentifier(node: TSNode): TSNode? {
+        var current = node
+        while (current.type == JSX_MEMBER_EXPRESSION || current.type == MEMBER_EXPRESSION) {
+            current = current.children().firstOrNull() ?: return null
+        }
+        return if (current.type == JSX_IDENTIFIER || current.type == IDENTIFIER) current else null
+    }
 }

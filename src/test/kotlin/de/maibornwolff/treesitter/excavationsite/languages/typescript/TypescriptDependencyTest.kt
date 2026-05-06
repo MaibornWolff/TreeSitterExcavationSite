@@ -234,6 +234,20 @@ class TypescriptDependencyTest {
         }
 
         @Test
+        fun `should map default keyword to DEFAULT_EXPORT sentinel in re-export import path`() {
+            // Arrange
+            val code = "export { default as validationMixin } from './mixins/validation.mixin'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly(".", "mixins", "validation.mixin", "DEFAULT_EXPORT")
+            assertThat(result.imports[0].isWildcard).isFalse()
+        }
+
+        @Test
         fun `should extract wildcard re-export as import`() {
             // Arrange
             val code = "export * from './utils'"

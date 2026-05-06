@@ -24,9 +24,11 @@ internal object ImportExtractor {
     private const val SHORTHAND_PROPERTY_IDENTIFIER_PATTERN = "shorthand_property_identifier_pattern"
     private const val PAIR_PATTERN = "pair_pattern"
     private const val PROPERTY_IDENTIFIER = "property_identifier"
+    private const val TEMPLATE_STRING = "template_string"
     private const val REQUIRE = "require"
     private const val IMPORT_KEYWORD = "import"
     private const val PATH_SEPARATOR = "/"
+
     fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> {
         val es6Imports = extractEs6Imports(rootNode, sourceCode)
         val commonJsImports = extractCommonJsImports(rootNode, sourceCode)
