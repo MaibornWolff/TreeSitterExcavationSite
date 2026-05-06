@@ -784,6 +784,8 @@ class TypescriptDependencyTest {
             assertThat(byName).containsKeys("a", "b")
             assertThat(byName["a"]?.type).isEqualTo(DeclarationType.VARIABLE)
             assertThat(byName["b"]?.type).isEqualTo(DeclarationType.VARIABLE)
+            assertThat(byName["a"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("TypeA")
+            assertThat(byName["b"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("TypeB")
         }
 
         @Test

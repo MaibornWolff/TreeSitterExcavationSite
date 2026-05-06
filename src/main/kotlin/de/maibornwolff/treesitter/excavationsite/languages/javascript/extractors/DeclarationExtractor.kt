@@ -230,7 +230,7 @@ internal object DeclarationExtractor {
                 Declaration(
                     name = name,
                     type = DeclarationType.VARIABLE,
-                    usedTypes = UsedTypeExtractor.extract(node, sourceCode, aliasMap),
+                    usedTypes = UsedTypeExtractor.extract(declarator, sourceCode, aliasMap),
                     parentPath = parentPath
                 )
             }
