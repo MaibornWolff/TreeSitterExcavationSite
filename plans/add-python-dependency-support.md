@@ -107,3 +107,27 @@ DC branch already exists: `feat/python-dependency-integration`. Two distinct pie
 - [x] dc-compare iteration to parity (Task 6)
 - [ ] Release (Task 7)
 - [ ] Backfill dependency goldens for Java/Kotlin/C#/C++ (Task 8 — follow-up)
+
+## Session handoff (paused after Task 6)
+
+**Where parity was verified.** `/dc-compare ../flask` returned **MATCH** (0 diff lines) after two iteration fixes that landed during Task 6:
+- `b049eec fix(python): walk all import statements recursively` — `ImportExtractor` and the `DeclarationExtractor` alias collectors now use `findAllDescendantsOfType` so imports nested inside function bodies (flask's `from . import views` pattern in `create_app()`) are captured. DC's legacy TSQuery captured these at any depth.
+- `4cb2446 fix(python): emit Declarations in DC's categorical order` — `DeclarationExtractor.extract` returns declarations as `basic + decorated + assignments` rather than source order. DC's `ReportService.associateBy { pathWithName }` keeps the *last* duplicate per ID, and DC's legacy `PythonDefinitionsQuery` produces that categorical order. Affects overload sets like `flask.helpers.stream_with_context` (three definitions sharing one name).
+
+The first `dc-compare` run on flask is the canonical regression for both fixes — re-run it before any future change to `ImportExtractor` or `DeclarationExtractor`.
+
+**Working-tree state at handoff.**
+- TSE branch `feat/python-dependency-support` — clean working tree; commits up through `e57a598 test(python): capture golden dependency contract for python_sample.py`.
+- DC branch `feat/python-dependency-integration` — clean working tree; two commits ahead of `main` (`d941f1e` composite-build wiring + TseMappings extension; `de3c509` PythonAnalyzer adapter rewrite).
+- DC has **legacy code still on disk and unused**: `analyzers/python/queries/{PythonDefinitionsQuery,PythonImportQuery,PythonTypeAttributeQuery,PythonTypeIdentifierQuery}.kt` and `analyzers/python/PythonUtils.kt`. User asked to keep these around until the whole feature lands; delete as part of Task 7 once the TSE tag is published and DC is back on JitPack.
+- DC's `analysis/settings.gradle.kts` and `analysis/build.gradle.kts` carry the **TEMPORARY** composite-build wiring marked with `// TEMPORARY: REVERT before opening the DC PR` comments. Revert sequence is in Task 7 below.
+- Reference corpus checkout lives at `/c/Users/ChristianSpa/IdeaProjects/DCTSE/flask` (sibling). `dc-compare` outputs at `/c/Users/ChristianSpa/IdeaProjects/DCTSE/dc-compare/{main,feature}/` — `main/` is the golden, regenerate only on demand.
+
+**Resume here for Task 7.**
+1. Open the TSE PR off `feat/python-dependency-support`. Body should highlight the four extractors, the two parity fixes, and the new golden contract test.
+2. Once merged, tag TSE (`v0.9.0` is the placeholder used in this plan; check the existing tag sequence before picking).
+3. In DC: delete the legacy queries and `PythonUtils.kt`, revert the composite-build lines from `analysis/settings.gradle.kts` and `analysis/build.gradle.kts`, and switch the dependency back to `com.github.MaibornWolff:TreeSitterExcavationSite:<new-tag>`.
+4. Re-run `/dc-compare ../flask` from TSE (which by now points at JitPack) one more time to confirm the released build still produces MATCH.
+5. Open the DC PR.
+
+Task 8 (backfill goldens for Java/Kotlin/C#/C++) is mechanical and not a blocker for Python's release — defer or ship as its own PR.
