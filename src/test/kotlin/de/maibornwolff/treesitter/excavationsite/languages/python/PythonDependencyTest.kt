@@ -1,5 +1,6 @@
 package de.maibornwolff.treesitter.excavationsite.languages.python
 
+import de.maibornwolff.treesitter.excavationsite.api.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.api.ImportKind
 import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
@@ -230,6 +231,160 @@ class PythonDependencyTest {
             // Assert
             assertThat(result.imports).hasSize(1)
             assertThat(result.imports[0].path).containsExactly(".", "sibling")
+        }
+    }
+
+    @Nested
+    inner class DeclarationExtraction {
+        @Test
+        fun `should extract top-level class as CLASS declaration`() {
+            // Arrange
+            val code = """
+            class MyService:
+                pass
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MyService")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.CLASS)
+            assertThat(result.declarations[0].parentPath).isEmpty()
+        }
+
+        @Test
+        fun `should extract top-level function as FUNCTION declaration`() {
+            // Arrange
+            val code = """
+            def compute():
+                return 1
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("compute")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.FUNCTION)
+        }
+
+        @Test
+        fun `should extract simple module-level assignment as VARIABLE declaration`() {
+            // Arrange
+            val code = """
+            MAX_RETRIES = 3
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("MAX_RETRIES")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.VARIABLE)
+            assertThat(result.declarations[0].usedTypes).isEmpty()
+        }
+
+        @Test
+        fun `should not extract tuple-unpacking assignment as VARIABLE`() {
+            // Arrange
+            val code = """
+            a, b = 1, 2
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
+
+        @Test
+        fun `should extract annotated assignment as VARIABLE`() {
+            // Arrange
+            val code = """
+            counter: int = 0
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("counter")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.VARIABLE)
+        }
+
+        @Test
+        fun `should not extract attribute-LHS assignment as VARIABLE`() {
+            // Arrange
+            val code = """
+            obj.field = 1
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
+
+        @Test
+        fun `should unwrap decorated function and emit FUNCTION declaration`() {
+            // Arrange
+            val code = """
+            @decorator
+            def handler():
+                pass
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("handler")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.FUNCTION)
+        }
+
+        @Test
+        fun `should unwrap decorated class and emit CLASS declaration`() {
+            // Arrange
+            val code = """
+            @dataclass
+            class Item:
+                pass
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("Item")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.CLASS)
+        }
+
+        @Test
+        fun `should not extract nested class or function as separate declaration`() {
+            // Arrange
+            val code = """
+            class Outer:
+                class Inner:
+                    pass
+                def method(self):
+                    pass
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("Outer")
         }
     }
 }
