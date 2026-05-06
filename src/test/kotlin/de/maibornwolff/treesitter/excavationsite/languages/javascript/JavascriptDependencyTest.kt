@@ -246,6 +246,26 @@ class JavascriptDependencyTest {
     }
 
     @Nested
+    inner class JsxSmokeTest {
+        @Test
+        fun `should extract JSX component as usedType when parsing jsx file content`() {
+            // Arrange
+            val code = """
+                export class App {
+                    render() { return <MyComponent /> }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            val appDeclaration = result.declarations.first { it.name == "App" }
+            assertThat(appDeclaration.usedTypes.map { it.name }).containsExactlyInAnyOrder("App", "MyComponent")
+        }
+    }
+
+    @Nested
     inner class ApiSupportCheck {
         @Test
         fun `should support JavaScript dependency analysis`() {
