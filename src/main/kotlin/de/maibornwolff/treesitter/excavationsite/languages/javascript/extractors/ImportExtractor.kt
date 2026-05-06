@@ -1,5 +1,6 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_EXPORT
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportDeclaration
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
@@ -26,8 +27,6 @@ internal object ImportExtractor {
     private const val REQUIRE = "require"
     private const val IMPORT_KEYWORD = "import"
     private const val PATH_SEPARATOR = "/"
-    private const val DEFAULT_EXPORT = "DEFAULT_EXPORT"
-
     fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> {
         val es6Imports = extractEs6Imports(rootNode, sourceCode)
         val commonJsImports = extractCommonJsImports(rootNode, sourceCode)

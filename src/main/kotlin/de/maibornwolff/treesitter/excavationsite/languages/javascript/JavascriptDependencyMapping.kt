@@ -6,8 +6,6 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDependencyMapping
 import org.treesitter.TSNode
 
-private const val DEFAULT_EXPORT = "DEFAULT_EXPORT"
-
 internal object JavascriptDependencyMapping {
     val dependencyMapping = LanguageDependencyMapping(
         extractPackagePath = { _, _ -> emptyList() }, // JS/TS have no package declarations

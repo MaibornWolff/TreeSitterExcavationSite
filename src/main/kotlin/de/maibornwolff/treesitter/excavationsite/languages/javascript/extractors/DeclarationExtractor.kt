@@ -1,5 +1,6 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_EXPORT
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.shared.domain.UsedType
@@ -24,7 +25,6 @@ internal object DeclarationExtractor {
     private const val EXPORT_SPECIFIER = "export_specifier"
     private const val STRING = "string"
     private const val STRING_FRAGMENT = "string_fragment"
-    private const val DEFAULT_EXPORT = "DEFAULT_EXPORT"
     private const val DEFAULT_KEYWORD = "default"
     private const val WILDCARD_REEXPORT = "*"
 
