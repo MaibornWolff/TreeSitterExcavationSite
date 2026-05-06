@@ -230,6 +230,36 @@ class JavascriptDependencyTest {
         }
 
         @Test
+        fun `should add DEFAULT_EXPORT REEXPORT for anonymous export default class`() {
+            // Arrange
+            val code = "export default class {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes).isEmpty()
+        }
+
+        @Test
+        fun `should add DEFAULT_EXPORT REEXPORT for anonymous export default function`() {
+            // Arrange
+            val code = "export default function() {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes).isEmpty()
+        }
+
+        @Test
         fun `should extract wildcard re-export as REEXPORT declaration`() {
             // Arrange
             val code = "export * from './module'"

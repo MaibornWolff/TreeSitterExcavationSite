@@ -88,7 +88,7 @@ internal object DeclarationExtractor {
                     type = DeclarationType.REEXPORT,
                     usedTypes = setOf(UsedType(defaultExportIdentifier))
                 )
-            hasValueDefaultExport(rootNode) ->
+            hasValueDefaultExport(rootNode) || hasAnonymousDefaultDeclaration(rootNode, sourceCode) ->
                 declarations + Declaration(
                     name = DEFAULT_EXPORT,
                     type = DeclarationType.REEXPORT,
@@ -118,6 +118,17 @@ internal object DeclarationExtractor {
             val children = exportNode.children().toList()
             children.any { it.type == DEFAULT_KEYWORD } &&
                 children.none { it.type in DECLARATION_NODE_TYPES }
+        }
+
+    private fun hasAnonymousDefaultDeclaration(rootNode: TSNode, sourceCode: String): Boolean = rootNode
+        .children()
+        .filter { it.type == EXPORT_STATEMENT }
+        .any { exportNode ->
+            val children = exportNode.children().toList()
+            val declarationChild = children.firstOrNull { it.type in DECLARATION_NODE_TYPES }
+            children.any { it.type == DEFAULT_KEYWORD } &&
+                declarationChild != null &&
+                extractName(declarationChild, sourceCode).isBlank()
         }
 
     private fun extractFromAmbientDeclaration(
