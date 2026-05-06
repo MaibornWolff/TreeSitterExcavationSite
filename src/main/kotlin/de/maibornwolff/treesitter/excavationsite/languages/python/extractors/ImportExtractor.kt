@@ -18,18 +18,19 @@ internal object ImportExtractor {
     private const val FIELD_NAME = "name"
     private const val SEPARATOR = "."
 
-    fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = rootNode
-        .children()
+    fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
+        .findAllDescendantsOfType(rootNode, IMPORT_STATEMENT, IMPORT_FROM_STATEMENT)
         .flatMap { node ->
             when (node.type) {
                 IMPORT_STATEMENT -> extractStandardImports(node, sourceCode)
                 IMPORT_FROM_STATEMENT -> extractFromImports(node, sourceCode)
-                else -> emptySequence()
+                else -> emptyList()
             }
-        }.toList()
+        }
 
-    private fun extractStandardImports(node: TSNode, sourceCode: String): Sequence<ImportDeclaration> =
-        node.children().mapNotNull { child ->
+    private fun extractStandardImports(node: TSNode, sourceCode: String): List<ImportDeclaration> = node
+        .children()
+        .mapNotNull { child ->
             when (child.type) {
                 DOTTED_NAME -> standardImport(child, sourceCode, isAliased = false)
                 ALIASED_IMPORT -> {
@@ -38,7 +39,7 @@ internal object ImportExtractor {
                 }
                 else -> null
             }
-        }
+        }.toList()
 
     private fun standardImport(dottedName: TSNode, sourceCode: String, isAliased: Boolean): ImportDeclaration = ImportDeclaration(
         path = TreeTraversal.getNodeText(dottedName, sourceCode).split(SEPARATOR),
@@ -47,21 +48,21 @@ internal object ImportExtractor {
         isAliased = isAliased
     )
 
-    private fun extractFromImports(node: TSNode, sourceCode: String): Sequence<ImportDeclaration> {
-        val moduleNode = node.getChildByFieldName(FIELD_MODULE_NAME).takeIf { !it.isNull } ?: return emptySequence()
-        val modulePath = extractModulePath(moduleNode, sourceCode) ?: return emptySequence()
+    private fun extractFromImports(node: TSNode, sourceCode: String): List<ImportDeclaration> {
+        val moduleNode = node.getChildByFieldName(FIELD_MODULE_NAME).takeIf { !it.isNull } ?: return emptyList()
+        val modulePath = extractModulePath(moduleNode, sourceCode) ?: return emptyList()
 
         val isWildcard = node.children().any { it.type == WILDCARD_IMPORT }
         if (isWildcard) {
-            return sequenceOf(
+            return listOf(
                 ImportDeclaration(path = modulePath, isWildcard = true, kind = ImportKind.IMPORT_FROM)
             )
         }
 
         val nameNodes = nameFieldChildren(node)
-        if (nameNodes.isEmpty()) return emptySequence()
+        if (nameNodes.isEmpty()) return emptyList()
 
-        return nameNodes.asSequence().mapNotNull { nameNode ->
+        return nameNodes.mapNotNull { nameNode ->
             when (nameNode.type) {
                 DOTTED_NAME -> fromImport(modulePath, nameNode, sourceCode, isAliased = false)
                 ALIASED_IMPORT -> {
