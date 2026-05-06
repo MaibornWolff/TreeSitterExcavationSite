@@ -91,7 +91,7 @@ Convert grill outcomes into concrete implementation steps. Order follows the dep
 
 - [x] Complete grill Q1–Q12
 - [x] Write ADRs 0001–0006
-- [ ] Domain-type changes (Task 1)
+- [x] Domain-type changes (Task 1)
 - [ ] Python language module (Task 2)
 - [ ] Tests (Task 3)
 - [ ] README correction (Task 4)

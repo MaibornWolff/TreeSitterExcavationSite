@@ -97,20 +97,22 @@ All non-C++ languages leave the field at its default (`STANDARD`), so adding the
 
 ### Namespace-prefix handling
 
-`UsedType.namespacePrefix` captures the scope segments that appear *before* a type name at the use site. For `A::B::Settings` it is `["A", "B"]`; for an unqualified `Settings` it is `[]`.
+`UsedType.namespacePrefix` captures the qualifier segments that appear *before* a type name at the use site. For `A::B::Settings` it is `["A", "B"]`; for an unqualified `Settings` it is `[]`. The exact meaning of "qualifier" is language-specific (namespace scopes in C++, attribute-access chains in Python).
 
-**Why it exists — and why it's essentially a C++ concern:**
+**Per-language interpretation:**
 
 | Language | Typical style | Does `namespacePrefix` carry info? |
 |---|---|---|
 | Java, Kotlin, C# | Import types at the top, use short names inline. Qualified inline usage (`com.other.Settings s`) is rare and idiomatically discouraged. | No — always empty. The import list already carries the neighborhood info the resolver needs. |
-| C++ | `using namespace` is discouraged in headers because it pollutes scope. Writing `cppcheck::Settings` inline is **the normal way** to reference cross-namespace types. | Yes — populated on every qualified inline reference. |
-| TypeScript, JavaScript, Python, Go, Vue | Import-aliased usage (`pkg.Type`) is idiomatic but stored as a dotted string in `UsedType.name`; the resolver splits on `.`. | No — always empty. |
+| C++ | `using namespace` is discouraged in headers because it pollutes scope. Writing `cppcheck::Settings` inline is **the normal way** to reference cross-namespace types. | Yes — namespace/scope segments populated on every qualified inline reference. |
+| Python | Attribute access on imported modules (`os.path.join`, `httpx.AsyncClient`) is the idiomatic way to reach into an imported package; the segments before the final identifier are the qualifier. | Yes — attribute-access segments populated for every `(attribute)` AST node. `namespacePrefix.isEmpty()` discriminates identifier-stream usages from attribute-stream usages. |
+| TypeScript, JavaScript, Go, Vue | Import-aliased usage (`pkg.Type`) is idiomatic but stored as a dotted string in `UsedType.name`; the resolver splits on `.`. | No — always empty. |
 | PHP | Has namespaces similar to C++; could opt in if the same resolver gap appears. | Optional; opt-in per extractor. |
 
-**How a DC-side adapter consumes it:** when building a node's `dependencies` set, emit a synthetic `Dependency(Path(namespacePrefix), isWildcard = true)` per `UsedType` that has a non-empty prefix. This mirrors what DC's legacy C++ analyzer did implicitly via `TypeExtractionService.extractTypeWithFoundNamespacesAsDependencies`: for every qualified usage, add a wildcard pointing at the type's neighborhood so the resolver can match the short name against classes declared there.
+**How a DC-side adapter consumes it:** consumption is language-specific.
 
-The resolver itself needs no changes — the existing wildcard-matching loop in `Node.resolveTypeImport` already prepends wildcards to type names and looks for project matches.
+- **C++** — for every `UsedType` with a non-empty prefix, emit a synthetic `Dependency(Path(namespacePrefix), isWildcard = true)` into the node's `dependencies` set. This mirrors what DC's legacy C++ analyzer did implicitly via `TypeExtractionService.extractTypeWithFoundNamespacesAsDependencies`: for every qualified usage, add a wildcard pointing at the type's neighborhood so the resolver can match the short name against classes declared there. The resolver itself needs no changes — the existing wildcard-matching loop in `Node.resolveTypeImport` already prepends wildcards to type names and looks for project matches.
+- **Python** — demultiplex on `namespacePrefix.isEmpty()`: empty → identifier-stream usage, route into `Node.usedTypes`; non-empty → attribute-stream usage, match the joined prefix against the file's `STANDARD`-kind imports and STANDARD-aliases (`import os.path`, `import os.path as op`) and route resolved hits into `Node.dependencies`.
 
 ### Primitive and sized-type representation
 
