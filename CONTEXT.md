@@ -5,7 +5,7 @@ A standalone Kotlin library that runs tree-sitter over source files and emits st
 ## Language
 
 **Package path**:
-The list of segments that locate a source file inside its project (e.g. `["com", "example", "service"]`). For Java, Kotlin, C#, and C++ this is read from an in-source `package` / `namespace` token; for Python it is the file's filesystem path with the language extension stripped, derived by the consumer (DependaCharta), not by TSE.
+The list of segments that locate a source file inside its project (e.g. `["com", "example", "service"]`). For Java, Kotlin, C#, and C++ this is read from an in-source `package` / `namespace` token; for Python it is the file's path *relative to the project source root* with `.py` stripped (e.g. `src/flask/app.py` → `["flask", "app"]`), derived by the consumer (DependaCharta), not by TSE.
 _Avoid_: module path (DC's term in Python code — same concept), namespace path (overloaded with `UsedType.namespacePrefix`).
 
 **Declaration**:

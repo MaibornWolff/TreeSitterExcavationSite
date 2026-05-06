@@ -24,6 +24,9 @@ The DC adapter is now that consumer.
 val (aliasedFromImports, regularFromImports) = imports
     .filter { it.kind == ImportKind.IMPORT_FROM }
     .partition { it.isAliased }
+val standardImportPaths = imports
+    .filter { it.kind == ImportKind.STANDARD }
+    .map { it.path.joinToString(".") }
 
 declaration.dependencies = if (declaration.type == DeclarationType.VARIABLE) {
     emptySet()                                                         // VARIABLE Nodes are isolated leaves in DC
@@ -33,11 +36,11 @@ declaration.dependencies = if (declaration.type == DeclarationType.VARIABLE) {
         if (declaration.usedTypes.any { it.name == imp.path.last() })  // conditionally pre-loaded
             twin(imp) else emptyList()
     } +
-    attributeMatches(declaration.usedTypes, standardImports, aliasedStandardImports)
+    attributeMatches(declaration.usedTypes, standardImportPaths)       // matches usedTypes with non-empty namespacePrefix
 }
 ```
 
-`twin(imp)` synthesizes the canonical and `__init__` Dependencies per ADR-0004. The `VARIABLE` exception mirrors DC's early return at `PythonAnalyzer.kt:94-103`, which discards the pre-loaded `mutableImportFromDependencies` for top-level identifier captures and returns `dependencies = setOf(), usedTypes = setOf()`.
+`twin(imp)` synthesizes the canonical and `__init__` Dependencies per ADR-0004. `attributeMatches` filters `usedTypes` to those with non-empty `namespacePrefix` (per ADR-0005), joins the prefix with `"."`, and emits a twin pair per match against `standardImportPaths`. **No separate `aliasedStandardImports` parameter is needed**: per ADR-0002 TSE's `UsedTypeExtractor` rewrites `import os.path as op; op.join` → `UsedType("join", ["os","path"])` at the use site, so the adapter sees the post-rewrite prefix and matches directly against the canonical (non-aliased) `standardImportPaths` entry. The `isAliased` flag is only consulted on `IMPORT_FROM` kinds. The `VARIABLE` exception mirrors DC's early return at `PythonAnalyzer.kt:94-103`, which discards the pre-loaded `mutableImportFromDependencies` for top-level identifier captures and returns `dependencies = setOf(), usedTypes = setOf()`.
 
 ## Considered Options
 

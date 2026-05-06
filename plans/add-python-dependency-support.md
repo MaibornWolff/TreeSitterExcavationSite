@@ -13,7 +13,7 @@ Migrate DependaCharta's legacy Python dependency analyzer to TSE. Python is a Cl
 
 ## Grill state
 
-This plan was started via `/grill-with-docs`. Decisions locked in so far are recorded as ADRs in `docs/adr/`. Q1–Q11 resolved. Resume at Q12 (reference corpus for dc-compare) — last grill branch.
+This plan was started via `/grill-with-docs`. Decisions locked in are recorded as ADRs in `docs/adr/`. Q1–Q12 resolved — grill complete. Implementation starts at Task 1.
 
 ### Decisions locked in
 
@@ -29,8 +29,9 @@ This plan was started via `/grill-with-docs`. Decisions locked in so far are rec
 - **Q9 confirmations (no ADR)** — Adapter pre-loads non-aliased `IMPORT_FROM` twins on every CLASS/FUNCTION Declaration's dependencies (mirrors DC's `mutableImportFromDependencies` initialization). Adapter detects `modulePath.last() == "__init__"` from `FileInfo.physicalPath` and creates one Node per re-export (filesystem-state in adapter per ADR-0001). STANDARD-import attribute matching uses `usedTypes` with non-empty `namespacePrefix` per ADR-0005.
 - **Q10 / no ADR** — Module-level VARIABLE Declarations have empty `usedTypes` and empty `dependencies` (no pre-loaded import twins). Mirrors DC's early return at `PythonAnalyzer.kt:94-103`. Only simple `IDENTIFIER = ...` form captured — tuple unpacking, subscripts, attribute LHS, augmented and annotated assignments are all skipped. The RHS expression is never extracted. Adapter must check `declaration.type == VARIABLE` and skip pre-loading (codified in ADR-0006's algorithm).
 - **Q11 / no ADR** — Mirror DC's four-category concatenation order in adapter's `Node.dependencies`: (1) non-aliased FROM-import twins in source order, (2) wildcard FROM-import twins in source order, (3) aliased FROM-import twins in identifier-stream order (conditional on use), (4) STANDARD-import + STANDARD-alias attribute matches in attribute-stream order. TSE's `PythonUsedTypeExtractor` builds `(identifierStream + attributeStream).toSet()` mirroring Java's pattern at `JavaUsedTypeExtractor.kt:63-66`. `LinkedHashSet` preserves insertion order. Pin within-stream order with an extractor unit test. Update `integration/dependencies/README.md` to correct the "imports only, no concatenation" claim.
+- **Q12 / no ADR** — Reference corpus is **flask** (single corpus, sibling-cloned as `../flask`). Mid-sized (~50 .py), exercises decorators heavily, strong `__init__.py` re-exports, mix of relative/absolute imports, qualified attribute access on werkzeug. No vendored-deps pollution (unlike `requests`). Aliased-FROM density is light in flask — accepted gap, covered by `PythonDependencyTest` unit tests for ADR-0006's `isAliased` path rather than corpus diff. Single-corpus playbook mirrors C++ (cppcheck only). `pytest` held as stretch validation if flask's diff goes empty before all four quirks have been exercised in the wild.
 
-### Pitfalls flagged in ADR-0004 / ADR-0005 (re-surface during Q6 and implementation)
+### Pitfalls flagged in ADR-0004 / ADR-0005 (re-surface during implementation)
 
 - `ImportKind` must come straight from the AST node type — heuristic on `path.size` would mis-twin `import X.Y`.
 - `import X.Y` parity (ADR-0004 → ADR-0005): `UsedTypeExtractor` must populate `namespacePrefix` for every `(attribute)` AST node so the adapter can match the joined prefix against `STANDARD` imports.
@@ -42,11 +43,7 @@ This plan was started via `/grill-with-docs`. Decisions locked in so far are rec
 
 - `CONTEXT.md` — created at repo root with terms: **package path** (canonical, vs DC's `modulePath`), **Declaration**, **Used type**, **Class 1 / Class 2 namespace models**.
 
-## Pending — Question 12 (reference corpus for dc-compare)
-
-- **Q12 — Reference corpus.** Pick a medium-sized open-source Python repo for `dc-compare` against DC main. Per `dependency-migration.md`: must have packages (not flat), use both relative and absolute imports, and ideally exercise the quirks (aliased FROM-imports, `__init__.py` re-exports, decorators, attribute access on imported modules). Candidates: `requests`, `flask`, `httpie`, `black`, `pytest`. Picking a corpus settles the dc-compare iteration target before implementation begins.
-
-## Tasks (sketch — finalize once Q12 settles)
+## Tasks
 
 Convert grill outcomes into concrete implementation steps. Order follows the dependency: structural changes first, language extractors next, adapter migration last.
 
@@ -60,7 +57,7 @@ Convert grill outcomes into concrete implementation steps. Order follows the dep
 - `languages/python/PythonDefinition.kt` — register dependency mapping
 - `languages/python/PythonDependencyMapping.kt` — compose extractors
 - `languages/python/extractors/PackageExtractor.kt` — returns empty path (ADR-0001)
-- `languages/python/extractors/ImportExtractor.kt` — emits `IMPORT_FROM` / `STANDARD` / wildcards / aliased flag / leading-dots relative encoding / multi-name split / empty-name skip (ADR-0003, ADR-0004, ADR-0006, Q5b/c/e)
+- `languages/python/extractors/ImportExtractor.kt` — emits `IMPORT_FROM` / `STANDARD` / wildcards / aliased flag / leading-dots relative encoding / multi-name split / empty-name skip (ADR-0003, ADR-0004, ADR-0006)
 - `languages/python/extractors/DeclarationExtractor.kt` — class/function/variable, decorated_definition unwrap (Q2, Q8, Q10)
 - `languages/python/extractors/UsedTypeExtractor.kt` — two-stream (identifier + attribute), alias rewriting, source-order preservation (ADR-0002, ADR-0005, Q6, Q11)
 
@@ -68,6 +65,7 @@ Convert grill outcomes into concrete implementation steps. Order follows the dep
 - `PythonDependencyTest` with `@Nested` groups per quirk
 - Pin within-stream order in `UsedTypeExtractor` unit test (Q11)
 - Pin `namespacePrefix.isEmpty()` discriminator invariant (ADR-0005)
+- Pin nested-attribute emission: `os.path.join` source must produce both `UsedType("join", ["os","path"])` and `UsedType("path", ["os"])` (ADR-0005 Consequences — emitting only the outermost would silently drop dependencies)
 
 ### 4. README correction (TSE)
 - Update `integration/dependencies/README.md` Python section: four-category concatenation order, `IMPORT_FROM`/`STANDARD` discriminator, aliased-FROM-import flag
@@ -78,10 +76,11 @@ Convert grill outcomes into concrete implementation steps. Order follows the dep
 - Delete legacy queries (`PythonImportQuery`, `PythonTypeIdentifierQuery`, `PythonTypeAttributeQuery`, `PythonDefinitionsQuery`)
 
 ### 6. dc-compare iteration
-- Clone `requests` locally
-- Run `/dc-compare` after basic extractors compile
+- Clone `flask` as a sibling (`../flask`)
+- Run `/dc-compare ../flask` after basic extractors compile (don't wait for all extractors complete — see `dependency-migration.md` "Set up dc-compare before you think you're ready")
 - Iterate fix → rebuild → re-compare until parity
 - Document any accepted deviations
+- If flask's diff goes empty before all four quirks have fired in the wild, add `pytest` as stretch validation
 
 ### 7. Release
 - Merge TSE, tag release
@@ -90,9 +89,8 @@ Convert grill outcomes into concrete implementation steps. Order follows the dep
 
 ## Steps
 
-- [x] Complete grill Q1–Q11
+- [x] Complete grill Q1–Q12
 - [x] Write ADRs 0001–0006
-- [ ] Resolve Q12 (reference corpus)
 - [ ] Domain-type changes (Task 1)
 - [ ] Python language module (Task 2)
 - [ ] Tests (Task 3)
@@ -100,21 +98,3 @@ Convert grill outcomes into concrete implementation steps. Order follows the dep
 - [ ] DC adapter migration (Task 5)
 - [ ] dc-compare iteration to parity (Task 6)
 - [ ] Release (Task 7)
-
-- **Q8 — Decorated definition unwrapping.** Strip `decorated_definition` wrapper to reach the inner class/function definition.
-- **Q9 — `usedTypes` vs `dependencies` split.** DC PythonAnalyzer puts some things into `Node.usedTypes` (resolve-at-runtime) and some into `Node.dependencies` (already-resolved). TSE only has `Declaration.usedTypes`. The DC adapter has to demultiplex.
-- **Q10 — Module-level variable Declarations have empty `usedTypes`.** DC sets `dependencies = setOf(), usedTypes = setOf()` for module-level assignments. Mirror in TSE? Or extract identifiers from the RHS expression?
-- **Q11 — Concatenation order.** README claims Python is "imports only, no multi-category concatenation" — but DC actually has multiple categories (importsFrom, wildcardImportsFrom, importFromTypes, importDependencies). What's the canonical order for TSE's UsedTypeExtractor?
-- **Q12 — Reference corpus for `dc-compare`.** Pick a medium-sized open-source Python repo. Candidates: `requests`, `flask`, `httpie`, `black`, `pytest`. Need packages (not flat) and both relative and absolute imports.
-
-## Tasks (placeholder — fill in once grill completes)
-
-### 1. (TBD)
-
-## Steps
-
-- [ ] Complete grill (resume at Q5)
-- [ ] Write ADR-0004 once Q5 is resolved
-- [ ] Continue grill through Q6–Q12
-- [ ] Convert grill outcomes into Tasks section
-- [ ] Implement
