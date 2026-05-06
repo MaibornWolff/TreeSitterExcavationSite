@@ -4,7 +4,7 @@ issue: TBD
 state: progress
 version: 2
 tse_branch: feat/python-dependency-support
-dc_branch: TBD
+dc_branch: feat/python-dependency-integration
 ---
 
 ## Goal
@@ -71,9 +71,11 @@ Convert grill outcomes into concrete implementation steps. Order follows the dep
 - Update `integration/dependencies/README.md` Python section: four-category concatenation order, `IMPORT_FROM`/`STANDARD` discriminator, aliased-FROM-import flag
 
 ### 5. DC adapter migration
-- Branch DC; rewrite `PythonAnalyzer` as a thin adapter
-- Implement: `__init__.py` Node-per-export, twin synthesis for `IMPORT_FROM`/wildcards/aliased-on-use, attribute matching against `STANDARD` imports + STANDARD-aliases, four-category concatenation order, VARIABLE-as-leaf exception
-- Delete legacy queries (`PythonImportQuery`, `PythonTypeIdentifierQuery`, `PythonTypeAttributeQuery`, `PythonDefinitionsQuery`)
+DC branch already exists: `feat/python-dependency-integration`. Two distinct pieces of work, both required:
+
+- **(a) Wire DC to local TSE via composite build for the whole iteration phase** — in DC's `analysis/settings.gradle.kts` add `includeBuild("../../TreeSitterExcavationSite")` and switch DC's TSE coordinate to `de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite`. TSE changes flow into DC immediately, no JitPack publish needed. **Must be reverted before the DC PR is opened** (see `.claude/rules/dependency-migration.md` "Composite Build" section). Reverted in Task 7 once TSE is tagged.
+- **(b) Rewrite `PythonAnalyzer` as a thin adapter** that calls `TreeSitterDependencies.analyze(content, Language.PYTHON)` and maps `DependencyResult` → DC's `FileReport`. Implement: `__init__.py` Node-per-export, twin synthesis for `IMPORT_FROM`/wildcards/aliased-on-use, attribute matching against `STANDARD` imports + STANDARD-aliases, four-category concatenation order, VARIABLE-as-leaf exception (per `Q9`/`Q10`/`Q11` decisions in this plan).
+- Delete legacy extraction code: `PythonImportQuery`, `PythonTypeIdentifierQuery`, `PythonTypeAttributeQuery`, `PythonDefinitionsQuery`, plus any helper extractors made redundant by the rewrite.
 
 ### 6. dc-compare iteration
 - Clone `flask` as a sibling (`../flask`)
@@ -81,11 +83,17 @@ Convert grill outcomes into concrete implementation steps. Order follows the dep
 - Iterate fix → rebuild → re-compare until parity
 - Document any accepted deviations
 - If flask's diff goes empty before all four quirks have fired in the wild, add `pytest` as stretch validation
+- **At parity, capture the golden dependency contract test for Python.** Until now, `GoldenFileContractTest.DependenciesGoldenFileTests` only covered Delphi. Python is the first migration to ship one as a baseline, establishing the pattern for future migrations. Add `python_sample_dependencies.golden` next to the existing `python_sample_extraction.golden` and `python_sample_metrics.golden`, and a `should match golden file for PYTHON dependencies` test in the existing inner class. Pre-existing `python_sample.py` fixture is reused. Captured here (not earlier) because the golden is a stabilization tool, not a development tool — the unit tests in `PythonDependencyTest` are the per-iteration feedback loop, and the golden becomes useful only once output stops churning.
 
 ### 7. Release
-- Merge TSE, tag release
-- Update DC's JitPack dep to new TSE tag
-- Merge DC
+- Merge TSE PR, tag the release (e.g. `v0.9.0`)
+- In DC: revert the composite-build wiring from Task 5 (drop `includeBuild` line in `analysis/settings.gradle.kts`, change TSE coordinate back to `com.github.MaibornWolff:TreeSitterExcavationSite:<new-tag>`)
+- Merge DC PR
+
+### 8. Backfill dependency goldens for already-migrated languages
+- Scope: add `*_dependencies.golden` for Java, Kotlin, C#, C++ (Delphi already has one); extend `DependenciesGoldenFileTests` with one test per language; reuse each language's existing `<lang>_sample.<ext>` fixture.
+- Why follow-up, not blocking: the Python golden alone establishes the test pattern and exercises `DependenciesGoldenFileTests` for non-Delphi shapes. Backfill is mechanical and orthogonal to the Python migration's correctness story, so it should not gate Python's release.
+- Can be split into its own follow-up plan/PR if the cross-language fixtures need adjustment beyond the boilerplate.
 
 ## Steps
 
@@ -98,3 +106,4 @@ Convert grill outcomes into concrete implementation steps. Order follows the dep
 - [ ] DC adapter migration (Task 5)
 - [ ] dc-compare iteration to parity (Task 6)
 - [ ] Release (Task 7)
+- [ ] Backfill dependency goldens for Java/Kotlin/C#/C++ (Task 8 — follow-up)
