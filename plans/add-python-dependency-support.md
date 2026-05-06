@@ -101,7 +101,7 @@ DC branch already exists: `feat/python-dependency-integration`. Two distinct pie
 - [x] Write ADRs 0001–0006
 - [x] Domain-type changes (Task 1)
 - [x] Python language module (Task 2)
-- [ ] Tests (Task 3)
+- [x] Tests (Task 3)
 - [ ] README correction (Task 4)
 - [ ] DC adapter migration (Task 5)
 - [ ] dc-compare iteration to parity (Task 6)

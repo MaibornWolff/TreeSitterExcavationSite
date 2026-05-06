@@ -492,5 +492,75 @@ class PythonDependencyTest {
             assertThat(result.declarations[0].type).isEqualTo(DeclarationType.VARIABLE)
             assertThat(result.declarations[0].usedTypes).isEmpty()
         }
+
+        @Test
+        fun `should preserve source order within identifier stream`() {
+            // Arrange
+            val code = """
+            def handler():
+                return ZZZ + AAA + MMM
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            val orderedTestIdentifiers = result.declarations[0]
+                .usedTypes
+                .filter { it.namespacePrefix.isEmpty() && it.name in setOf("ZZZ", "AAA", "MMM") }
+                .map { it.name }
+            assertThat(orderedTestIdentifiers).containsExactly("ZZZ", "AAA", "MMM")
+        }
+
+        @Test
+        fun `should preserve source order within attribute stream`() {
+            // Arrange
+            val code = """
+            def handler():
+                first.alpha
+                second.beta
+                third.gamma
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            val orderedAttributes = result.declarations[0]
+                .usedTypes
+                .filter { it.namespacePrefix.isNotEmpty() }
+            assertThat(orderedAttributes).containsExactly(
+                UsedType(name = "alpha", namespacePrefix = listOf("first")),
+                UsedType(name = "beta", namespacePrefix = listOf("second")),
+                UsedType(name = "gamma", namespacePrefix = listOf("third"))
+            )
+        }
+
+        @Test
+        fun `should partition usedTypes by namespacePrefix into identifier and attribute streams`() {
+            // Arrange
+            val code = """
+            def handler():
+                Foo
+                bar.Baz
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            val (identifierStream, attributeStream) = result.declarations[0]
+                .usedTypes
+                .partition { it.namespacePrefix.isEmpty() }
+            assertThat(identifierStream).containsExactlyInAnyOrder(
+                UsedType("handler"),
+                UsedType("Foo"),
+                UsedType("bar"),
+                UsedType("Baz")
+            )
+            assertThat(attributeStream).containsExactly(
+                UsedType(name = "Baz", namespacePrefix = listOf("bar"))
+            )
+        }
     }
 }
