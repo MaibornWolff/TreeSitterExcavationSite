@@ -755,6 +755,22 @@ class TypescriptDependencyTest {
             val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
             assertThat(usedTypeNames).containsExactlyInAnyOrder("MyType")
         }
+
+        @Test
+        fun `should resolve default import name to DEFAULT_EXPORT in usedTypes`() {
+            // Arrange
+            val code = """
+                import Dep from './dep'
+                class Foo extends Dep {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("DEFAULT_EXPORT")
+        }
     }
 
     @Nested

@@ -269,6 +269,11 @@ internal object DeclarationExtractor {
         val aliasMap = mutableMapOf<String, String>()
         TreeTraversal.findAllDescendantsOfType(rootNode, IMPORT_STATEMENT).forEach { importNode ->
             val importClause = importNode.children().firstOrNull { it.type == IMPORT_CLAUSE } ?: return@forEach
+            val defaultBinding = importClause.children().firstOrNull { it.type == IDENTIFIER }
+            if (defaultBinding != null) {
+                val name = TreeTraversal.getNodeText(defaultBinding, sourceCode).trim()
+                if (name.isNotBlank()) aliasMap[name] = DEFAULT_EXPORT
+            }
             val namedImports = importClause.children().firstOrNull { it.type == NAMED_IMPORTS } ?: return@forEach
             namedImports
                 .children()
