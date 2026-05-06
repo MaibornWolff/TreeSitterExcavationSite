@@ -1,0 +1,81 @@
+# Package
+
+
+# Imports
+enum.Enum
+typing.List
+typing.Optional
+
+# Declarations
+CLASS:Sample
+CLASS:Status
+FUNCTION:logged
+
+# Used Types (per declaration)
+Sample
+  Exception
+  List
+  MAX_RETRIES
+  Optional
+  Sample
+  __init__
+  _counter
+  _counter
+  a
+  append
+  append
+  b
+  bool
+  c
+  calculate
+  chained_call
+  classmethod
+  cls
+  count
+  create_default
+  d
+  e
+  filter_items
+  format_by_type
+  get_counter
+  i
+  input_str
+  int
+  item
+  items
+  join
+  join
+  label
+  len
+  logged
+  prefix
+  prefix
+  process_data
+  range
+  replace
+  replace
+  replace
+  result
+  self
+  staticmethod
+  str
+  strip
+  strip
+  total
+  type_id
+  upper
+  upper
+  validate
+  value
+Status
+  ACTIVE
+  COMPLETED
+  Enum
+  PENDING
+  Status
+logged
+  args
+  func
+  kwargs
+  logged
+  wrapper

@@ -118,8 +118,16 @@ class GoldenFileContractTest {
     inner class DependenciesGoldenFileTests {
         @Test
         fun `should match golden file for DELPHI dependencies`() {
+            assertDependenciesGolden(Language.DELPHI)
+        }
+
+        @Test
+        fun `should match golden file for PYTHON dependencies`() {
+            assertDependenciesGolden(Language.PYTHON)
+        }
+
+        private fun assertDependenciesGolden(language: Language) {
             // Arrange
-            val language = Language.DELPHI
             val sampleFileName = SAMPLE_FILE_NAMES[language]
                 ?: error("No sample file configured for $language")
             val goldenBaseName = GOLDEN_BASE_NAMES[language]
