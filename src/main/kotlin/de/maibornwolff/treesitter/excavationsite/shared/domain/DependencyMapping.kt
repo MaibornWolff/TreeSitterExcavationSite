@@ -11,9 +11,12 @@ import org.treesitter.TSNode
  * [Extract] stores custom extraction functions.
  */
 data class LanguageDependencyMapping(
-    val extractPackagePath: (TSNode, String) -> List<String>,
     val extractImports: (TSNode, String) -> List<ImportDeclaration>,
-    val extractDeclarations: (TSNode, String) -> List<Declaration>
+    val extractDeclarations: (TSNode, String) -> List<Declaration>,
+    // Defaults to empty for languages without an in-source package declaration (e.g. Python — see
+    // ADR-0001 in plans/add-python-dependency-support.md). Languages that do declare packages
+    // override this with their own extractor.
+    val extractPackagePath: (TSNode, String) -> List<String> = { _, _ -> emptyList() }
 )
 
 /**

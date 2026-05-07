@@ -173,10 +173,12 @@ object NewLangDependencyMapping {
 Each extractor is an `internal object` with an `extract` function. Use direct tree traversal (`TreeTraversal.findAllDescendantsOfType`, `findAllDescendantsGroupedByType`, etc.) — not TSQuery.
 
 Required extractors:
-- **PackageExtractor** — extracts the package/module path as `List<String>`
 - **ImportExtractor** — extracts imports as `List<ImportDeclaration>`
 - **DeclarationExtractor** — finds class/interface/enum declarations, delegates to UsedTypeExtractor for each
 - **UsedTypeExtractor** — extracts all types used within a declaration
+
+Optional:
+- **PackageExtractor** — extracts the package/module path as `List<String>`. Omit when the language has no in-source package declaration (e.g. Python — see ADR-0001); `LanguageDependencyMapping.extractPackagePath` defaults to empty.
 
 See `languages/java/extractors/` for the reference implementation.
 
