@@ -54,9 +54,7 @@ internal object ImportExtractor {
 
         val isWildcard = node.children().any { it.type == WILDCARD_IMPORT }
         if (isWildcard) {
-            return listOf(
-                ImportDeclaration(path = modulePath, isWildcard = true, kind = ImportKind.IMPORT_FROM)
-            )
+            return listOf(ImportDeclaration(path = modulePath, isWildcard = true, kind = ImportKind.IMPORT_FROM))
         }
 
         val nameNodes = nameFieldChildren(node)
@@ -80,6 +78,9 @@ internal object ImportExtractor {
         else -> null
     }
 
+    // ADR-0003 leading-dots encoding: "from .foo import X" → path = [".", "foo", "X"];
+    // "from .. import Y" → [".."]. The DC adapter detects relativity via path[0].all { it == '.' }
+    // and resolves the prefix length against FileInfo.physicalPath.
     private fun extractRelativeModulePath(relativeNode: TSNode, sourceCode: String): List<String>? {
         val prefixNode = relativeNode.children().firstOrNull { it.type == IMPORT_PREFIX } ?: return null
         val prefixText = TreeTraversal.getNodeText(prefixNode, sourceCode)
@@ -98,12 +99,14 @@ internal object ImportExtractor {
         )
     }
 
+    // `from M import a, b, c` produces three children attached to the repeating `name:` field on a
+    // single `import_from_statement`. Tree-sitter's `getChildByFieldName` returns only the first,
+    // and direct-child filtering by type is ambiguous because the `module_name:` field is also a
+    // `dotted_name`. Walk by index and pick out field-tagged children.
     private fun nameFieldChildren(node: TSNode): List<TSNode> {
         val result = mutableListOf<TSNode>()
         for (i in 0 until node.childCount) {
-            if (node.getFieldNameForChild(i) == FIELD_NAME) {
-                result.add(node.getChild(i))
-            }
+            if (node.getFieldNameForChild(i) == FIELD_NAME) result.add(node.getChild(i))
         }
         return result
     }

@@ -10,52 +10,47 @@ internal object UsedTypeExtractor {
     private const val ATTRIBUTE = "attribute"
     private const val SEPARATOR = "."
 
-    fun extract(
-        declaration: TSNode,
-        sourceCode: String,
-        fromImportAliases: Map<String, String>,
-        standardImportAliases: Map<String, String>
-    ): Set<UsedType> {
+    fun extract(declaration: TSNode, sourceCode: String, aliases: AliasContext): Set<UsedType> {
+        val collector = Collector(sourceCode, aliases)
+        collector.collect(declaration)
+        return (collector.identifierStream + collector.attributeStream).toCollection(LinkedHashSet())
+    }
+
+    private class Collector(val sourceCode: String, val aliases: AliasContext) {
         val identifierStream = mutableListOf<UsedType>()
         val attributeStream = mutableListOf<UsedType>()
-        collect(declaration, sourceCode, fromImportAliases, standardImportAliases, identifierStream, attributeStream)
-        return (identifierStream + attributeStream).toCollection(LinkedHashSet())
-    }
 
-    private fun collect(
-        node: TSNode,
-        sourceCode: String,
-        fromImportAliases: Map<String, String>,
-        standardImportAliases: Map<String, String>,
-        identifierStream: MutableList<UsedType>,
-        attributeStream: MutableList<UsedType>
-    ) {
-        for (child in node.children()) {
-            if (child.isNull) continue
-            when (child.type) {
-                IDENTIFIER -> {
-                    val text = TreeTraversal.getNodeText(child, sourceCode)
-                    val resolved = fromImportAliases[text] ?: text
-                    identifierStream.add(UsedType(name = resolved))
+        fun collect(node: TSNode) {
+            for (child in node.children()) {
+                if (child.isNull) continue
+                when (child.type) {
+                    IDENTIFIER -> {
+                        val text = TreeTraversal.getNodeText(child, sourceCode)
+                        val resolved = aliases.fromImports[text] ?: text
+                        identifierStream.add(UsedType(name = resolved))
+                    }
+                    ATTRIBUTE -> attributeStream.add(buildAttributeUsedType(child))
                 }
-                ATTRIBUTE -> attributeStream.add(buildAttributeUsedType(child, sourceCode, standardImportAliases))
+                // ADR-0005: recurse unconditionally so nested attribute usages are emitted too.
+                // Source "os.path.join" must produce both UsedType("join", ["os","path"]) and
+                // UsedType("path", ["os"]); skipping recursion on attribute nodes drops dependencies
+                // on intermediate modules.
+                collect(child)
             }
-            collect(child, sourceCode, fromImportAliases, standardImportAliases, identifierStream, attributeStream)
         }
-    }
 
-    private fun buildAttributeUsedType(attributeNode: TSNode, sourceCode: String, standardImportAliases: Map<String, String>): UsedType {
-        val parts = TreeTraversal.getNodeText(attributeNode, sourceCode).split(SEPARATOR)
-        val name = parts.last()
-        val rawPrefix = parts.dropLast(1)
-        val rewrittenPrefix = rewriteStandardAliasPrefix(rawPrefix, standardImportAliases)
-        return UsedType(name = name, namespacePrefix = rewrittenPrefix)
-    }
+        private fun buildAttributeUsedType(attributeNode: TSNode): UsedType {
+            val parts = TreeTraversal.getNodeText(attributeNode, sourceCode).split(SEPARATOR)
+            val name = parts.last()
+            val rawPrefix = parts.dropLast(1)
+            return UsedType(name = name, namespacePrefix = rewriteStandardAliasPrefix(rawPrefix))
+        }
 
-    private fun rewriteStandardAliasPrefix(prefix: List<String>, standardImportAliases: Map<String, String>): List<String> {
-        if (prefix.isEmpty()) return prefix
-        val first = prefix.first()
-        val replacement = standardImportAliases[first] ?: return prefix
-        return replacement.split(SEPARATOR) + prefix.drop(1)
+        private fun rewriteStandardAliasPrefix(prefix: List<String>): List<String> {
+            if (prefix.isEmpty()) return prefix
+            val first = prefix.first()
+            val replacement = aliases.standardImports[first] ?: return prefix
+            return replacement.split(SEPARATOR) + prefix.drop(1)
+        }
     }
 }
