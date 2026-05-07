@@ -195,13 +195,14 @@ internal object DeclarationExtractor {
                 when (identifiers.size) {
                     1 -> {
                         val name = identifiers[0]
-                        Declaration(name = name, type = DeclarationType.REEXPORT, usedTypes = setOf(UsedType(name)))
+                        val usedTypeName = if (name == DEFAULT_KEYWORD) DEFAULT_EXPORT else name
+                        Declaration(name = name, type = DeclarationType.REEXPORT, usedTypes = setOf(UsedType(usedTypeName)))
                     }
 
                     2 -> {
                         val originalName = identifiers[0]
                         val alias = identifiers[1]
-                        val usedTypeName = if (originalName == "default") DEFAULT_EXPORT else originalName
+                        val usedTypeName = if (originalName == DEFAULT_KEYWORD) DEFAULT_EXPORT else originalName
                         Declaration(name = alias, type = DeclarationType.REEXPORT, usedTypes = setOf(UsedType(usedTypeName)))
                     }
 
@@ -285,12 +286,12 @@ internal object DeclarationExtractor {
                         .map { TreeTraversal.getNodeText(it, sourceCode).trim() }
                         .toList()
                     if (identifiers.size == 2) {
-                        val original = identifiers[0]
-                        val alias = identifiers[1]
-                        aliasMap[alias] = original
+                        aliasMap[identifiers[1]] = normalizeDefaultKeyword(identifiers[0])
                     }
                 }
         }
         return aliasMap
     }
+
+    private fun normalizeDefaultKeyword(name: String): String = if (name == DEFAULT_KEYWORD) DEFAULT_EXPORT else name
 }
