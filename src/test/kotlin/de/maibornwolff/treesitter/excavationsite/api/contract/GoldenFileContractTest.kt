@@ -114,6 +114,11 @@ class GoldenFileContractTest {
         }
     }
 
+    // Explicit @Test per language (rather than @ParameterizedTest @EnumSource like Metrics and
+    // Extraction above) because dependency mappings are opt-in per language. Languages without a
+    // mapping have no golden file, and a parameterized run over Language.values() would
+    // auto-generate failing tests for every unsupported language. Add a new @Test method as each
+    // language's dependency support lands.
     @Nested
     inner class DependenciesGoldenFileTests {
         @Test
