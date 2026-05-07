@@ -199,6 +199,9 @@ class JavascriptDependencyTest {
             assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("buildFunction")
         }
 
+        // JS intentionally produces both the named declaration AND a DEFAULT_EXPORT copy (same DeclarationType)
+        // for `export default function/class Foo` — matching DC main's legacy JS analyzer behavior.
+        // TypeScript does NOT add the DEFAULT_EXPORT copy; see JavascriptDependencyMapping.extractJsDeclarations.
         @Test
         fun `should add DEFAULT_EXPORT node alongside original for export default function`() {
             // Arrange

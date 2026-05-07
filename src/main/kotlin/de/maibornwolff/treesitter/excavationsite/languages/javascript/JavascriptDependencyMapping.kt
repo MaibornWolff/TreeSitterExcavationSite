@@ -10,15 +10,18 @@ internal object JavascriptDependencyMapping {
     val dependencyMapping = LanguageDependencyMapping(
         extractPackagePath = { _, _ -> emptyList() }, // JS/TS have no package declarations
         extractImports = ImportExtractor::extract,
-        extractDeclarations = ::extractJsDeclarations
+        extractDeclarations = { node, code -> extractJsDeclarations(node, code) }
     )
-}
 
-private fun extractJsDeclarations(rootNode: TSNode, sourceCode: String): List<Declaration> {
-    val declarations = DeclarationExtractor.extract(rootNode, sourceCode)
-    val inlineDefaultName = DeclarationExtractor.findInlineDefaultExportName(rootNode, sourceCode)
-        ?: return declarations
-    val inlineDecl = declarations.firstOrNull { it.name == inlineDefaultName }
-        ?: return declarations
-    return declarations + inlineDecl.copy(name = DEFAULT_EXPORT)
+    // Intentional JS/TS divergence: DC's legacy JS analyzer produces both the named declaration
+    // AND a DEFAULT_EXPORT copy (same DeclarationType) for `export default function/class Foo`.
+    // TypeScript does NOT add the DEFAULT_EXPORT copy. This matches DC main's behavior per language.
+    private fun extractJsDeclarations(rootNode: TSNode, sourceCode: String): List<Declaration> {
+        val declarations = DeclarationExtractor.extract(rootNode, sourceCode)
+        val inlineDefaultName = DeclarationExtractor.findInlineDefaultExportName(rootNode, sourceCode)
+            ?: return declarations
+        val inlineDecl = declarations.firstOrNull { it.name == inlineDefaultName }
+            ?: return declarations
+        return declarations + inlineDecl.copy(name = DEFAULT_EXPORT)
+    }
 }
