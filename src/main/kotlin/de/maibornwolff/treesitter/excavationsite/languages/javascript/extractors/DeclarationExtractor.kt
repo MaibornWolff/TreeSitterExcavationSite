@@ -54,22 +54,35 @@ internal object DeclarationExtractor {
         VARIABLE_DECLARATION
     )
 
-    internal fun findInlineDefaultExportName(rootNode: TSNode, sourceCode: String): String? {
-        return rootNode
+    internal sealed interface DefaultExport {
+        data class Named(val name: String) : DefaultExport    // export default class Foo {}
+        data class Reexport(val name: String) : DefaultExport // export default Foo;
+        data object Anonymous : DefaultExport                 // export default class {}
+        data object Value : DefaultExport                     // export default { ... } / 42
+        data object None : DefaultExport                      // no export default
+    }
+
+    internal fun classifyDefaultExport(rootNode: TSNode, sourceCode: String): DefaultExport =
+        rootNode
             .children()
             .filter { it.type == EXPORT_STATEMENT }
             .firstNotNullOfOrNull { exportNode ->
                 val children = exportNode.children().toList()
                 if (!children.any { it.type == DEFAULT_KEYWORD }) return@firstNotNullOfOrNull null
+                val identifier = children.firstOrNull { it.type == IDENTIFIER }
+                if (identifier != null) {
+                    return@firstNotNullOfOrNull DefaultExport.Reexport(TreeTraversal.getNodeText(identifier, sourceCode).trim())
+                }
                 val declarationChild = children.firstOrNull { it.type in DECLARATION_NODE_TYPES }
-                    ?: return@firstNotNullOfOrNull null
-                extractName(declarationChild, sourceCode).takeIf { it.isNotBlank() }
-            }
-    }
+                if (declarationChild != null) {
+                    val name = extractName(declarationChild, sourceCode)
+                    return@firstNotNullOfOrNull if (name.isNotBlank()) DefaultExport.Named(name) else DefaultExport.Anonymous
+                }
+                DefaultExport.Value
+            } ?: DefaultExport.None
 
     fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> {
         val aliasMap = buildAliasMap(rootNode, sourceCode)
-        val defaultExportIdentifier = findDefaultExportIdentifier(rootNode, sourceCode)
         val declarations = rootNode
             .children()
             .flatMap { child ->
@@ -81,55 +94,14 @@ internal object DeclarationExtractor {
                 }
             }.filter { it.name.isNotBlank() }
             .toList()
-        return when {
-            defaultExportIdentifier != null ->
-                declarations + Declaration(
-                    name = DEFAULT_EXPORT,
-                    type = DeclarationType.REEXPORT,
-                    usedTypes = setOf(UsedType(defaultExportIdentifier))
-                )
-            hasValueDefaultExport(rootNode) || hasAnonymousDefaultDeclaration(rootNode, sourceCode) ->
-                declarations + Declaration(
-                    name = DEFAULT_EXPORT,
-                    type = DeclarationType.REEXPORT,
-                    usedTypes = emptySet()
-                )
-            else -> declarations
+        return when (val shape = classifyDefaultExport(rootNode, sourceCode)) {
+            is DefaultExport.Reexport ->
+                declarations + Declaration(DEFAULT_EXPORT, DeclarationType.REEXPORT, setOf(UsedType(shape.name)))
+            is DefaultExport.Anonymous, DefaultExport.Value ->
+                declarations + Declaration(DEFAULT_EXPORT, DeclarationType.REEXPORT, emptySet())
+            is DefaultExport.Named, DefaultExport.None -> declarations
         }
     }
-
-    private fun findDefaultExportIdentifier(rootNode: TSNode, sourceCode: String): String? = rootNode
-        .children()
-        .filter { it.type == EXPORT_STATEMENT }
-        .firstNotNullOfOrNull { exportNode ->
-            val children = exportNode.children().toList()
-            val identifier = children.firstOrNull { it.type == IDENTIFIER }
-            if (children.any { it.type == DEFAULT_KEYWORD } && identifier != null) {
-                TreeTraversal.getNodeText(identifier, sourceCode).trim()
-            } else {
-                null
-            }
-        }
-
-    private fun hasValueDefaultExport(rootNode: TSNode): Boolean = rootNode
-        .children()
-        .filter { it.type == EXPORT_STATEMENT }
-        .any { exportNode ->
-            val children = exportNode.children().toList()
-            children.any { it.type == DEFAULT_KEYWORD } &&
-                children.none { it.type in DECLARATION_NODE_TYPES }
-        }
-
-    private fun hasAnonymousDefaultDeclaration(rootNode: TSNode, sourceCode: String): Boolean = rootNode
-        .children()
-        .filter { it.type == EXPORT_STATEMENT }
-        .any { exportNode ->
-            val children = exportNode.children().toList()
-            val declarationChild = children.firstOrNull { it.type in DECLARATION_NODE_TYPES }
-            children.any { it.type == DEFAULT_KEYWORD } &&
-                declarationChild != null &&
-                extractName(declarationChild, sourceCode).isBlank()
-        }
 
     private fun extractFromAmbientDeclaration(
         node: TSNode,

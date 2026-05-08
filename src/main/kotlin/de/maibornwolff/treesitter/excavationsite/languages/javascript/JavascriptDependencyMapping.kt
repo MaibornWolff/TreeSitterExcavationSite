@@ -18,10 +18,9 @@ internal object JavascriptDependencyMapping {
     // TypeScript does NOT add the DEFAULT_EXPORT copy. This matches DC main's behavior per language.
     private fun extractJsDeclarations(rootNode: TSNode, sourceCode: String): List<Declaration> {
         val declarations = DeclarationExtractor.extract(rootNode, sourceCode)
-        val inlineDefaultName = DeclarationExtractor.findInlineDefaultExportName(rootNode, sourceCode)
-            ?: return declarations
-        val inlineDecl = declarations.firstOrNull { it.name == inlineDefaultName }
-            ?: return declarations
+        val shape = DeclarationExtractor.classifyDefaultExport(rootNode, sourceCode)
+        if (shape !is DeclarationExtractor.DefaultExport.Named) return declarations
+        val inlineDecl = declarations.firstOrNull { it.name == shape.name } ?: return declarations
         return declarations + inlineDecl.copy(name = DEFAULT_EXPORT)
     }
 }
