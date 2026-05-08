@@ -93,37 +93,7 @@ internal object ImportExtractor {
             }
             val nameChild = declarator.children().firstOrNull { it.type == OBJECT_PATTERN || it.type == IDENTIFIER }
             when (nameChild?.type) {
-                OBJECT_PATTERN ->
-                    nameChild
-                        .children()
-                        .flatMap { prop ->
-                            when (prop.type) {
-                                SHORTHAND_PROPERTY_IDENTIFIER_PATTERN -> {
-                                    val name = TreeTraversal.getNodeText(prop, sourceCode).trim()
-                                    if (name.isBlank()) {
-                                        emptyList()
-                                    } else {
-                                        listOf(
-                                            ImportDeclaration(path = basePath + name, isWildcard = false)
-                                        )
-                                    }
-                                }
-                                PAIR_PATTERN -> {
-                                    val key = prop
-                                        .children()
-                                        .firstOrNull { it.type == IDENTIFIER || it.type == PROPERTY_IDENTIFIER }
-                                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                                    if (key.isNullOrBlank()) {
-                                        emptyList()
-                                    } else {
-                                        listOf(
-                                            ImportDeclaration(path = basePath + key, isWildcard = false)
-                                        )
-                                    }
-                                }
-                                else -> emptyList()
-                            }
-                        }.toList()
+                OBJECT_PATTERN -> extractDestructuredCommonJs(nameChild, basePath, sourceCode)
                 else -> listOf(ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false))
             }
         }
@@ -170,6 +140,25 @@ internal object ImportExtractor {
             val pathText = extractStringText(args, sourceCode) ?: return@mapNotNull null
             ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = false)
         }
+
+    private fun extractDestructuredCommonJs(
+        objectPattern: TSNode,
+        basePath: List<String>,
+        sourceCode: String
+    ): List<ImportDeclaration> = objectPattern
+        .children()
+        .mapNotNull { prop ->
+            val name = when (prop.type) {
+                SHORTHAND_PROPERTY_IDENTIFIER_PATTERN ->
+                    TreeTraversal.getNodeText(prop, sourceCode).trim()
+                PAIR_PATTERN ->
+                    prop.children()
+                        .firstOrNull { it.type == IDENTIFIER || it.type == PROPERTY_IDENTIFIER }
+                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                else -> null
+            }
+            if (name.isNullOrBlank()) null else ImportDeclaration(path = basePath + name, isWildcard = false)
+        }.toList()
 
     private fun extractStringText(node: TSNode, sourceCode: String): String? {
         val stringNode = node.children().firstOrNull { it.type == STRING || it.type == TEMPLATE_STRING }
