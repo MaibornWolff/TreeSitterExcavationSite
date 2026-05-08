@@ -141,24 +141,22 @@ internal object ImportExtractor {
             ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = false)
         }
 
-    private fun extractDestructuredCommonJs(
-        objectPattern: TSNode,
-        basePath: List<String>,
-        sourceCode: String
-    ): List<ImportDeclaration> = objectPattern
-        .children()
-        .mapNotNull { prop ->
-            val name = when (prop.type) {
-                SHORTHAND_PROPERTY_IDENTIFIER_PATTERN ->
-                    TreeTraversal.getNodeText(prop, sourceCode).trim()
-                PAIR_PATTERN ->
-                    prop.children()
-                        .firstOrNull { it.type == IDENTIFIER || it.type == PROPERTY_IDENTIFIER }
-                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                else -> null
-            }
-            if (name.isNullOrBlank()) null else ImportDeclaration(path = basePath + name, isWildcard = false)
-        }.toList()
+    private fun extractDestructuredCommonJs(objectPattern: TSNode, basePath: List<String>, sourceCode: String): List<ImportDeclaration> =
+        objectPattern
+            .children()
+            .mapNotNull { prop ->
+                val name = when (prop.type) {
+                    SHORTHAND_PROPERTY_IDENTIFIER_PATTERN ->
+                        TreeTraversal.getNodeText(prop, sourceCode).trim()
+                    PAIR_PATTERN ->
+                        prop
+                            .children()
+                            .firstOrNull { it.type == IDENTIFIER || it.type == PROPERTY_IDENTIFIER }
+                            ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                    else -> null
+                }
+                if (name.isNullOrBlank()) null else ImportDeclaration(path = basePath + name, isWildcard = false)
+            }.toList()
 
     private fun extractStringText(node: TSNode, sourceCode: String): String? {
         val stringNode = node.children().firstOrNull { it.type == STRING || it.type == TEMPLATE_STRING }
