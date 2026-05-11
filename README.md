@@ -23,7 +23,7 @@ includeBuild("/path/to/TreeSitterLibrary")
 
 // build.gradle.kts
 dependencies {
-    implementation("de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite:0.8.0")
+    implementation("de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite:0.9.0")
 }
 ```
 
@@ -109,7 +109,7 @@ println(result.declarations)  // [Declaration(name=UserService, type=CLASS, used
 
 // Check language support
 println(TreeSitterDependencies.isDependencyAnalysisSupported(Language.JAVA))   // true
-println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA, KOTLIN, CSHARP, CPP, DELPHI]
+println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA, KOTLIN, TYPESCRIPT, JAVASCRIPT, CSHARP, CPP, DELPHI]
 ```
 
 ## Supported Languages and Frameworks
@@ -118,8 +118,8 @@ println(TreeSitterDependencies.getSupportedLanguages())                        /
 |----------|-------------|---------|------------|--------------|
 | Java | `.java` | Stable | Stable | Experimental |
 | Kotlin | `.kt`, `.kts` | Stable | Stable | Experimental |
-| TypeScript | `.ts`, `.tsx` | Stable | Stable | — |
-| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | Stable | Stable | — |
+| TypeScript | `.ts`, `.tsx` | Stable | Stable | Experimental |
+| JavaScript | `.js`, `.jsx`, `.mjs`, `.cjs` | Stable | Stable | Experimental |
 | Python | `.py` | Stable | Stable | — |
 | Go | `.go` | Stable | Stable | — |
 | PHP | `.php` | Stable | Stable | — |
