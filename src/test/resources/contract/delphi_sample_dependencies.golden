@@ -2,10 +2,10 @@
 MyCo.MyMod.Sample
 
 # Imports
-Classes
-Generics.Collections
-Math
-SysUtils
+STANDARD:Classes
+STANDARD:Generics.Collections
+STANDARD:Math
+STANDARD:SysUtils
 
 # Declarations
 CLASS:TInner (parent: TOuter)

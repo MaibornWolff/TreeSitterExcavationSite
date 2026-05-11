@@ -45,7 +45,11 @@ After migration, the DC analyzer becomes a thin adapter:
 
 ## Key Principles
 
-1. **Match DC main's output — fix bugs where possible.** The goal is to produce the same results as DC main. DC's legacy behavior is the baseline — even when it seems wrong (type leakage, quirky concatenation order, positional extraction). However, if DC has a genuine bug (e.g., wrong classification, broken positional extraction for dotted types), TSE should fix it. Document accepted improvements explicitly and verify the differences are real improvements, not extraction errors.
+1. **Match DC main's output — discuss every suspected bug before fixing.** The goal is to produce the same results as DC main. Any output change is a breaking change for downstream consumers — even fixes to genuine bugs. DC's legacy behavior is the baseline, including behavior that looks wrong (type leakage, quirky concatenation order, positional extraction). When you suspect a bug:
+   - **Stop and surface it to the user** with the specific input, DC's output, and what TSE would emit instead. Do not silently "fix" it.
+   - **Default to replicating DC's behavior**, even when wrong. Only deviate after the user explicitly approves the change.
+   - **Keep deviations minimal and well-scoped.** The output should not change much; cumulative "small improvements" still amount to a breaking change.
+   - **Document every accepted deviation** in the language's migration plan with the input, old output, new output, and the user's rationale for accepting it.
 
 2. **Set up dc-compare before you think you're ready.** Run it as soon as basic extractors work, not after you think you're done. The Kotlin migration went through 4 rounds (17k → 2.9k → 1.7k → 74 lines), each revealing issues that unit tests couldn't catch. Iterate: fix, rebuild, re-compare.
 

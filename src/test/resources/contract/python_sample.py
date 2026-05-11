@@ -3,6 +3,7 @@ A comprehensive sample module demonstrating various Python features.
 Used for golden file contract testing.
 """
 
+import datetime as dt
 from enum import Enum
 from typing import List, Optional
 

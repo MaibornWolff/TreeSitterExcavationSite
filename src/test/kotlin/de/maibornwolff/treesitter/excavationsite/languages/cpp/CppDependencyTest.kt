@@ -1960,13 +1960,4 @@ class CppDependencyTest {
             )
         }
     }
-
-    @Nested
-    inner class ApiSupportCheck {
-        @Test
-        fun `should report CPP as supported for dependency analysis`() {
-            // Act & Assert
-            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.CPP)).isTrue()
-        }
-    }
 }

@@ -8,6 +8,7 @@ import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterMetrics
 import de.maibornwolff.treesitter.excavationsite.api.UsedType
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportDeclaration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -114,12 +115,25 @@ class GoldenFileContractTest {
         }
     }
 
+    // Explicit @Test per language (rather than @ParameterizedTest @EnumSource like Metrics and
+    // Extraction above) because dependency mappings are opt-in per language. Languages without a
+    // mapping have no golden file, and a parameterized run over Language.values() would
+    // auto-generate failing tests for every unsupported language. Add a new @Test method as each
+    // language's dependency support lands.
     @Nested
     inner class DependenciesGoldenFileTests {
         @Test
         fun `should match golden file for DELPHI dependencies`() {
+            assertDependenciesGolden(Language.DELPHI)
+        }
+
+        @Test
+        fun `should match golden file for PYTHON dependencies`() {
+            assertDependenciesGolden(Language.PYTHON)
+        }
+
+        private fun assertDependenciesGolden(language: Language) {
             // Arrange
-            val language = Language.DELPHI
             val sampleFileName = SAMPLE_FILE_NAMES[language]
                 ?: error("No sample file configured for $language")
             val goldenBaseName = GOLDEN_BASE_NAMES[language]
@@ -180,7 +194,7 @@ class GoldenFileContractTest {
         builder.appendLine()
         builder.appendLine("# Imports")
         result.imports
-            .map { "${if (it.isWildcard) "*:" else ""}${it.path.joinToString(".")}" }
+            .map { formatImport(it) }
             .sorted()
             .forEach { builder.appendLine(it) }
 
@@ -212,6 +226,17 @@ class GoldenFileContractTest {
         return builder.toString().trim()
     }
 
+    private fun formatImport(declaration: ImportDeclaration): String {
+        val wildcard = if (declaration.isWildcard) "*:" else ""
+        val aliased = if (declaration.isAliased) "aliased:" else ""
+        val namespace = if (declaration.namespacePath.isEmpty()) {
+            ""
+        } else {
+            "${declaration.namespacePath.joinToString(".")}/"
+        }
+        return "${declaration.kind}:$wildcard$aliased$namespace${declaration.path.joinToString(".")}"
+    }
+
     private fun formatUsedType(usedType: UsedType): String {
         if (usedType.genericTypes.isEmpty()) return usedType.name
         return "${usedType.name}<${usedType.genericTypes.joinToString(",") { formatUsedType(it) }}>"
@@ -236,8 +261,9 @@ class GoldenFileContractTest {
             )
         }
 
-        val expected = goldenFile.readText().trim()
-        assertThat(actual)
+        val expected = goldenFile.readText().replace("\r\n", "\n").trim()
+        val normalizedActual = actual.replace("\r\n", "\n")
+        assertThat(normalizedActual)
             .withFailMessage {
                 """
                 |Golden file mismatch: $goldenPath

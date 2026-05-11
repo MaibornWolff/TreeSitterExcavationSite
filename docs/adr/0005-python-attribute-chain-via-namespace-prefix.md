@@ -1,0 +1,25 @@
+# Python attribute-access prefixes are carried via `UsedType.namespacePrefix`
+
+For an attribute access like `os.path.join`, TSE's Python `UsedTypeExtractor` emits `UsedType(name = "join", namespacePrefix = ["os", "path"])`. For a bare identifier `Foo`, it emits `UsedType(name = "Foo", namespacePrefix = [])`. Both come from the same definition body — TSE runs two passes, one over `(identifier)` AST nodes (identifier stream) and one over `(attribute)` AST nodes (attribute stream), mirroring DC's `PythonTypeIdentifierQuery` and `PythonTypeAttributeQuery`.
+
+The DC `PythonAnalyzer` adapter demultiplexes on `namespacePrefix.isEmpty()`:
+
+- `namespacePrefix == []` → identifier stream → `Node.usedTypes`, resolved later by the project resolver against `IMPORT_FROM`-style imports.
+- `namespacePrefix != []` → attribute stream → adapter joins the prefix with `"."`, matches it against `STANDARD`-kind imports (`import X.Y`) and aliased imports, and on match emits the canonical `Dependency` plus its `__init__` twin into `Node.dependencies`. Per ADR-0004, matching is adapter-side; the extractor's only job is to capture the prefix and the leaf.
+
+This expands `namespacePrefix`'s documented purpose: previously "namespace or scope segments written alongside the type at the use site (e.g. `A::B` for `A::B::Settings`)" with the C++ adapter synthesizing a wildcard `Dependency` per qualified usage. Now: "qualifier segments at the use site — interpretation is per-language." Same data shape; the adapter's downstream use is what differs (C++ synthesizes a wildcard, Python matches against an existing import).
+
+## Considered Options
+
+- **A. `UsedType.name` carries the full dotted chain** (e.g. `name = "os.path.join"`). Rejected: drifts the semantics of `name` from "simple type identifier" to "sometimes-dotted, sometimes-not, depending on language." Generic resolution code that does `usedType.name == "Foo"` silently breaks for Python.
+- **B. (Chosen) `namespacePrefix` carries the prefix segments; `name` carries the leaf.** Mirrors how the C++ adapter already uses `namespacePrefix` for fully-qualified inline references. Adapter demultiplexes on `namespacePrefix.isEmpty()`.
+- **C. Add a new field `UsedType.attributeChain: List<String>?`.** Rejected: one more field for a Python-only quirk when `namespacePrefix` already does the right structural thing. The data is identical to what `namespacePrefix` captures; only the per-language adapter interpretation differs.
+
+## Consequences
+
+- **Two-stream extractor — one entry per `(attribute)` node, nested included.** TSE's Python `UsedTypeExtractor` emits one `UsedType` per `(identifier)` *and* one per `(attribute)` node found in the definition body. For `os.path.join` this means up to five `UsedType` entries (three identifiers — `os`, `path`, `join` — plus two attribute nodes — outer `os.path.join` → `UsedType("join", ["os","path"])` and inner `os.path` → `UsedType("path", ["os"])`). Both attribute emissions are required: DC's `PythonTypeAttributeQuery` runs `(attribute) @attribute` which matches every attribute node, then the adapter's `attributeIdentifier in imports` is an exact-string match against the joined prefix. Emitting only the outermost would silently drop dependencies in files that `import os` but not `import os.path`. Pin with a unit test asserting both nested and outermost attribute nodes produce a `UsedType`. The remaining noise (no-match identifiers/attributes) is harmless: the adapter and resolver silently drop no-ops.
+- **`namespacePrefix` KDoc must be updated** to reflect the dual-language interpretation: C++ synthesizes wildcard `Dependency`s, Python matches against existing `STANDARD` imports. The data shape is unchanged.
+- **Adapter demultiplex rule is hard.** `namespacePrefix.isEmpty()` is a structural discriminator the Python adapter relies on. If a future change to TSE's Python `UsedTypeExtractor` populates `namespacePrefix` for non-attribute reasons, the adapter would mis-route those entries to the attribute stream. The KDoc and an extractor unit test should pin this invariant.
+- **Junky segments are preserved verbatim.** For source like `result.value[0].process`, the attribute string contains `value[0]` as a segment. TSE emits `UsedType("process", namespacePrefix = ["result", "value[0]"])`. This won't match any sensible import — no `Dependency` emitted, same as DC. Acceptable for parity, not pretty; documented here so it's not surprising during dc-compare review.
+- **Cross-language convention seeded.** Other languages with attribute-style chains (PHP `$obj->method`, Ruby `obj.method`, JavaScript `obj.method`) can reuse the same encoding when their migrations land. Each language's adapter decides whether the prefix matches an existing import (Python pattern) or synthesizes a wildcard (C++ pattern) or some other interpretation.
+- **Generic resolution code stays simple.** Code that compares `usedType.name` to a simple string remains correct — the leaf is in `name`. Code that needs to consider the full qualifier walks `namespacePrefix` explicitly.

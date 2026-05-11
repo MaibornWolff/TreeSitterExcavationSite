@@ -4,7 +4,7 @@
 
 The dependencies feature extracts structural dependency information from source files: package declarations, imports, class/interface/enum declarations, and the types each declaration uses. This data is consumed by DependaCharta (DC) to build dependency graphs, detect cycles, and assign architectural levels.
 
-Java, Kotlin, and C# are implemented. Other languages will be migrated from DC's legacy analyzers over time.
+Java, Kotlin, C#, C++, Delphi, and Python are implemented. Other languages will be migrated from DC's legacy analyzers over time.
 
 ## Architecture
 
@@ -60,17 +60,19 @@ data class ImportDeclaration(
     val path: List<String>,                 // ["java", "util", "List"]
     val isWildcard: Boolean,                // true for "import java.util.*"
     val namespacePath: List<String> = [],   // namespace scope: [] = global, ["My", "Namespace"] = scoped to that namespace
-    val kind: ImportKind = STANDARD         // INCLUDE for C++ #include; STANDARD for everything else (Java/Kotlin/C#/C++ `using`)
+    val kind: ImportKind = STANDARD,        // STANDARD / INCLUDE / IMPORT_FROM — see "Import kinds" below
+    val isAliased: Boolean = false          // true for Python `from M import X as Y` and `import M as N`; alias name itself is dropped
 )
 
 enum class ImportKind {
-    STANDARD,  // e.g., Java `import`, Kotlin `import`, C# `using`, C++ `using namespace`/`using X::Y`
-    INCLUDE    // C++ `#include` — downstream adapter applies path resolution + extension normalization
+    STANDARD,    // e.g., Java `import`, Kotlin `import`, C# `using`, C++ `using namespace`/`using X::Y`, Python `import M`
+    INCLUDE,     // C++ `#include` — downstream adapter applies path resolution + extension normalization
+    IMPORT_FROM  // Python `from M import X` — module path and imported name combined into a single `path`
 }
 
 data class Declaration(
     val name: String,                       // "MyService"
-    val type: DeclarationType,              // CLASS, INTERFACE, ENUM, RECORD, ANNOTATION
+    val type: DeclarationType,              // CLASS, INTERFACE, ENUM, RECORD, ANNOTATION, FUNCTION, VARIABLE
     val usedTypes: Set<UsedType>,           // types referenced inside this declaration
     val parentPath: List<String> = []       // namespace/package path: ["com", "example"]
 )
@@ -88,29 +90,34 @@ data class UsedType(
 
 | Kind | Source | Adapter handling |
 |---|---|---|
-| `STANDARD` (default) | Java `import`, Kotlin `import`, C# `using`, C++ `using namespace` / `using X::Y` | Consumed as-is — the `path` is already the canonical reference |
+| `STANDARD` (default) | Java `import`, Kotlin `import`, C# `using`, C++ `using namespace` / `using X::Y`, Python `import os.path` | Consumed as-is — the `path` is already the canonical reference |
 | `INCLUDE` | C++ `#include "…"` or `#include <…>` only | Adapter resolves relative paths (`./`, `../`) against the file's physical path and rewrites the final segment's `.` → `_` to match DC's node-naming convention |
+| `IMPORT_FROM` | Python `from M import X` only | Adapter synthesizes the `__init__` twin (`["M", "__init__", "X"]`) alongside the canonical entry — see ADR-0004 in `docs/adr/`. Discriminates from plain `import M.X` (which would produce the same `path` shape) so twin synthesis fires only on `from`-imports. |
 
-Without this tag, a C++ DC adapter cannot tell `#include "foo"` (needs path normalization) from `using foo;` (must not be normalized) — both produce the same `(path, isWildcard, namespacePath)` triple. TSE extractors tag the AST source; adapters branch on `kind`.
+Without these tags an adapter cannot tell `#include "foo"` (needs path normalization) from `using foo;` (must not be normalized), nor `from M import X` (needs `__init__` twin) from `import M.X` (must not be twinned) — all three produce structurally similar `(path, isWildcard)` shapes. TSE extractors tag the AST source; adapters branch on `kind`.
 
-All non-C++ languages leave the field at its default (`STANDARD`), so adding the field is source- and binary-compatible with existing callers.
+The `isAliased` flag on `ImportDeclaration` is a separate, orthogonal discriminator used by the Python adapter (ADR-0006). For `from M import X as Y` TSE emits `ImportDeclaration(path=["M","X"], kind=IMPORT_FROM, isAliased=true)`; the alias name `Y` itself is dropped because TSE's Python `UsedTypeExtractor` rewrites use-site occurrences of `Y` to `X` internally (ADR-0002). Only the *fact* of aliasing is preserved, so the DC adapter can match DC main's "pre-load non-aliased twins unconditionally; conditionally pre-load aliased twins on use" behavior.
+
+All non-Python, non-C++ languages leave `kind` at its default (`STANDARD`) and `isAliased` at its default (`false`), so the fields are source- and binary-compatible with existing callers.
 
 ### Namespace-prefix handling
 
-`UsedType.namespacePrefix` captures the scope segments that appear *before* a type name at the use site. For `A::B::Settings` it is `["A", "B"]`; for an unqualified `Settings` it is `[]`.
+`UsedType.namespacePrefix` captures the qualifier segments that appear *before* a type name at the use site. For `A::B::Settings` it is `["A", "B"]`; for an unqualified `Settings` it is `[]`. The exact meaning of "qualifier" is language-specific (namespace scopes in C++, attribute-access chains in Python).
 
-**Why it exists — and why it's essentially a C++ concern:**
+**Per-language interpretation:**
 
 | Language | Typical style | Does `namespacePrefix` carry info? |
 |---|---|---|
 | Java, Kotlin, C# | Import types at the top, use short names inline. Qualified inline usage (`com.other.Settings s`) is rare and idiomatically discouraged. | No — always empty. The import list already carries the neighborhood info the resolver needs. |
-| C++ | `using namespace` is discouraged in headers because it pollutes scope. Writing `cppcheck::Settings` inline is **the normal way** to reference cross-namespace types. | Yes — populated on every qualified inline reference. |
-| TypeScript, JavaScript, Python, Go, Vue | Import-aliased usage (`pkg.Type`) is idiomatic but stored as a dotted string in `UsedType.name`; the resolver splits on `.`. | No — always empty. |
+| C++ | `using namespace` is discouraged in headers because it pollutes scope. Writing `cppcheck::Settings` inline is **the normal way** to reference cross-namespace types. | Yes — namespace/scope segments populated on every qualified inline reference. |
+| Python | Attribute access on imported modules (`os.path.join`, `httpx.AsyncClient`) is the idiomatic way to reach into an imported package; the segments before the final identifier are the qualifier. | Yes — attribute-access segments populated for every `(attribute)` AST node. `namespacePrefix.isEmpty()` discriminates identifier-stream usages from attribute-stream usages. |
+| TypeScript, JavaScript, Go, Vue | Import-aliased usage (`pkg.Type`) is idiomatic but stored as a dotted string in `UsedType.name`; the resolver splits on `.`. | No — always empty. |
 | PHP | Has namespaces similar to C++; could opt in if the same resolver gap appears. | Optional; opt-in per extractor. |
 
-**How a DC-side adapter consumes it:** when building a node's `dependencies` set, emit a synthetic `Dependency(Path(namespacePrefix), isWildcard = true)` per `UsedType` that has a non-empty prefix. This mirrors what DC's legacy C++ analyzer did implicitly via `TypeExtractionService.extractTypeWithFoundNamespacesAsDependencies`: for every qualified usage, add a wildcard pointing at the type's neighborhood so the resolver can match the short name against classes declared there.
+**How a DC-side adapter consumes it:** consumption is language-specific.
 
-The resolver itself needs no changes — the existing wildcard-matching loop in `Node.resolveTypeImport` already prepends wildcards to type names and looks for project matches.
+- **C++** — for every `UsedType` with a non-empty prefix, emit a synthetic `Dependency(Path(namespacePrefix), isWildcard = true)` into the node's `dependencies` set. This mirrors what DC's legacy C++ analyzer did implicitly via `TypeExtractionService.extractTypeWithFoundNamespacesAsDependencies`: for every qualified usage, add a wildcard pointing at the type's neighborhood so the resolver can match the short name against classes declared there. The resolver itself needs no changes — the existing wildcard-matching loop in `Node.resolveTypeImport` already prepends wildcards to type names and looks for project matches.
+- **Python** — demultiplex on `namespacePrefix.isEmpty()`: empty → identifier-stream usage, route into `Node.usedTypes`; non-empty → attribute-stream usage, match the joined prefix against the file's `STANDARD`-kind imports and STANDARD-aliases (`import os.path`, `import os.path as op`) and route resolved hits into `Node.dependencies`.
 
 ### Primitive and sized-type representation
 
@@ -166,10 +173,12 @@ object NewLangDependencyMapping {
 Each extractor is an `internal object` with an `extract` function. Use direct tree traversal (`TreeTraversal.findAllDescendantsOfType`, `findAllDescendantsGroupedByType`, etc.) — not TSQuery.
 
 Required extractors:
-- **PackageExtractor** — extracts the package/module path as `List<String>`
 - **ImportExtractor** — extracts imports as `List<ImportDeclaration>`
 - **DeclarationExtractor** — finds class/interface/enum declarations, delegates to UsedTypeExtractor for each
 - **UsedTypeExtractor** — extracts all types used within a declaration
+
+Optional:
+- **PackageExtractor** — extracts the package/module path as `List<String>`. Omit when the language has no in-source package declaration (e.g. Python — see ADR-0001); `LanguageDependencyMapping.extractPackagePath` defaults to empty.
 
 See `languages/java/extractors/` for the reference implementation.
 
@@ -198,11 +207,10 @@ class NewLangDependencyTest {
 
     @Nested
     inner class DeclarationExtraction { ... }
-
-    @Nested
-    inner class ApiSupportCheck { ... }
 }
 ```
+
+API-support assertions (`isDependencyAnalysisSupported`, throw-on-unsupported) live in `LanguageSupportContractTest.DependencySupportContract`. Add the new language to the expected supported-language set there; no per-language API-support tests.
 
 ### 5. Verify with dc-compare
 
@@ -236,7 +244,7 @@ A different concatenation order with the same types produces identical dependenc
 | **C#** | constructors, methods, casts, genericParams, genericConstraints, inherited, variables, objectCreations, memberAccesses, attributes, isTypeChecks | `CsharpAnalyzer.kt` |
 | **C++** | processor list order: typeDecl, inheritance, methods, typeDef, alias, generic, define | `BodyProcessor.kt` |
 | **Go** | functionQuery, typeQuery | `GoAnalyzer.kt` |
-| **Python** | N/A — imports only, no multi-category concatenation | `PythonAnalyzer.kt` |
+| **Python** | identifier stream, attribute stream — `LinkedHashSet` preserves source order within each. Adapter then re-orders into a four-category sequence at `Node.dependencies` build time: (1) non-aliased FROM-import twins in source order, (2) wildcard FROM-import twins in source order, (3) aliased FROM-import twins in identifier-stream order (conditional on use), (4) STANDARD-import + STANDARD-alias attribute matches in attribute-stream order. | `PythonAnalyzer.kt` (legacy queries: `PythonTypeIdentifierQuery` + `PythonTypeAttributeQuery`) |
 | **JavaScript** | N/A — imports only, no multi-category concatenation | `JavascriptAnalyzer.kt` |
 | **Vue** | script imports, template components | `VueAnalyzer.kt` |
 | **Delphi** | inheritance, parameters, returnTypes, fieldTypes, propertyTypes, constTypes, variableTypes, constructorCalls, methodCalls, castTypes, attributeTypes, genericConstraintTypes | N/A — TSE-native, no DC legacy |
