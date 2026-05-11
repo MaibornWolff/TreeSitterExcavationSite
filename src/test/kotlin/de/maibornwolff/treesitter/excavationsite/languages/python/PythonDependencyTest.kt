@@ -233,6 +233,43 @@ class PythonDependencyTest {
             assertThat(result.imports).hasSize(1)
             assertThat(result.imports[0].path).containsExactly(".", "sibling")
         }
+
+        @Test
+        fun `should extract from-import nested inside a function body`() {
+            // Arrange
+            val code = """
+            def create_app():
+                from . import views
+                return views
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly(".", "views")
+            assertThat(result.imports[0].kind).isEqualTo(ImportKind.IMPORT_FROM)
+        }
+
+        @Test
+        fun `should extract aliased standard import nested inside a function body`() {
+            // Arrange
+            val code = """
+            def load():
+                import numpy as np
+                return np
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.PYTHON)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly("numpy")
+            assertThat(result.imports[0].kind).isEqualTo(ImportKind.STANDARD)
+            assertThat(result.imports[0].isAliased).isTrue()
+        }
     }
 
     @Nested
