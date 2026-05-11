@@ -5,6 +5,7 @@
 IMPORT_FROM:enum.Enum
 IMPORT_FROM:typing.List
 IMPORT_FROM:typing.Optional
+STANDARD:aliased:datetime
 
 # Declarations
 CLASS:Sample
