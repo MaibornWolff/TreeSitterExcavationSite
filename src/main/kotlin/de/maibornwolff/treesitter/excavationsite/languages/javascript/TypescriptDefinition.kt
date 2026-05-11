@@ -2,6 +2,7 @@ package de.maibornwolff.treesitter.excavationsite.languages.javascript
 
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Extract
 import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDefinition
+import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDependencyMapping
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Metric
 
 /**
@@ -13,4 +14,5 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.Metric
 object TypescriptDefinition : LanguageDefinition {
     override val nodeMetrics: Map<String, Set<Metric>> = TypescriptMetricMapping.nodeMetrics
     override val nodeExtractions: Map<String, Extract> = JavascriptExtractionMapping.nodeExtractions
+    override val dependencyMapping: LanguageDependencyMapping = TypescriptDependencyMapping.dependencyMapping
 }

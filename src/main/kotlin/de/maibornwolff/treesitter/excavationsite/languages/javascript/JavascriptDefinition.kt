@@ -4,6 +4,7 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.CalculationConfig
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Extract
 import de.maibornwolff.treesitter.excavationsite.shared.domain.IgnoreRule
 import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDefinition
+import de.maibornwolff.treesitter.excavationsite.shared.domain.LanguageDependencyMapping
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Metric
 
 /**
@@ -23,4 +24,6 @@ object JavascriptDefinition : LanguageDefinition {
             IgnoreRule.TypeWithParentType(IDENTIFIER, FUNCTION_DECLARATION)
         )
     )
+
+    override val dependencyMapping: LanguageDependencyMapping = JavascriptDependencyMapping.dependencyMapping
 }
