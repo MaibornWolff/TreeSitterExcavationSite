@@ -261,8 +261,9 @@ class GoldenFileContractTest {
             )
         }
 
-        val expected = goldenFile.readText().trim()
-        assertThat(actual)
+        val expected = goldenFile.readText().replace("\r\n", "\n").trim()
+        val normalizedActual = actual.replace("\r\n", "\n")
+        assertThat(normalizedActual)
             .withFailMessage {
                 """
                 |Golden file mismatch: $goldenPath
