@@ -962,12 +962,4 @@ class TypescriptDependencyTest {
             assertThat(result.declarations[0].parentPath).containsExactly("@scope", "pkg")
         }
     }
-
-    @Nested
-    inner class ApiSupportCheck {
-        @Test
-        fun `should support TypeScript dependency analysis`() {
-            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.TYPESCRIPT)).isTrue()
-        }
-    }
 }

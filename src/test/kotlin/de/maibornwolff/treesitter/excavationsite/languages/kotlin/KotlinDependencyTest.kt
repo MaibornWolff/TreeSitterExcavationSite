@@ -880,13 +880,4 @@ class KotlinDependencyTest {
             )
         }
     }
-
-    @Nested
-    inner class ApiSupportCheck {
-        @Test
-        fun `should report Kotlin as supported for dependency analysis`() {
-            // Act & Assert
-            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.KOTLIN)).isTrue()
-        }
-    }
 }

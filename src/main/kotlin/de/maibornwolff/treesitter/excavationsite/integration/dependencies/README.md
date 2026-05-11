@@ -207,11 +207,10 @@ class NewLangDependencyTest {
 
     @Nested
     inner class DeclarationExtraction { ... }
-
-    @Nested
-    inner class ApiSupportCheck { ... }
 }
 ```
+
+API-support assertions (`isDependencyAnalysisSupported`, throw-on-unsupported) live in `LanguageSupportContractTest.DependencySupportContract`. Add the new language to the expected supported-language set there; no per-language API-support tests.
 
 ### 5. Verify with dc-compare
 

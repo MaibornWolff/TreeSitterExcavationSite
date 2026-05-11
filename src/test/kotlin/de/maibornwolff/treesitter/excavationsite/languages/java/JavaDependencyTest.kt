@@ -5,7 +5,6 @@ import de.maibornwolff.treesitter.excavationsite.api.Language
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
 import de.maibornwolff.treesitter.excavationsite.api.UsedType
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 
@@ -703,32 +702,6 @@ class JavaDependencyTest {
 
             // Assert - Record has no extracted used types (record components use different AST structure)
             assertThat(byName["CreatureId"]?.usedTypes).isEmpty()
-        }
-    }
-
-    @Nested
-    inner class ApiSupportCheck {
-        @Test
-        fun `should report Java as supported for dependency analysis`() {
-            // Act & Assert
-            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.JAVA)).isTrue()
-        }
-
-        @Test
-        fun `should report unsupported language`() {
-            // Act & Assert
-            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.RUBY)).isFalse()
-        }
-
-        @Test
-        fun `should throw when analyzing unsupported language`() {
-            // Arrange
-            val code = "x = 1"
-
-            // Act & Assert
-            assertThatThrownBy { TreeSitterDependencies.analyze(code, Language.RUBY) }
-                .isInstanceOf(UnsupportedOperationException::class.java)
-                .hasMessageContaining("RUBY")
         }
     }
 }

@@ -1855,22 +1855,7 @@ class DelphiDependencyTest {
     }
 
     @Nested
-    inner class ApiSupportCheck {
-        @Test
-        fun `should report Delphi as supported for dependency analysis`() {
-            // Assert
-            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.DELPHI)).isTrue()
-        }
-
-        @Test
-        fun `should include Delphi in supported languages list`() {
-            // Act
-            val supported = TreeSitterDependencies.getSupportedLanguages()
-
-            // Assert
-            assertThat(supported.any { it == Language.DELPHI }).isTrue()
-        }
-
+    inner class Robustness {
         @Test
         fun `should not throw when analyzing a trivial valid unit`() {
             // Arrange
@@ -1884,10 +1869,7 @@ class DelphiDependencyTest {
             // Act + Assert
             TreeSitterDependencies.analyze(code, Language.DELPHI)
         }
-    }
 
-    @Nested
-    inner class Robustness {
         @Test
         fun `should return empty result for empty input`() {
             // Act

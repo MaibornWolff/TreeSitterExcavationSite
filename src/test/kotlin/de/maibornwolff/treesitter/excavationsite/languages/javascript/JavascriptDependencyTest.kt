@@ -297,12 +297,4 @@ class JavascriptDependencyTest {
             assertThat(appDeclaration.usedTypes.map { it.name }).containsExactlyInAnyOrder("App", "MyComponent")
         }
     }
-
-    @Nested
-    inner class ApiSupportCheck {
-        @Test
-        fun `should support JavaScript dependency analysis`() {
-            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.JAVASCRIPT)).isTrue()
-        }
-    }
 }

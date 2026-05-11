@@ -5,6 +5,7 @@ import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterMetrics
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -300,6 +301,20 @@ class LanguageSupportContractTest {
                     Language.TSX,
                     Language.PYTHON
                 )
+        }
+
+        @Test
+        fun `should throw when analyzing an unsupported language`() {
+            // Arrange — pick any language without dependency support at runtime so this
+            // test does not need updating each time a new language gets migrated.
+            val unsupportedLanguage = Language.entries.first {
+                !TreeSitterDependencies.isDependencyAnalysisSupported(it)
+            }
+
+            // Act & Assert
+            assertThatThrownBy { TreeSitterDependencies.analyze("x = 1", unsupportedLanguage) }
+                .isInstanceOf(UnsupportedOperationException::class.java)
+                .hasMessageContaining(unsupportedLanguage.name)
         }
     }
 

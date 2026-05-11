@@ -138,12 +138,4 @@ class TsxDependencyTest {
             assertThat(fooDeclaration.usedTypes.map { it.name }).containsExactlyInAnyOrder("MyComponent")
         }
     }
-
-    @Nested
-    inner class ApiSupportCheck {
-        @Test
-        fun `should support TSX dependency analysis`() {
-            assertThat(TreeSitterDependencies.isDependencyAnalysisSupported(Language.TSX)).isTrue()
-        }
-    }
 }
