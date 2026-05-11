@@ -8,7 +8,6 @@ import org.treesitter.TSNode
 
 internal object JavascriptDependencyMapping {
     val dependencyMapping = LanguageDependencyMapping(
-        extractPackagePath = { _, _ -> emptyList() }, // JS/TS have no package declarations
         extractImports = ImportExtractor::extract,
         extractDeclarations = { node, code -> extractJsDeclarations(node, code) }
     )
