@@ -8,6 +8,7 @@ import de.maibornwolff.treesitter.excavationsite.api.TreeSitterDependencies
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterExtraction
 import de.maibornwolff.treesitter.excavationsite.api.TreeSitterMetrics
 import de.maibornwolff.treesitter.excavationsite.api.UsedType
+import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportDeclaration
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
@@ -193,7 +194,7 @@ class GoldenFileContractTest {
         builder.appendLine()
         builder.appendLine("# Imports")
         result.imports
-            .map { "${if (it.isWildcard) "*:" else ""}${it.path.joinToString(".")}" }
+            .map { formatImport(it) }
             .sorted()
             .forEach { builder.appendLine(it) }
 
@@ -223,6 +224,17 @@ class GoldenFileContractTest {
             }
 
         return builder.toString().trim()
+    }
+
+    private fun formatImport(declaration: ImportDeclaration): String {
+        val wildcard = if (declaration.isWildcard) "*:" else ""
+        val aliased = if (declaration.isAliased) "aliased:" else ""
+        val namespace = if (declaration.namespacePath.isEmpty()) {
+            ""
+        } else {
+            "${declaration.namespacePath.joinToString(".")}/"
+        }
+        return "${declaration.kind}:$wildcard$aliased$namespace${declaration.path.joinToString(".")}"
     }
 
     private fun formatUsedType(usedType: UsedType): String {

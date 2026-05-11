@@ -2,9 +2,9 @@
 
 
 # Imports
-enum.Enum
-typing.List
-typing.Optional
+IMPORT_FROM:enum.Enum
+IMPORT_FROM:typing.List
+IMPORT_FROM:typing.Optional
 
 # Declarations
 CLASS:Sample
