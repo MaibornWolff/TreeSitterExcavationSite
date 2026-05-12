@@ -661,6 +661,19 @@ class TypescriptDependencyTest {
         }
 
         @Test
+        fun `should extract extends clause type from interface declaration`() {
+            // Arrange
+            val code = "interface Foo extends Bar {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("Bar")
+        }
+
+        @Test
         fun `should extract extends clause type`() {
             // Arrange
             val code = "class Foo extends Bar {}"

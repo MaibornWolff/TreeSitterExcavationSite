@@ -14,6 +14,7 @@ internal object UsedTypeExtractor {
     private const val CALL_EXPRESSION = "call_expression"
     private const val PROPERTY_IDENTIFIER = "property_identifier"
     private const val EXTENDS_CLAUSE = "extends_clause"
+    private const val EXTENDS_TYPE_CLAUSE = "extends_type_clause"
     private const val IMPLEMENTS_CLAUSE = "implements_clause"
     private const val JSX_OPENING_ELEMENT = "jsx_opening_element"
     private const val JSX_SELF_CLOSING_ELEMENT = "jsx_self_closing_element"
@@ -26,6 +27,7 @@ internal object UsedTypeExtractor {
         MEMBER_EXPRESSION,
         CALL_EXPRESSION,
         EXTENDS_CLAUSE,
+        EXTENDS_TYPE_CLAUSE,
         IMPLEMENTS_CLAUSE,
         IDENTIFIER,
         JSX_OPENING_ELEMENT,
@@ -85,7 +87,7 @@ internal object UsedTypeExtractor {
         }
 
     private fun extractExtensions(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
-        val clauseNodes = buckets[EXTENDS_CLAUSE].orEmpty() + buckets[IMPLEMENTS_CLAUSE].orEmpty()
+        val clauseNodes = buckets[EXTENDS_CLAUSE].orEmpty() + buckets[EXTENDS_TYPE_CLAUSE].orEmpty() + buckets[IMPLEMENTS_CLAUSE].orEmpty()
         return clauseNodes.flatMap { clauseNode ->
             TreeTraversal
                 .findAllDescendantsOfType(clauseNode, TYPE_IDENTIFIER, IDENTIFIER)
