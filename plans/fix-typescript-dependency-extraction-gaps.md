@@ -13,20 +13,20 @@ No shared-domain or facade changes required.
 
 ## Gaps
 
-| # | Description | Root cause | Effort |
-|---|-------------|------------|--------|
-| 1 | `interface Foo extends Bar` — `Bar` missing from `usedTypes` | `extends_type_clause` node not in `ALL_NODE_TYPES` | ~3 lines |
-| 3a | `class Foo<T extends Bar>` — `Bar` missing from `usedTypes` | `constraint` node not in `ALL_NODE_TYPES` | ~15 lines |
-| 3b | `type Foo = Bar<Baz>` — `Bar`, `Baz` missing from `usedTypes` | type alias RHS is not a `type_annotation` node | ~20 lines |
-| 2 | `export namespace EngineArgs {}` — no declaration emitted | `internal_module` node type missing from `DECLARATION_NODE_TYPES` | ~20 lines |
+| # | Description | Root cause | Effort | Status |
+|---|-------------|------------|--------|--------|
+| 1 | `interface Foo extends Bar` — `Bar` missing from `usedTypes` | `extends_type_clause` node not in `ALL_NODE_TYPES` | ~3 lines | ✅ done |
+| 3a | `class Foo<T extends Bar>` — `Bar` missing from `usedTypes` | `constraint` node not in `ALL_NODE_TYPES` | ~15 lines | ✅ done |
+| 3b | `type Foo = Bar<Baz>` — `Bar`, `Baz` missing from `usedTypes` | type alias RHS is not a `type_annotation` node | ~20 lines | ✅ done |
+| 2 | `export namespace EngineArgs {}` — no declaration emitted | `internal_module` node type missing from `DECLARATION_NODE_TYPES` | ~20 lines | ✅ done |
+| 4 | Named import usages not tracked | `UsedTypeExtractor` only captures capitalised identifiers; imported lowercase names used in function bodies are silently dropped | Medium — see `fix-js-declaration-extraction-gaps.md` Issue 3 | ✅ done |
 
-## What we're NOT doing
+## What we're NOT doing (Gaps 1–3)
 
 - No recursion into namespace bodies — DC legacy produced only the opaque namespace node itself
   (`type=UNKNOWN`, no members), and TSE will match that.
 - No new `DeclarationType.NAMESPACE` — `UNKNOWN` matches DC legacy output.
-- No changes to JavaScript (non-TypeScript) dependency extraction.
-- No dc-compare round (Prisma comparison already done; these fixes address known regressions).
+- Gap 4 (named import usage tracking) is tracked and will be implemented in `fix-js-declaration-extraction-gaps.md` Issue 3, which covers both TS and JS.
 
 ## Architecture and code reuse
 

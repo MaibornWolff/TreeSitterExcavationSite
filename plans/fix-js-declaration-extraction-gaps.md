@@ -7,9 +7,12 @@ version:
 
 ## Goal
 
-Fix two JS/TS dependency extraction gaps surfaced by dc-compare against React (JS) and Prisma (TS).
+Fix JS/TS dependency extraction gaps surfaced by dc-compare against React (JS) and Prisma (TS).
 TS gaps 1/2/3 (interface extends, namespace, type alias RHS, generic constraints) are already fixed in
-`fix-typescript-dependency-extraction-gaps.md`. This plan covers the remaining issues.
+`fix-typescript-dependency-extraction-gaps.md`. This plan covers the remaining issues:
+- Issue 1: export-only filtering (✅ done)
+- Issue 2: named import value-position usages investigation (✅ done — DC-side)
+- Issue 3: lowercase/camelCase named import usages not tracked (✅ done)
 
 ## Context
 
@@ -154,6 +157,95 @@ four patterns. Do NOT fix anything yet — write the tests and run them.
 - If tests **fail**: TSE is genuinely not emitting these. Diagnose and implement fix in
   `UsedTypeExtractor` or `JavascriptDependencyMapping`.
 
+## Issue 3: Named import usages not tracked (affects both TS and JS)
+
+DC's old analyzers tracked every reference to an imported name anywhere in a declaration body —
+including lowercase function calls, camelCase method calls, and PascalCase/SCREAMING_SNAKE usages.
+TSE currently applies a capitalisation heuristic (`name.firstOrNull()?.isUpperCase()`) so all
+lowercase and camelCase usages silently disappear from `usedTypes`.
+
+**Scale:**
+- TS (Prisma): ~1,422 missing deps — e.g. `debug`, `createHash`, `formatError`
+- JS (React): ~3,483 missing camelCase deps — e.g. `releaseCache`, `retainCache`, `commitClassCallbacks`
+
+**Pattern in old DC analyzers:**
+1. Parse import statements → collect the set of locally bound names (e.g. `{releaseCache, retainCache}`)
+2. Scan the full declaration body for any `identifier` whose text matches a name in that set
+3. Emit each match as a `usedType` → DC resolver links it back to the source node
+
+**Scope:** import-scoped only — not all identifiers, only those that appear as named bindings in the
+file's import declarations (`import { A, B }` or `const { A, B } = require(...)`).
+
+**Architectural question:** The fix requires correlating two pieces of data that are currently
+computed independently:
+- The set of imported names (from `ImportExtractor` or re-derived from the root AST)
+- The identifier nodes inside each declaration body (currently only visible to `UsedTypeExtractor`)
+
+`DeclarationExtractor.buildAliasMap()` already walks import statements and collects a subset of this
+data (alias mappings). Extending it — or running a parallel pass — to collect ALL named bindings is
+the most likely fix path. Whether to thread the resulting `Set<String>` through to `UsedTypeExtractor`
+as a new parameter, or to compute it inside `DeclarationExtractor.extract()` and handle the emission
+there, needs investigation.
+
+### Phase 3a: Investigation
+
+**Step 0 — Verify the gap exists in DC legacy before assuming TSE must change.**
+
+Read DC's `analyzers/typescript/TypescriptAnalyzer.kt` and `analyzers/javascript/JavascriptAnalyzer.kt`
+(or their query files under `analyzers/<lang>/queries/`) and answer:
+
+- Does the legacy TS analyzer emit usedType entries for lowercase/camelCase identifiers that match
+  an imported name (e.g. `debug`, `createHash`)? Or does it apply a capitalisation filter of its own?
+- Does the legacy JS analyzer emit usedType entries for camelCase identifiers that match an imported
+  name (e.g. `releaseCache`, `commitClassCallbacks`)?
+- If yes: confirm the pattern with a concrete example from the analyzer source (quote the relevant code).
+- If no: the dc-compare diff for these names has a different cause (DC pipeline, resolver, or
+  something else). Do NOT proceed to Phase 3b.
+
+This step mirrors the due-diligence done for every other language migration (dependency-migration.md:
+"Read DC's legacy analyzer... understand how it extracts usedTypes"). Issue 2 showed that dc-compare
+can report "missing" deps that TSE already emits correctly — applying the same scepticism here.
+
+Before implementing, also answer the following questions by reading the code and/or adding a throwaway
+exploration test:
+
+1. **What named-binding names does `buildAliasMap()` currently collect?** It collects `alias → original`
+   pairs for aliased named imports (`import { A as B }` → maps B→A) and default bindings (`import Foo`
+   → maps Foo→DEFAULT_EXPORT). It does NOT collect unaliased named imports (`import { foo }` → `foo`
+   is NOT in the alias map). Confirm this.
+
+2. **Where is the cleanest place to compute the imported-names set?**
+   - Option A: Extend `buildAliasMap()` to additionally return `Set<String>` of all named bindings
+     (including unaliased), then pass both to `UsedTypeExtractor.extract(importedNames)`.
+   - Option B: Add a separate `buildImportedNames(rootNode, sourceCode): Set<String>` function
+     in `DeclarationExtractor` and pass to `UsedTypeExtractor`.
+   - Option C: Compute the set inside `JavascriptDependencyMapping` from `ImportExtractor.extract()`
+     results (path.last() for non-wildcard imports) and pass down to `DeclarationExtractor.extract()`.
+   - Option D: Move the whole import-scan into `UsedTypeExtractor.extract()` by accepting `rootNode`.
+
+3. **Does `UsedTypeExtractor.extract()` need a new parameter, or can the imported-names set be
+   passed via the existing `aliasMap`?** The alias map currently maps local name → canonical name;
+   a different mechanism is needed for plain unaliased names (their canonical name equals their local name).
+
+4. **Are there identifier nodes inside declaration bodies that should be excluded even if they match
+   an imported name?** E.g. variable declarations inside function bodies (`const foo = ...` where
+   `foo` happens to be an imported name) — should those count? DC's legacy probably did count them
+   (whole-body scan), so TSE should too.
+
+### Phase 3b: Implementation (to be detailed after Phase 3a)
+
+Placeholder — update this section after the investigation confirms the approach:
+
+- [ ] Add a failing test in `TypescriptDependencyTest.NamedImportValueUsages` (new nested class) for
+  a lowercase named import used in a function call (TS pattern)
+- [ ] Add a failing test in `JavascriptDependencyTest.NamedImportValueUsages` for a camelCase named
+  import used in a function call (JS pattern) — existing `NamedImportValueUsages` class covers uppercase
+  only; add a lowercase case that currently fails
+- [ ] Implement the fix in `UsedTypeExtractor` (or `DeclarationExtractor`) per the approach confirmed
+  in Phase 3a
+- [ ] Run `./gradlew test` green
+- [ ] Run `./gradlew ktlintCheck` passes
+
 ## Steps
 
 - [x] Phase 1a: Write failing tests for new `should not extract non-exported...` cases in `JavascriptDependencyTest`
@@ -166,6 +258,9 @@ four patterns. Do NOT fix anything yet — write the tests and run them.
 - [x] Phase 2b: Run tests — all 4 PASSED → TSE already emits these usedTypes correctly
 - [x] Phase 2c: DC-side issue confirmed — no TSE code changes needed
 - [x] Phase 2d: N/A (no code changes in Phase 2c)
+- [x] Phase 3a-0: Both analyzers already migrated to TSE; `TypescriptAnalyzer.extraUsedTypes()` compensates at adapter level — gap confirmed real in TSE
+- [x] Phase 3a: Answered all four investigation questions (see Findings)
+- [x] Phase 3b: Added failing tests, implemented fix, green suite, ktlintCheck passes
 
 ## Findings
 
@@ -178,6 +273,11 @@ four patterns. Do NOT fix anything yet — write the tests and run them.
 Root cause of DC's ~3,744 missing deps is in DC's own pipeline (adapter mapping or resolver). The fix belongs in DC, not TSE.
 
 Note: JS class names use `identifier` nodes (not `type_identifier` like TS), so the class name itself (e.g. "App") is captured as a usedType by `extractRelevantIdentifiers`. Tests reflect this accurately.
+
+**Issue 3 outcome**: Fixed via two minimal changes:
+- `buildAliasMap()` extended to self-map unaliased named imports (`import { foo }` → `foo → foo`), making aliasMap a complete registry of all locally bound import names.
+- `extractRelevantIdentifiers()` extended to accept `aliasMap` and emit identifiers in aliasMap regardless of capitalisation. Existing aliasMap rename step handles aliased imports (`import { Foo as bar }` → `bar` renamed to `Foo`) for free.
+- DC's `TypescriptAnalyzer.extraUsedTypes()` — which was added as a workaround for this gap — becomes redundant but can stay harmlessly.
 
 ## Notes
 

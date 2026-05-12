@@ -265,8 +265,9 @@ internal object DeclarationExtractor {
                         .filter { it.type == IDENTIFIER }
                         .map { TreeTraversal.getNodeText(it, sourceCode).trim() }
                         .toList()
-                    if (identifiers.size == 2) {
-                        aliasMap[identifiers[1]] = normalizeDefaultKeyword(identifiers[0])
+                    when (identifiers.size) {
+                        1 -> aliasMap[identifiers[0]] = identifiers[0]
+                        2 -> aliasMap[identifiers[1]] = normalizeDefaultKeyword(identifiers[0])
                     }
                 }
         }

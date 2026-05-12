@@ -378,8 +378,26 @@ class JavascriptDependencyTest {
         }
 
         @Test
-        fun `should not emit lowercase named import used as plain function argument as usedType`() {
-            // Arrange — lowercase identifiers are intentionally not captured (not PascalCase or SCREAMING_SNAKE)
+        fun `should emit lowercase named import used as function call as usedType`() {
+            // Arrange
+            val code = """
+                import { releaseCache } from './cache'
+                export class App {
+                    run() { releaseCache() }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "App" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("App", "releaseCache")
+        }
+
+        @Test
+        fun `should emit lowercase named import used as plain function call argument as usedType`() {
+            // Arrange
             val code = """
                 import { processData } from './utils'
                 export class App {
@@ -390,9 +408,9 @@ class JavascriptDependencyTest {
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
 
-            // Assert — only the class name "App" itself; processData is lowercase, excluded by design
+            // Assert
             val usedTypeNames = result.declarations.first { it.name == "App" }.usedTypes.map { it.name }
-            assertThat(usedTypeNames).containsExactlyInAnyOrder("App")
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("App", "processData")
         }
     }
 

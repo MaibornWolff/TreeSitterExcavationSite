@@ -45,7 +45,7 @@ internal object UsedTypeExtractor {
         val memberAccesses = extractMemberAccesses(buckets, sourceCode)
         val methodCalls = extractMethodCalls(buckets, sourceCode)
         val extensions = extractExtensions(buckets, sourceCode)
-        val relevantIdentifiers = extractRelevantIdentifiers(buckets, sourceCode)
+        val relevantIdentifiers = extractRelevantIdentifiers(buckets, sourceCode, aliasMap)
 
         val constraintTypes = extractConstraintTypes(buckets, sourceCode)
         val typeAliasRhsTypes = if (declaration.type ==
@@ -109,12 +109,17 @@ internal object UsedTypeExtractor {
         }
     }
 
-    private fun extractRelevantIdentifiers(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
-        buckets[IDENTIFIER].orEmpty().mapNotNull { node ->
-            val name = TreeTraversal.getNodeText(node, sourceCode).trim()
-            if (name.firstOrNull()?.isUpperCase() != true) return@mapNotNull null
-            UsedType(name = name)
-        }
+    // JS uses `identifier` nodes for class names (unlike TS which uses `type_identifier`),
+    // so PascalCase class names are captured here via the uppercase check.
+    private fun extractRelevantIdentifiers(
+        buckets: Map<String, List<TSNode>>,
+        sourceCode: String,
+        aliasMap: Map<String, String> = emptyMap()
+    ): List<UsedType> = buckets[IDENTIFIER].orEmpty().mapNotNull { node ->
+        val name = TreeTraversal.getNodeText(node, sourceCode).trim()
+        if (name.firstOrNull()?.isUpperCase() != true && name !in aliasMap) return@mapNotNull null
+        UsedType(name = name)
+    }
 
     private fun extractJsxComponents(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
         val jsxNodes = buckets[JSX_OPENING_ELEMENT].orEmpty() + buckets[JSX_SELF_CLOSING_ELEMENT].orEmpty()

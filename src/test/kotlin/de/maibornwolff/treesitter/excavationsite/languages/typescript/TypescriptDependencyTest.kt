@@ -1046,6 +1046,41 @@ class TypescriptDependencyTest {
     }
 
     @Nested
+    inner class NamedImportValueUsages {
+        @Test
+        fun `should emit lowercase named import used as function call as usedType`() {
+            // Arrange
+            val code = """
+                import { createHash } from 'crypto'
+                export function process() { return createHash('sha256') }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "process" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("createHash")
+        }
+
+        @Test
+        fun `should resolve aliased lowercase import to original name as usedType`() {
+            // Arrange
+            val code = """
+                import { Hash as createHash } from 'crypto'
+                export function process() { return createHash('sha256') }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "process" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("Hash")
+        }
+    }
+
+    @Nested
     inner class ApiSupportCheck {
         @Test
         fun `should support TypeScript dependency analysis`() {
