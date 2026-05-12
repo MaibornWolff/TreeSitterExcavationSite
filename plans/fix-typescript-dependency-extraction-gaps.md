@@ -1,7 +1,7 @@
 ---
 name: Fix TypeScript dependency extraction gaps
 issue:
-state: todo
+state: complete
 version:
 ---
 
@@ -18,7 +18,7 @@ No shared-domain or facade changes required.
 | 1 | `interface Foo extends Bar` — `Bar` missing from `usedTypes` | `extends_type_clause` node not in `ALL_NODE_TYPES` | ~3 lines |
 | 3a | `class Foo<T extends Bar>` — `Bar` missing from `usedTypes` | `constraint` node not in `ALL_NODE_TYPES` | ~15 lines |
 | 3b | `type Foo = Bar<Baz>` — `Bar`, `Baz` missing from `usedTypes` | type alias RHS is not a `type_annotation` node | ~20 lines |
-| 2 | `export namespace EngineArgs {}` — no declaration emitted | `module` node type missing from `DECLARATION_NODE_TYPES` | ~20 lines |
+| 2 | `export namespace EngineArgs {}` — no declaration emitted | `internal_module` node type missing from `DECLARATION_NODE_TYPES` | ~20 lines |
 
 ## What we're NOT doing
 
@@ -45,17 +45,17 @@ for class inheritance. Only the latter is currently in `ALL_NODE_TYPES`, so inte
 relationships are invisible to the dependency graph.
 
 **Tasks**:
-- [ ] Add a failing `UsedTypeExtraction` test in `TypescriptDependencyTest`:
+- [x] Add a failing `UsedTypeExtraction` test in `TypescriptDependencyTest`:
   `should extract extends clause type from interface declaration`
   — `interface Foo extends Bar {}` → `Foo.usedTypes` contains `Bar`
-- [ ] In `UsedTypeExtractor`, add constant `EXTENDS_TYPE_CLAUSE = "extends_type_clause"`
-- [ ] Add `EXTENDS_TYPE_CLAUSE` to `ALL_NODE_TYPES`
-- [ ] Include `EXTENDS_TYPE_CLAUSE` in `extractExtensions` alongside `EXTENDS_CLAUSE` and
+- [x] In `UsedTypeExtractor`, add constant `EXTENDS_TYPE_CLAUSE = "extends_type_clause"`
+- [x] Add `EXTENDS_TYPE_CLAUSE` to `ALL_NODE_TYPES`
+- [x] Include `EXTENDS_TYPE_CLAUSE` in `extractExtensions` alongside `EXTENDS_CLAUSE` and
   `IMPLEMENTS_CLAUSE`
 
 **Automated verification**:
-- [ ] `./gradlew test --tests "TypescriptDependencyTest.UsedTypeExtraction"` green
-- [ ] `./gradlew ktlintCheck` passes
+- [x] `./gradlew test --tests "TypescriptDependencyTest.UsedTypeExtraction"` green
+- [x] `./gradlew ktlintCheck` passes
 
 ---
 
@@ -71,12 +71,12 @@ node under `type_parameters` → `type_parameter`. This node is not in `ALL_NODE
 constraint types are silently skipped.
 
 **Tasks**:
-- [ ] Add a failing `UsedTypeExtraction` test:
+- [x] Add a failing `UsedTypeExtraction` test:
   `should extract type constraint from generic type parameter`
   — `class Foo<T extends Bar> {}` → `Foo.usedTypes` contains `Bar`
-- [ ] Add constant `CONSTRAINT = "constraint"` in `UsedTypeExtractor`
-- [ ] Add `CONSTRAINT` to `ALL_NODE_TYPES`
-- [ ] Add `extractConstraintTypes(buckets, sourceCode)` that finds all `type_identifier`
+- [x] Add constant `CONSTRAINT = "constraint"` in `UsedTypeExtractor`
+- [x] Add `CONSTRAINT` to `ALL_NODE_TYPES`
+- [x] Add `extractConstraintTypes(buckets, sourceCode)` that finds all `type_identifier`
   descendants within `constraint` nodes, and include its result in `extract()`
 
 ### 2b — Type alias right-hand side
@@ -87,67 +87,66 @@ it finds nothing for type aliases. The fix: for `type_alias_declaration` nodes, 
 collect all `type_identifier` descendants that are not the declaration's own name.
 
 **Tasks**:
-- [ ] Add a failing `UsedTypeExtraction` test:
+- [x] Add a failing `UsedTypeExtraction` test:
   `should extract type reference from type alias right-hand side`
   — `type Foo = Bar<Baz>` → `Foo.usedTypes` contains `Bar` and `Baz`
-- [ ] Add a second test for a union type alias:
+- [x] Add a second test for a union type alias:
   `should extract multiple types from union type alias`
   — `type Foo = Bar | Baz` → `Foo.usedTypes` contains `Bar` and `Baz`
-- [ ] In `UsedTypeExtractor.extract()`, add an internal branch: when the passed `declaration`
+- [x] In `UsedTypeExtractor.extract()`, add an internal branch: when the passed `declaration`
   node's type is `TYPE_ALIAS_DECLARATION`, additionally collect all `type_identifier` descendants
   from the non-name subtree — skip the first `type_identifier` direct child (the declaration
   name), then `findAllDescendantsOfType` over the remaining children
 
 **Automated verification**:
-- [ ] `./gradlew test --tests "TypescriptDependencyTest.UsedTypeExtraction"` green
-- [ ] `./gradlew ktlintCheck` passes
+- [x] `./gradlew test --tests "TypescriptDependencyTest.UsedTypeExtraction"` green
+- [x] `./gradlew ktlintCheck` passes
 
 ---
 
 ## Phase 3: namespace declarations (Gap 2)
 
-`namespace Foo {}` and `export namespace Foo {}` produce `module` AST nodes in tree-sitter
-TypeScript. `module` is not in `DECLARATION_NODE_TYPES`, so no declaration is emitted. DC
-legacy emitted a single opaque `Declaration(name="Foo", type=UNKNOWN, usedTypes=emptySet())`.
-
-The `module` node type is already handled inside `extractFromAmbientDeclaration` (for
-`declare module "string" {}`) but only when the name is a `string` child. Top-level `module`
-nodes with an `identifier` name are unrelated and not affected by adding `module` to
-`DECLARATION_NODE_TYPES`.
-
 **Tasks**:
-- [ ] Add a failing `DeclarationExtraction` test:
+- [x] Add a failing `NamespaceDeclaration` test:
   `should extract namespace declaration as UNKNOWN type`
   — `export namespace EngineArgs { export type Foo = string }` → one declaration with
   `name="EngineArgs"`, `type=UNKNOWN`, `usedTypes=emptySet()`
-- [ ] Add a second test for namespace without export:
+- [x] Add a second test for namespace without export:
   `should extract namespace declaration without export keyword`
   — `namespace Foo {}` → `Declaration(name="Foo", type=UNKNOWN)`
-- [ ] Verify `MODULE_DECLARATION = "module"` already exists at line 32 of `DeclarationExtractor`
-  — reuse it, no new constant needed
-- [ ] Add `MODULE_DECLARATION` to `DECLARATION_NODE_TYPES`
-- [ ] Confirm `extractName` for `module` nodes: the `else` branch uses `arrayOf(IDENTIFIER)`,
-  and the namespace name is a direct `identifier` child of the `module` node (verified via
-  `findFirstChildTextByType` which scans direct children) ✓
-- [ ] Confirm `declarationType("module")`: the `else` branch returns `UNKNOWN` ✓
+- [x] Add constant `INTERNAL_MODULE = "internal_module"` and `EXPRESSION_STATEMENT = "expression_statement"`
+  to `DeclarationExtractor` (the plan assumed `"module"`; actual tree-sitter node type is
+  `"internal_module"`, confirmed via AST dump)
+- [x] Add `INTERNAL_MODULE` to `DECLARATION_NODE_TYPES`
+- [x] Add `EXPRESSION_STATEMENT` case in top-level dispatch to unwrap bare `namespace Foo {}`
+  (which tree-sitter wraps in `expression_statement → internal_module`)
+- [x] Add `INTERNAL_MODULE` branch in `extractFromNode` returning `Declaration(name, UNKNOWN, emptySet())`
+  — without calling `UsedTypeExtractor` (which would pick up the uppercase namespace name
+  as a self-referencing usedType via `extractRelevantIdentifiers`)
 
 **Automated verification**:
-- [ ] `./gradlew test --tests "TypescriptDependencyTest.DeclarationExtraction"` green
-- [ ] `./gradlew test` (full suite) green
-- [ ] `./gradlew ktlintCheck` passes
+- [x] `./gradlew test --tests "TypescriptDependencyTest.NamespaceDeclaration"` green
+- [x] `./gradlew test` (full suite) green — 2904 tests, 0 failed
+- [x] `./gradlew ktlintCheck` passes
 
 ---
 
 ## Notes
 
-- **Phase ordering**: Each phase is independent. Run `ktlintFormat` after each phase.
 - **Gap 3b implementation detail**: the type alias RHS logic lives entirely inside
   `UsedTypeExtractor.extract()` (not split to `DeclarationExtractor`), keeping the existing
   pattern where `DeclarationExtractor` calls only `UsedTypeExtractor.extract()` as its
   single extraction entry point. Within `extract()`, detect `declaration.type == TYPE_ALIAS_DECLARATION`,
   skip the first `type_identifier` direct child (the name), and collect all `type_identifier`
   descendants from the remaining children.
-- **`MODULE_DECLARATION` already exists** at line 32 of `DeclarationExtractor.kt` — no new
-  constant needed.
+- **AST discovery for Phase 3**: the plan assumed `"module"` as the node type for namespace
+  declarations. Actual tree-sitter-typescript node type is `"internal_module"`. Bare
+  `namespace Foo {}` is additionally wrapped in `expression_statement` at top level (unlike
+  `export namespace`, which sits directly inside `export_statement`). Confirmed via a temporary
+  `AstDumpTest` before implementing.
+- **Namespace usedTypes must be empty**: calling `UsedTypeExtractor.extract()` on an
+  `internal_module` node would pick up the namespace name itself (uppercase identifier) as a
+  usedType. The `INTERNAL_MODULE` branch in `extractFromNode` short-circuits with `emptySet()`
+  to match DC legacy output.
 - **No new `DeclarationType` value** needed — `UNKNOWN` matches the DC legacy output for
   namespace nodes, so the DC adapter requires no changes.

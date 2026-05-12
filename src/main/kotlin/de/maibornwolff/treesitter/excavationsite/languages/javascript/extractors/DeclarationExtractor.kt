@@ -30,6 +30,8 @@ internal object DeclarationExtractor {
 
     private const val AMBIENT_DECLARATION = "ambient_declaration"
     private const val MODULE_DECLARATION = "module"
+    private const val INTERNAL_MODULE = "internal_module"
+    private const val EXPRESSION_STATEMENT = "expression_statement"
     private const val STATEMENT_BLOCK = "statement_block"
 
     private const val TYPE_IDENTIFIER = "type_identifier"
@@ -51,7 +53,8 @@ internal object DeclarationExtractor {
         GENERATOR_FUNCTION_DECLARATION,
         TYPE_ALIAS_DECLARATION,
         LEXICAL_DECLARATION,
-        VARIABLE_DECLARATION
+        VARIABLE_DECLARATION,
+        INTERNAL_MODULE
     )
 
     internal sealed interface DefaultExport {
@@ -92,6 +95,10 @@ internal object DeclarationExtractor {
                 when (child.type) {
                     EXPORT_STATEMENT -> extractFromExportStatement(child, sourceCode, aliasMap = aliasMap)
                     AMBIENT_DECLARATION -> extractFromAmbientDeclaration(child, sourceCode, aliasMap = aliasMap)
+                    EXPRESSION_STATEMENT -> {
+                        val inner = child.children().firstOrNull { it.type == INTERNAL_MODULE }
+                        if (inner != null) extractFromNode(inner, sourceCode, aliasMap = aliasMap) else emptyList()
+                    }
                     in DECLARATION_NODE_TYPES -> extractFromNode(child, sourceCode, aliasMap = aliasMap)
                     else -> emptyList()
                 }
@@ -193,6 +200,10 @@ internal object DeclarationExtractor {
         aliasMap: Map<String, String> = emptyMap()
     ): List<Declaration> = when (node.type) {
         LEXICAL_DECLARATION, VARIABLE_DECLARATION -> extractVariableDeclarations(node, sourceCode, parentPath, aliasMap)
+        INTERNAL_MODULE -> {
+            val name = extractName(node, sourceCode)
+            listOf(Declaration(name = name, type = DeclarationType.UNKNOWN, usedTypes = emptySet(), parentPath = parentPath))
+        }
         else -> {
             val name = extractName(node, sourceCode)
             val type = declarationType(node.type)

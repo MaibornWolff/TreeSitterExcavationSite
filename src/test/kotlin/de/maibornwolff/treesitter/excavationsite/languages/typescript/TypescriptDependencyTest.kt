@@ -764,7 +764,7 @@ class TypescriptDependencyTest {
 
             // Assert
             val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
-            assertThat(usedTypeNames).contains("Bar")
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("Bar")
         }
 
         @Test
@@ -1012,6 +1012,38 @@ class TypescriptDependencyTest {
             // Assert
             assertThat(result.declarations).hasSize(1)
             assertThat(result.declarations[0].parentPath).containsExactly("@scope", "pkg")
+        }
+    }
+
+    @Nested
+    inner class NamespaceDeclaration {
+        @Test
+        fun `should extract namespace declaration as UNKNOWN type`() {
+            // Arrange
+            val code = "export namespace EngineArgs { export type ApplyMigrations = { foo: string } }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName).containsKey("EngineArgs")
+            assertThat(byName["EngineArgs"]?.type).isEqualTo(DeclarationType.UNKNOWN)
+            assertThat(byName["EngineArgs"]?.usedTypes).isEmpty()
+        }
+
+        @Test
+        fun `should extract namespace declaration without export keyword`() {
+            // Arrange
+            val code = "namespace Foo {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName).containsKey("Foo")
+            assertThat(byName["Foo"]?.type).isEqualTo(DeclarationType.UNKNOWN)
         }
     }
 
