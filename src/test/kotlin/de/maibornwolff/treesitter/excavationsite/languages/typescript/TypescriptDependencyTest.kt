@@ -755,6 +755,45 @@ class TypescriptDependencyTest {
         }
 
         @Test
+        fun `should extract type constraint from generic type parameter`() {
+            // Arrange
+            val code = "class Foo<T extends Bar> {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).contains("Bar")
+        }
+
+        @Test
+        fun `should extract type reference from type alias right-hand side`() {
+            // Arrange
+            val code = "type Foo = ErrorCapturingInterface<Transaction>"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("ErrorCapturingInterface", "Transaction")
+        }
+
+        @Test
+        fun `should extract multiple types from union type alias`() {
+            // Arrange
+            val code = "type Foo = Bar | Baz"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("Bar", "Baz")
+        }
+
+        @Test
         fun `should resolve default import name to DEFAULT_EXPORT in usedTypes`() {
             // Arrange
             val code = """

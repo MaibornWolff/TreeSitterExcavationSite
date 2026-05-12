@@ -16,6 +16,8 @@ internal object UsedTypeExtractor {
     private const val EXTENDS_CLAUSE = "extends_clause"
     private const val EXTENDS_TYPE_CLAUSE = "extends_type_clause"
     private const val IMPLEMENTS_CLAUSE = "implements_clause"
+    private const val CONSTRAINT = "constraint"
+    private const val TYPE_ALIAS_DECLARATION = "type_alias_declaration"
     private const val JSX_OPENING_ELEMENT = "jsx_opening_element"
     private const val JSX_SELF_CLOSING_ELEMENT = "jsx_self_closing_element"
     private const val JSX_MEMBER_EXPRESSION = "jsx_member_expression"
@@ -29,6 +31,7 @@ internal object UsedTypeExtractor {
         EXTENDS_CLAUSE,
         EXTENDS_TYPE_CLAUSE,
         IMPLEMENTS_CLAUSE,
+        CONSTRAINT,
         IDENTIFIER,
         JSX_OPENING_ELEMENT,
         JSX_SELF_CLOSING_ELEMENT
@@ -44,10 +47,21 @@ internal object UsedTypeExtractor {
         val extensions = extractExtensions(buckets, sourceCode)
         val relevantIdentifiers = extractRelevantIdentifiers(buckets, sourceCode)
 
+        val constraintTypes = extractConstraintTypes(buckets, sourceCode)
+        val typeAliasRhsTypes = if (declaration.type ==
+            TYPE_ALIAS_DECLARATION
+        ) {
+            extractTypeAliasRhsTypes(declaration, sourceCode)
+        } else {
+            emptyList()
+        }
         val jsxComponents = extractJsxComponents(buckets, sourceCode)
 
-        return (typeIdentifiers + constructorCalls + memberAccesses + methodCalls + extensions + relevantIdentifiers + jsxComponents)
-            .map { usedType -> aliasMap[usedType.name]?.let { UsedType(name = it) } ?: usedType }
+        return (
+            typeIdentifiers + constructorCalls + memberAccesses + methodCalls + extensions + relevantIdentifiers + constraintTypes +
+                typeAliasRhsTypes +
+                jsxComponents
+        ).map { usedType -> aliasMap[usedType.name]?.let { UsedType(name = it) } ?: usedType }
             .toSet()
     }
 
@@ -121,6 +135,22 @@ internal object UsedTypeExtractor {
             if (name.firstOrNull()?.isUpperCase() != true) return@mapNotNull null
             UsedType(name = name)
         }
+    }
+
+    private fun extractConstraintTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
+        buckets[CONSTRAINT].orEmpty().flatMap { constraintNode ->
+            TreeTraversal
+                .findAllDescendantsOfType(constraintNode, TYPE_IDENTIFIER)
+                .map { UsedType(name = TreeTraversal.getNodeText(it, sourceCode).trim()) }
+        }
+
+    private fun extractTypeAliasRhsTypes(declaration: TSNode, sourceCode: String): List<UsedType> {
+        val children = declaration.children().toList()
+        val nameNodeIndex = children.indexOfFirst { it.type == TYPE_IDENTIFIER }
+        return children
+            .filterIndexed { index, _ -> index != nameNodeIndex }
+            .flatMap { TreeTraversal.findAllDescendantsOfType(it, TYPE_IDENTIFIER) }
+            .map { UsedType(name = TreeTraversal.getNodeText(it, sourceCode).trim()) }
     }
 
     private fun findLeftmostIdentifier(node: TSNode): TSNode? {
