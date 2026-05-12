@@ -290,3 +290,36 @@ Note: JS class names use `identifier` nodes (not `type_identifier` like TS), so 
   - `selectUsedTypes()` override (filters DEFAULT_EXPORT) — unaffected by this plan
   - `expandWildcardReexport()` / `resolveSourceFile()` — unaffected; TSE still returns `Declaration(name="*")`
   - Default-import module-name proxy — unaffected; aliasMap still maps default bindings → DEFAULT_EXPORT
+
+## dc-compare Results (version 0.10.0-local, Prisma/React)
+
+Final numbers after all fixes in this plan:
+
+| Metric         | TS (Prisma) | JS (React) |
+|----------------|-------------|------------|
+| Missing deps   | 432         | 6,843      |
+| Extra deps     | 662         | 3,728      |
+| Only in main   | 7           | 97         |
+| Only in feat.  | 218         | 209        |
+
+### Accepted differences
+
+**Intra-file non-exported symbol dependencies (432 TS / 6,843 JS missing):**
+TSE intentionally excludes non-exported top-level symbols from the dependency graph. DC main included
+them as a side-effect of having no export filter — e.g. `const debug = createDebugger(...)` (not
+exported) was a graph node in DC main, enabling `StdClient → debug` edges. TSE's export-only
+filtering removes these nodes and their edges. This is an accepted improvement, not a regression:
+- Intra-file references to non-exported helpers are implementation details, not architectural edges
+- The meaningful dep (`StdClient → "debug"` npm package) is still captured via the import
+- Adding these back would require an `includeNonExported` mode and would re-introduce the same
+  non-exported noise that Issue 1 (export-only filtering) was designed to remove
+
+**Remaining "extra" deps (662 TS / 3,728 JS):** Improvements over DC main — better extraction of
+types TSE finds that DC's legacy analyzers missed. Accepted as improvements.
+
+**Note on `localDeclarationNames`:** The `extractLocalDeclarationNames` pass (which collects exported
+symbol names to allow lowercase cross-references between declarations in the same file) is NOT
+related to `includeNonExported`. It only collects names from `export` statements, so it never adds
+non-exported locals to the usedType set. The `export default X` case (where `X` is a locally-defined
+non-exported const) was separately fixed: `X` is not added to `exportReferencedLocalNames`, so it
+does not appear as a node — only the `DEFAULT_EXPORT` REEXPORT entry is emitted.

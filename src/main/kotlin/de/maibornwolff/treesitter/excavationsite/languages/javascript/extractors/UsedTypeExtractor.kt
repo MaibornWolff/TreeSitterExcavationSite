@@ -37,7 +37,12 @@ internal object UsedTypeExtractor {
         JSX_SELF_CLOSING_ELEMENT
     )
 
-    fun extract(declaration: TSNode, sourceCode: String, aliasMap: Map<String, String> = emptyMap()): Set<UsedType> {
+    fun extract(
+        declaration: TSNode,
+        sourceCode: String,
+        aliasMap: Map<String, String> = emptyMap(),
+        localDeclarationNames: Set<String> = emptySet()
+    ): Set<UsedType> {
         val buckets = TreeTraversal.findAllDescendantsGroupedByType(declaration, ALL_NODE_TYPES)
 
         val typeIdentifiers = extractTypeIdentifiers(buckets, sourceCode)
@@ -45,7 +50,7 @@ internal object UsedTypeExtractor {
         val memberAccesses = extractMemberAccesses(buckets, sourceCode)
         val methodCalls = extractMethodCalls(buckets, sourceCode)
         val extensions = extractExtensions(buckets, sourceCode)
-        val relevantIdentifiers = extractRelevantIdentifiers(buckets, sourceCode, aliasMap)
+        val relevantIdentifiers = extractRelevantIdentifiers(buckets, sourceCode, aliasMap, localDeclarationNames)
 
         val constraintTypes = extractConstraintTypes(buckets, sourceCode)
         val typeAliasRhsTypes = if (declaration.type ==
@@ -114,10 +119,11 @@ internal object UsedTypeExtractor {
     private fun extractRelevantIdentifiers(
         buckets: Map<String, List<TSNode>>,
         sourceCode: String,
-        aliasMap: Map<String, String> = emptyMap()
+        aliasMap: Map<String, String> = emptyMap(),
+        localDeclarationNames: Set<String> = emptySet()
     ): List<UsedType> = buckets[IDENTIFIER].orEmpty().mapNotNull { node ->
         val name = TreeTraversal.getNodeText(node, sourceCode).trim()
-        if (name.firstOrNull()?.isUpperCase() != true && name !in aliasMap) return@mapNotNull null
+        if (name.firstOrNull()?.isUpperCase() != true && name !in aliasMap && name !in localDeclarationNames) return@mapNotNull null
         UsedType(name = name)
     }
 

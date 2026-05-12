@@ -299,6 +299,40 @@ class JavascriptDependencyTest {
             assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
             assertThat(result.declarations[0].usedTypes).isEmpty()
         }
+
+        @Test
+        fun `should extract declaration defined separately from export clause`() {
+            // Arrange — declare-then-export pattern; collectExportReferencedLocalNames picks up buildFunction
+            val code = """
+                const buildFunction = () => "hello"
+                export { buildFunction }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName).containsKey("buildFunction")
+            assertThat(byName["buildFunction"]?.type).isEqualTo(DeclarationType.VARIABLE)
+        }
+
+        @Test
+        fun `should extract declaration exported via module-exports property assignment`() {
+            // Arrange — CommonJS export pattern; extractCJSExportedNames picks up helper
+            val code = """
+                const helper = () => {}
+                module.exports.helper = helper
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName).containsKey("helper")
+            assertThat(byName["helper"]?.type).isEqualTo(DeclarationType.VARIABLE)
+        }
     }
 
     @Nested
@@ -411,6 +445,26 @@ class JavascriptDependencyTest {
             // Assert
             val usedTypeNames = result.declarations.first { it.name == "App" }.usedTypes.map { it.name }
             assertThat(usedTypeNames).containsExactlyInAnyOrder("App", "processData")
+        }
+    }
+
+    @Nested
+    inner class LocalDeclarationCrossReferences {
+        @Test
+        fun `should emit exported lowercase local function name as usedType when called in another declaration`() {
+            // Arrange — buildFunction is exported but lowercase; without localDeclarationNames it would be
+            // filtered out by the isUpperCase check in extractRelevantIdentifiers
+            val code = """
+                export function buildFunction() {}
+                export function app() { return buildFunction() }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert — app's usedTypes include buildFunction but not app itself (own name is excluded)
+            val usedTypeNames = result.declarations.first { it.name == "app" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("buildFunction")
         }
     }
 
