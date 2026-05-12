@@ -74,7 +74,7 @@ class TsxDependencyTest {
         fun `should extract uppercase JSX self-closing element as usedType`() {
             // Arrange
             val code = """
-                class Foo {
+                export class Foo {
                     render() { return <Routes /> }
                 }
             """.trimIndent()
@@ -91,7 +91,7 @@ class TsxDependencyTest {
         fun `should extract only root identifier for member JSX element`() {
             // Arrange
             val code = """
-                class Foo {
+                export class Foo {
                     render() { return <Form.Input /> }
                 }
             """.trimIndent()
@@ -108,7 +108,7 @@ class TsxDependencyTest {
         fun `should not extract lowercase HTML element as usedType`() {
             // Arrange
             val code = """
-                class Foo {
+                export class Foo {
                     render() { return <div /> }
                 }
             """.trimIndent()
@@ -125,7 +125,7 @@ class TsxDependencyTest {
         fun `should extract uppercase JSX opening element as usedType`() {
             // Arrange
             val code = """
-                class Foo {
+                export class Foo {
                     render() { return <MyComponent>child</MyComponent> }
                 }
             """.trimIndent()

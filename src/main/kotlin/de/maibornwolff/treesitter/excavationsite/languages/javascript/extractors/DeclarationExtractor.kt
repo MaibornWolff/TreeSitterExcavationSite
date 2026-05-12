@@ -31,7 +31,6 @@ internal object DeclarationExtractor {
     private const val AMBIENT_DECLARATION = "ambient_declaration"
     private const val MODULE_DECLARATION = "module"
     private const val INTERNAL_MODULE = "internal_module"
-    private const val EXPRESSION_STATEMENT = "expression_statement"
     private const val STATEMENT_BLOCK = "statement_block"
 
     private const val TYPE_IDENTIFIER = "type_identifier"
@@ -95,11 +94,6 @@ internal object DeclarationExtractor {
                 when (child.type) {
                     EXPORT_STATEMENT -> extractFromExportStatement(child, sourceCode, aliasMap = aliasMap)
                     AMBIENT_DECLARATION -> extractFromAmbientDeclaration(child, sourceCode, aliasMap = aliasMap)
-                    EXPRESSION_STATEMENT -> {
-                        val inner = child.children().firstOrNull { it.type == INTERNAL_MODULE }
-                        if (inner != null) extractFromNode(inner, sourceCode, aliasMap = aliasMap) else emptyList()
-                    }
-                    in DECLARATION_NODE_TYPES -> extractFromNode(child, sourceCode, aliasMap = aliasMap)
                     else -> emptyList()
                 }
             }.filter { it.name.isNotBlank() }

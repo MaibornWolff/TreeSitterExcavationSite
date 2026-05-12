@@ -142,7 +142,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should return empty imports when no imports present`() {
             // Arrange
-            val code = "class Foo {}"
+            val code = "export class Foo {}"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -266,7 +266,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract class declaration`() {
             // Arrange
-            val code = "class Foo {}"
+            val code = "export class Foo {}"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -280,7 +280,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract interface declaration`() {
             // Arrange
-            val code = "interface IFoo {}"
+            val code = "export interface IFoo {}"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -294,7 +294,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract enum declaration`() {
             // Arrange
-            val code = "enum Color { RED, GREEN, BLUE }"
+            val code = "export enum Color { RED, GREEN, BLUE }"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -308,7 +308,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract function declaration`() {
             // Arrange
-            val code = "function greet(name: string): void {}"
+            val code = "export function greet(name: string): void {}"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -322,7 +322,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract type alias declaration as CLASS`() {
             // Arrange
-            val code = "type Id = string"
+            val code = "export type Id = string"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -336,7 +336,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract const variable declaration`() {
             // Arrange
-            val code = "const greeting: string = 'hello'"
+            val code = "export const greeting: string = 'hello'"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -350,7 +350,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract var variable declaration`() {
             // Arrange
-            val code = "var counter = 0"
+            val code = "export var counter = 0"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -365,9 +365,9 @@ class TypescriptDependencyTest {
         fun `should extract multiple declarations`() {
             // Arrange
             val code = """
-                class Foo {}
-                interface IBar {}
-                enum Baz { A, B }
+                export class Foo {}
+                export interface IBar {}
+                export enum Baz { A, B }
             """.trimIndent()
 
             // Act
@@ -458,7 +458,7 @@ class TypescriptDependencyTest {
         }
 
         @Test
-        fun `should keep original variable and add DEFAULT_EXPORT REEXPORT when local var is default-exported`() {
+        fun `should produce DEFAULT_EXPORT REEXPORT when local var is default-exported without own export`() {
             // Arrange
             val code = "const events = { EventEmitter }\nexport default events"
 
@@ -466,11 +466,10 @@ class TypescriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
 
             // Assert
-            val byName = result.declarations.associateBy { it.name }
-            assertThat(byName.keys).containsExactlyInAnyOrder("events", "DEFAULT_EXPORT")
-            assertThat(byName["events"]?.type).isEqualTo(DeclarationType.VARIABLE)
-            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
-            assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("events")
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes.map { it.name }).containsExactlyInAnyOrder("events")
         }
 
         @Test
@@ -550,7 +549,7 @@ class TypescriptDependencyTest {
         fun `should extract nested class declarations`() {
             // Arrange
             val code = """
-                class Outer {
+                export class Outer {
                     inner = class Inner {}
                 }
             """.trimIndent()
@@ -578,7 +577,7 @@ class TypescriptDependencyTest {
         }
 
         @Test
-        fun `should extract abstract class without export as CLASS declaration`() {
+        fun `should produce DEFAULT_EXPORT REEXPORT when bare abstract class is default-exported by name`() {
             // Arrange
             val code = "abstract class Base {}\nexport default Base"
 
@@ -586,9 +585,10 @@ class TypescriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
 
             // Assert
-            val byName = result.declarations.associateBy { it.name }
-            assertThat(byName).containsKey("Base")
-            assertThat(byName["Base"]?.type).isEqualTo(DeclarationType.CLASS)
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes.map { it.name }).containsExactlyInAnyOrder("Base")
         }
 
         @Test
@@ -611,7 +611,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract type from type annotation`() {
             // Arrange
-            val code = "class Foo { field: MyService }"
+            val code = "export class Foo { field: MyService }"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -624,7 +624,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract type from constructor call`() {
             // Arrange
-            val code = "class Foo { bar() { return new MyService() } }"
+            val code = "export class Foo { bar() { return new MyService() } }"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -637,7 +637,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract uppercase object from member access`() {
             // Arrange
-            val code = "class Foo { bar() { return MyModule.value } }"
+            val code = "export class Foo { bar() { return MyModule.value } }"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -650,7 +650,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should not extract lowercase object from member access`() {
             // Arrange
-            val code = "class Foo { bar() { return myModule.value } }"
+            val code = "export class Foo { bar() { return myModule.value } }"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -663,7 +663,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract extends clause type from interface declaration`() {
             // Arrange
-            val code = "interface Foo extends Bar {}"
+            val code = "export interface Foo extends Bar {}"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -676,7 +676,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract extends clause type`() {
             // Arrange
-            val code = "class Foo extends Bar {}"
+            val code = "export class Foo extends Bar {}"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -689,7 +689,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract implements clause types`() {
             // Arrange
-            val code = "class Foo implements IBar, IBaz {}"
+            val code = "export class Foo implements IBar, IBaz {}"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -702,7 +702,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract uppercase identifier`() {
             // Arrange
-            val code = "class Foo { bar() { return MyFactory } }"
+            val code = "export class Foo { bar() { return MyFactory } }"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -715,7 +715,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should not extract lowercase identifiers`() {
             // Arrange
-            val code = "class Foo { bar() { return myFactory } }"
+            val code = "export class Foo { bar() { return myFactory } }"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -728,7 +728,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract generic type argument`() {
             // Arrange
-            val code = "class Foo { items: Array<MyItem> }"
+            val code = "export class Foo { items: Array<MyItem> }"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -743,7 +743,7 @@ class TypescriptDependencyTest {
             // Arrange
             val code = """
                 import { MyType as MyRenamedType } from './MyType'
-                class Foo { field: MyRenamedType }
+                export class Foo { field: MyRenamedType }
             """.trimIndent()
 
             // Act
@@ -757,7 +757,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract type constraint from generic type parameter`() {
             // Arrange
-            val code = "class Foo<T extends Bar> {}"
+            val code = "export class Foo<T extends Bar> {}"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -770,7 +770,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract type reference from type alias right-hand side`() {
             // Arrange
-            val code = "type Foo = ErrorCapturingInterface<Transaction>"
+            val code = "export type Foo = ErrorCapturingInterface<Transaction>"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -783,7 +783,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract multiple types from union type alias`() {
             // Arrange
-            val code = "type Foo = Bar | Baz"
+            val code = "export type Foo = Bar | Baz"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -798,7 +798,7 @@ class TypescriptDependencyTest {
             // Arrange
             val code = """
                 import Dep from './dep'
-                class Foo extends Dep {}
+                export class Foo extends Dep {}
             """.trimIndent()
 
             // Act
@@ -841,7 +841,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract multiple variable declarators from one const statement`() {
             // Arrange
-            val code = "const a: TypeA = 1, b: TypeB = 2"
+            val code = "export const a: TypeA = 1, b: TypeB = 2"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -858,7 +858,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract used types from function declaration parameters and return type`() {
             // Arrange
-            val code = "function process(service: MyService): MyResult {}"
+            val code = "export function process(service: MyService): MyResult {}"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -885,7 +885,7 @@ class TypescriptDependencyTest {
         @Test
         fun `should extract function signature as FUNCTION type`() {
             // Arrange — function without body (e.g. overload or ambient declaration)
-            val code = "function greet(name: string): void;"
+            val code = "export function greet(name: string): void;"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
@@ -900,7 +900,7 @@ class TypescriptDependencyTest {
         fun `should not extract const declaration inside function body`() {
             // Arrange
             val code = """
-                function foo() {
+                export function foo() {
                     const x = 5
                 }
             """.trimIndent()
@@ -917,7 +917,7 @@ class TypescriptDependencyTest {
         fun `should not extract const declaration inside class body`() {
             // Arrange
             val code = """
-                class Foo {
+                export class Foo {
                     doSomething() {
                         const x = 5
                     }
@@ -1033,7 +1033,7 @@ class TypescriptDependencyTest {
         }
 
         @Test
-        fun `should extract namespace declaration without export keyword`() {
+        fun `should not extract namespace declaration without export keyword`() {
             // Arrange
             val code = "namespace Foo {}"
 
@@ -1041,9 +1041,7 @@ class TypescriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
 
             // Assert
-            val byName = result.declarations.associateBy { it.name }
-            assertThat(byName).containsKey("Foo")
-            assertThat(byName["Foo"]?.type).isEqualTo(DeclarationType.UNKNOWN)
+            assertThat(result.declarations).isEmpty()
         }
     }
 

@@ -181,7 +181,7 @@ class JavascriptDependencyTest {
         }
 
         @Test
-        fun `should keep original declaration and add DEFAULT_EXPORT REEXPORT when local var is default-exported`() {
+        fun `should produce DEFAULT_EXPORT REEXPORT when local var is default-exported without own export`() {
             // Arrange
             val code = """
                 const buildFunction = () => { return "hello"; };
@@ -192,11 +192,10 @@ class JavascriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
 
             // Assert
-            val byName = result.declarations.associateBy { it.name }
-            assertThat(byName.keys).containsExactlyInAnyOrder("buildFunction", "DEFAULT_EXPORT")
-            assertThat(byName["buildFunction"]?.type).isEqualTo(DeclarationType.VARIABLE)
-            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
-            assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("buildFunction")
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(result.declarations[0].usedTypes.map { it.name }).containsExactlyInAnyOrder("buildFunction")
         }
 
         // JS intentionally produces both the named declaration AND a DEFAULT_EXPORT copy (same DeclarationType)
@@ -263,6 +262,30 @@ class JavascriptDependencyTest {
         }
 
         @Test
+        fun `should not extract non-exported function declaration`() {
+            // Arrange
+            val code = "function foo() {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
+
+        @Test
+        fun `should not extract non-exported class declaration`() {
+            // Arrange
+            val code = "class Foo {}"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.declarations).isEmpty()
+        }
+
+        @Test
         fun `should extract wildcard re-export as REEXPORT declaration`() {
             // Arrange
             val code = "export * from './module'"
@@ -295,6 +318,81 @@ class JavascriptDependencyTest {
             // Assert
             val appDeclaration = result.declarations.first { it.name == "App" }
             assertThat(appDeclaration.usedTypes.map { it.name }).containsExactlyInAnyOrder("App", "MyComponent")
+        }
+    }
+
+    @Nested
+    inner class NamedImportValueUsages {
+        @Test
+        fun `should emit JSX component from named import as usedType`() {
+            // Arrange
+            val code = """
+                import { ContextMenu } from './menu'
+                export class App {
+                    render() { return <ContextMenu /> }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "App" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("App", "ContextMenu")
+        }
+
+        @Test
+        fun `should emit constructor call of named import as usedType`() {
+            // Arrange
+            val code = """
+                import { Transform } from './transform'
+                export class App {
+                    build() { return new Transform() }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "App" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("App", "Transform")
+        }
+
+        @Test
+        fun `should emit SCREAMING_SNAKE_CASE named import used as member access object as usedType`() {
+            // Arrange
+            val code = """
+                import { TYPES } from './constants'
+                export class App {
+                    run() { return TYPES.something }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "App" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("App", "TYPES")
+        }
+
+        @Test
+        fun `should not emit lowercase named import used as plain function argument as usedType`() {
+            // Arrange — lowercase identifiers are intentionally not captured (not PascalCase or SCREAMING_SNAKE)
+            val code = """
+                import { processData } from './utils'
+                export class App {
+                    run(x) { return processData(x) }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert — only the class name "App" itself; processData is lowercase, excluded by design
+            val usedTypeNames = result.declarations.first { it.name == "App" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("App")
         }
     }
 
