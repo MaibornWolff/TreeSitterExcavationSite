@@ -291,35 +291,64 @@ Note: JS class names use `identifier` nodes (not `type_identifier` like TS), so 
   - `expandWildcardReexport()` / `resolveSourceFile()` — unaffected; TSE still returns `Declaration(name="*")`
   - Default-import module-name proxy — unaffected; aliasMap still maps default bindings → DEFAULT_EXPORT
 
-## dc-compare Results (version 0.10.0-local, Prisma/React)
+## dc-compare Results (version 0.9.0-local, Prisma/React)
 
-Final numbers after all fixes in this plan:
+### After all TSE fixes in this plan (before DC extraUsedTypes removal)
 
 | Metric         | TS (Prisma) | JS (React) |
 |----------------|-------------|------------|
-| Missing deps   | 432         | 6,843      |
-| Extra deps     | 662         | 3,728      |
-| Only in main   | 7           | 97         |
-| Only in feat.  | 218         | 209        |
+| Missing deps   | 1,064       | 6,859      |
+| Extra deps     | 132         | 1,567      |
+| Only in main   | 1,630       | 962        |
+| Only in feat.  | 190         | 262        |
+
+### After DC extraUsedTypes() removal — validated at yssymqmn
+
+DC commit `yssymqmn` removed the OLD `extraUsedTypes()` from `TypescriptAnalyzer` (was adding ALL
+import specifiers to ALL declarations as a workaround for whole-file attribution). A NEW
+`extraUsedTypes()` was added in a subsequent commit as a permanent design decision (decorator/CJS
+cases). The numbers below reflect the state at `yssymqmn` — not the current final state.
+
+| Metric         | TS (Prisma) | JS (React) |
+|----------------|-------------|------------|
+| Missing deps   | 4,492       | 14,735     |
+| Extra deps     | 64          | 1,186      |
+| Only in main   | 1,630       | 962        |
+| Only in feat.  | 190         | 262        |
+| nodeType diffs | 9           | 116        |
 
 ### Accepted differences
 
-**Intra-file non-exported symbol dependencies (432 TS / 6,843 JS missing):**
-TSE intentionally excludes non-exported top-level symbols from the dependency graph. DC main included
-them as a side-effect of having no export filter — e.g. `const debug = createDebugger(...)` (not
-exported) was a graph node in DC main, enabling `StdClient → debug` edges. TSE's export-only
-filtering removes these nodes and their edges. This is an accepted improvement, not a regression:
-- Intra-file references to non-exported helpers are implementation details, not architectural edges
-- The meaningful dep (`StdClient → "debug"` npm package) is still captured via the import
-- Adding these back would require an `includeNonExported` mode and would re-introduce the same
-  non-exported noise that Issue 1 (export-only filtering) was designed to remove
+**only-in-main (1,630 TS / 962 JS):** Non-exported symbols excluded by export-only filtering (Issue 1).
+DC main tracked them as graph nodes; TSE intentionally excludes them. Accepted.
 
-**Remaining "extra" deps (662 TS / 3,728 JS):** Improvements over DC main — better extraction of
-types TSE finds that DC's legacy analyzers missed. Accepted as improvements.
+**missing deps — target is only-in-main (1,009 TS / 384 JS):** Dependency edges where the target
+node itself is only-in-main. These disappear because the target node doesn't exist in feature.
+Already covered by the only-in-main acceptance above.
 
-**Note on `localDeclarationNames`:** The `extractLocalDeclarationNames` pass (which collects exported
-symbol names to allow lowercase cross-references between declarations in the same file) is NOT
-related to `includeNonExported`. It only collects names from `export` statements, so it never adds
-non-exported locals to the usedType set. The `export default X` case (where `X` is a locally-defined
-non-exported const) was separately fixed: `X` is not added to `exportReferencedLocalNames`, so it
-does not appear as a node — only the `DEFAULT_EXPORT` REEXPORT entry is emitted.
+**missing deps — target exists in feature (3,483 TS / 14,351 JS):** These are NOT regressions.
+They are **over-attribution artifacts from DC legacy's whole-file scan**. Verified by inspection:
+
+- `ConfigEditor → useStore` existed in DC main because legacy scanned the whole file and attributed
+  all usedTypes to whatever exported declarations existed. `useStore()` is actually called inside
+  non-exported `ExpandedEditor` helper, NOT inside `ConfigEditor`. TSE's per-declaration scoping
+  correctly does not attribute it to `ConfigEditor`.
+- `matrix → map` existed in DC main for the same reason. `map` is only called inside non-exported
+  `_matrix` helper, NOT inside `matrix`. TSE correctly omits it.
+- The OLD `extraUsedTypes()` (with a DEFAULT_EXPORT proxy that substituted the module name as a
+  stand-in for a default import's local alias) was removed in DC commit `yssymqmn`. A NEW, cleaner
+  `extraUsedTypes()` was subsequently added back as a **permanent DC design decision** — it adds all
+  non-default imported specifier names to all declarations as a broad net for two cases TSE doesn't
+  cover: identifier usage inside decorators (Angular DI) and CJS aliased imports. The dc-compare
+  numbers below reflect the state at `yssymqmn` (before the new `extraUsedTypes()` was added).
+- Classification: `classify-missing.js` confirmed 3,483/4,492 TS and 14,351/14,735 JS missing deps
+  have targets that exist in feature — all are over-attribution artifacts.
+
+**extra deps (64 TS / 1,186 JS):** TSE finds more correct edges than DC legacy. Accepted improvements.
+
+**nodeType diffs (9 TS / 116 JS):** All are `UNKNOWN → FUNCTION` or `UNKNOWN → CLASS` — improvements.
+
+**Note on `localDeclarationNames`:** Only collects names from `export` statements; never adds
+non-exported locals. The `export default X` case (where `X` is a declare-then-export reference)
+is handled by `collectExportReferences`: `X` IS added to `exportReferencedLocalNames`, so the
+bare `const X = ...` declaration becomes a node — correct, because it is indirectly exported.

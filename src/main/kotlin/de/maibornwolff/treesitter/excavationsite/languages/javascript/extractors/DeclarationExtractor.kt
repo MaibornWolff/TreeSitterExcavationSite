@@ -8,58 +8,201 @@ import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.Tr
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import org.treesitter.TSNode
 
+// ── shared constants ──────────────────────────────────────────────────────────
+private const val CLASS_DECLARATION = "class_declaration"
+private const val ABSTRACT_CLASS_DECLARATION = "abstract_class_declaration"
+private const val INTERFACE_DECLARATION = "interface_declaration"
+private const val ENUM_DECLARATION = "enum_declaration"
+private const val FUNCTION_DECLARATION = "function_declaration"
+private const val FUNCTION_SIGNATURE = "function_signature"
+private const val GENERATOR_FUNCTION_DECLARATION = "generator_function_declaration"
+private const val TYPE_ALIAS_DECLARATION = "type_alias_declaration"
+private const val LEXICAL_DECLARATION = "lexical_declaration"
+private const val VARIABLE_DECLARATION = "variable_declaration"
+private const val EXPORT_STATEMENT = "export_statement"
+
+private const val EXPORT_CLAUSE = "export_clause"
+private const val EXPORT_SPECIFIER = "export_specifier"
+private const val STRING = "string"
+private const val STRING_FRAGMENT = "string_fragment"
+private const val DEFAULT_KEYWORD = "default"
+private const val WILDCARD_REEXPORT = "*"
+
+private const val AMBIENT_DECLARATION = "ambient_declaration"
+private const val MODULE_DECLARATION = "module"
+private const val INTERNAL_MODULE = "internal_module"
+private const val STATEMENT_BLOCK = "statement_block"
+
+private const val EXPRESSION_STATEMENT = "expression_statement"
+private const val ASSIGNMENT_EXPRESSION = "assignment_expression"
+private const val MEMBER_EXPRESSION = "member_expression"
+
+private const val TYPE_IDENTIFIER = "type_identifier"
+private const val IDENTIFIER = "identifier"
+private const val VARIABLE_DECLARATOR = "variable_declarator"
+
+private const val IMPORT_STATEMENT = "import_statement"
+private const val IMPORT_CLAUSE = "import_clause"
+private const val NAMED_IMPORTS = "named_imports"
+private const val IMPORT_SPECIFIER = "import_specifier"
+
+private val DECLARATION_NODE_TYPES = setOf(
+    CLASS_DECLARATION,
+    ABSTRACT_CLASS_DECLARATION,
+    INTERFACE_DECLARATION,
+    ENUM_DECLARATION,
+    FUNCTION_DECLARATION,
+    FUNCTION_SIGNATURE,
+    GENERATOR_FUNCTION_DECLARATION,
+    TYPE_ALIAS_DECLARATION,
+    LEXICAL_DECLARATION,
+    VARIABLE_DECLARATION,
+    INTERNAL_MODULE
+)
+
+private fun extractName(node: TSNode, sourceCode: String): String {
+    val nameTypes = when (node.type) {
+        CLASS_DECLARATION, ABSTRACT_CLASS_DECLARATION,
+        INTERFACE_DECLARATION, TYPE_ALIAS_DECLARATION -> arrayOf(TYPE_IDENTIFIER, IDENTIFIER)
+        else -> arrayOf(IDENTIFIER)
+    }
+    return TreeTraversal.findFirstChildTextByType(node, sourceCode, *nameTypes)?.trim() ?: ""
+}
+
+// ── pre-pass helpers ──────────────────────────────────────────────────────────
+
+internal object DeclarationPrepass {
+    internal fun buildAliasMap(rootNode: TSNode, sourceCode: String): Map<String, String> {
+        val aliasMap = mutableMapOf<String, String>()
+        TreeTraversal.findAllDescendantsOfType(rootNode, IMPORT_STATEMENT).forEach { importNode ->
+            val importClause = importNode.children().firstOrNull { it.type == IMPORT_CLAUSE } ?: return@forEach
+            val defaultBinding = importClause.children().firstOrNull { it.type == IDENTIFIER }
+            if (defaultBinding != null) {
+                val name = TreeTraversal.getNodeText(defaultBinding, sourceCode).trim()
+                if (name.isNotBlank()) aliasMap[name] = name
+            }
+            val namedImports = importClause.children().firstOrNull { it.type == NAMED_IMPORTS } ?: return@forEach
+            namedImports
+                .children()
+                .filter { it.type == IMPORT_SPECIFIER }
+                .forEach { specifier ->
+                    val identifiers = specifier
+                        .children()
+                        .filter { it.type == IDENTIFIER }
+                        .map { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                        .toList()
+                    when (identifiers.size) {
+                        1 -> aliasMap[identifiers[0]] = identifiers[0]
+                        2 -> aliasMap[identifiers[1]] = normalizeDefaultKeyword(identifiers[0])
+                    }
+                }
+        }
+        return aliasMap
+    }
+
+    private fun normalizeDefaultKeyword(name: String): String = if (name == DEFAULT_KEYWORD) DEFAULT_EXPORT else name
+
+    internal fun extractLocalDeclarationNames(rootNode: TSNode, sourceCode: String): Set<String> = rootNode
+        .children()
+        .flatMap { child ->
+            when (child.type) {
+                EXPORT_STATEMENT -> extractNamesFromExportStatement(child, sourceCode)
+                else -> emptyList()
+            }
+        }.filter { it.isNotBlank() }
+        .toSet()
+
+    private fun extractNamesFromExportStatement(node: TSNode, sourceCode: String): List<String> {
+        val hasExportClause = node.children().any { it.type == EXPORT_CLAUSE }
+        val hasSource = node.children().any { it.type == STRING }
+        if (hasSource) return emptyList()
+        if (hasExportClause) {
+            val clause = node.children().firstOrNull { it.type == EXPORT_CLAUSE } ?: return emptyList()
+            return clause
+                .children()
+                .filter { it.type == EXPORT_SPECIFIER }
+                .mapNotNull { specifier ->
+                    specifier
+                        .children()
+                        .filter { it.type == IDENTIFIER }
+                        .lastOrNull()
+                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                }.toList()
+        }
+        return node
+            .children()
+            .filter { it.type in DECLARATION_NODE_TYPES }
+            .flatMap { extractNamesFromNode(it, sourceCode) }
+            .toList()
+    }
+
+    private fun extractNamesFromNode(node: TSNode, sourceCode: String): List<String> {
+        if (node.type == LEXICAL_DECLARATION || node.type == VARIABLE_DECLARATION) {
+            return node
+                .children()
+                .filter { it.type == VARIABLE_DECLARATOR }
+                .mapNotNull { TreeTraversal.findFirstChildTextByType(it, sourceCode, IDENTIFIER)?.trim() }
+                .filter { it.isNotBlank() }
+                .toList()
+        }
+        val name = extractName(node, sourceCode)
+        return if (name.isNotBlank()) listOf(name) else emptyList()
+    }
+
+    internal fun collectExportReferencedLocalNames(rootNode: TSNode, sourceCode: String): Set<String> {
+        val fromExportClauses = rootNode
+            .children()
+            .filter { it.type == EXPORT_STATEMENT }
+            .flatMap { node -> exportClauseOriginalNames(node, sourceCode) }
+            .toSet()
+        val fromDefaultExport = when (val shape = DeclarationExtractor.classifyDefaultExport(rootNode, sourceCode)) {
+            is DeclarationExtractor.DefaultExport.Reexport -> setOf(shape.name)
+            else -> emptySet()
+        }
+        return fromExportClauses + fromDefaultExport + extractCJSExportedNames(rootNode, sourceCode)
+    }
+
+    private fun exportClauseOriginalNames(node: TSNode, sourceCode: String): List<String> {
+        val hasSource = node.children().any { it.type == STRING }
+        val hasExportClause = node.children().any { it.type == EXPORT_CLAUSE }
+        if (hasSource || !hasExportClause) return emptyList()
+        val clause = node.children().firstOrNull { it.type == EXPORT_CLAUSE } ?: return emptyList()
+        return clause
+            .children()
+            .filter { it.type == EXPORT_SPECIFIER }
+            .mapNotNull { specifier ->
+                val name = specifier
+                    .children()
+                    .filter { it.type == IDENTIFIER }
+                    .firstOrNull()
+                    ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                    ?: return@mapNotNull null
+                if (name == DEFAULT_KEYWORD) null else name
+            }.toList()
+    }
+
+    private fun extractCJSExportedNames(rootNode: TSNode, sourceCode: String): Set<String> {
+        return rootNode
+            .children()
+            .filter { it.type == EXPRESSION_STATEMENT }
+            .mapNotNull { stmt ->
+                val assignment = stmt.children().firstOrNull { it.type == ASSIGNMENT_EXPRESSION }
+                    ?: return@mapNotNull null
+                val children = assignment.children().toList()
+                val left = children.firstOrNull { it.type == MEMBER_EXPRESSION } ?: return@mapNotNull null
+                val right = children.lastOrNull { it.type == IDENTIFIER } ?: return@mapNotNull null
+                val leftText = TreeTraversal.getNodeText(left, sourceCode).trim()
+                if (!leftText.startsWith("module.exports") && !leftText.startsWith("exports.")) {
+                    return@mapNotNull null
+                }
+                TreeTraversal.getNodeText(right, sourceCode).trim().takeIf { it.isNotBlank() }
+            }.toSet()
+    }
+}
+
+// ── main extractor ────────────────────────────────────────────────────────────
+
 internal object DeclarationExtractor {
-    private const val CLASS_DECLARATION = "class_declaration"
-    private const val ABSTRACT_CLASS_DECLARATION = "abstract_class_declaration"
-    private const val INTERFACE_DECLARATION = "interface_declaration"
-    private const val ENUM_DECLARATION = "enum_declaration"
-    private const val FUNCTION_DECLARATION = "function_declaration"
-    private const val FUNCTION_SIGNATURE = "function_signature"
-    private const val GENERATOR_FUNCTION_DECLARATION = "generator_function_declaration"
-    private const val TYPE_ALIAS_DECLARATION = "type_alias_declaration"
-    private const val LEXICAL_DECLARATION = "lexical_declaration"
-    private const val VARIABLE_DECLARATION = "variable_declaration"
-    private const val EXPORT_STATEMENT = "export_statement"
-
-    private const val EXPORT_CLAUSE = "export_clause"
-    private const val EXPORT_SPECIFIER = "export_specifier"
-    private const val STRING = "string"
-    private const val STRING_FRAGMENT = "string_fragment"
-    private const val DEFAULT_KEYWORD = "default"
-    private const val WILDCARD_REEXPORT = "*"
-
-    private const val AMBIENT_DECLARATION = "ambient_declaration"
-    private const val MODULE_DECLARATION = "module"
-    private const val INTERNAL_MODULE = "internal_module"
-    private const val STATEMENT_BLOCK = "statement_block"
-
-    private const val EXPRESSION_STATEMENT = "expression_statement"
-    private const val ASSIGNMENT_EXPRESSION = "assignment_expression"
-    private const val MEMBER_EXPRESSION = "member_expression"
-
-    private const val TYPE_IDENTIFIER = "type_identifier"
-    private const val IDENTIFIER = "identifier"
-    private const val VARIABLE_DECLARATOR = "variable_declarator"
-
-    private const val IMPORT_STATEMENT = "import_statement"
-    private const val IMPORT_CLAUSE = "import_clause"
-    private const val NAMED_IMPORTS = "named_imports"
-    private const val IMPORT_SPECIFIER = "import_specifier"
-
-    private val DECLARATION_NODE_TYPES = setOf(
-        CLASS_DECLARATION,
-        ABSTRACT_CLASS_DECLARATION,
-        INTERFACE_DECLARATION,
-        ENUM_DECLARATION,
-        FUNCTION_DECLARATION,
-        FUNCTION_SIGNATURE,
-        GENERATOR_FUNCTION_DECLARATION,
-        TYPE_ALIAS_DECLARATION,
-        LEXICAL_DECLARATION,
-        VARIABLE_DECLARATION,
-        INTERNAL_MODULE
-    )
-
     internal sealed interface DefaultExport {
         data class Named(val name: String) : DefaultExport // export default class Foo {}
 
@@ -91,9 +234,9 @@ internal object DeclarationExtractor {
         } ?: DefaultExport.None
 
     fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> {
-        val aliasMap = buildAliasMap(rootNode, sourceCode)
-        val localDeclarationNames = extractLocalDeclarationNames(rootNode, sourceCode)
-        val exportReferencedLocalNames = collectExportReferencedLocalNames(rootNode, sourceCode)
+        val aliasMap = DeclarationPrepass.buildAliasMap(rootNode, sourceCode)
+        val localDeclarationNames = DeclarationPrepass.extractLocalDeclarationNames(rootNode, sourceCode)
+        val exportReferencedLocalNames = DeclarationPrepass.collectExportReferencedLocalNames(rootNode, sourceCode)
         val declarations = rootNode
             .children()
             .flatMap { child ->
@@ -261,15 +404,6 @@ internal object DeclarationExtractor {
             }
         }.toList()
 
-    private fun extractName(node: TSNode, sourceCode: String): String {
-        val nameTypes = when (node.type) {
-            CLASS_DECLARATION, ABSTRACT_CLASS_DECLARATION,
-            INTERFACE_DECLARATION, TYPE_ALIAS_DECLARATION -> arrayOf(TYPE_IDENTIFIER, IDENTIFIER)
-            else -> arrayOf(IDENTIFIER)
-        }
-        return TreeTraversal.findFirstChildTextByType(node, sourceCode, *nameTypes)?.trim() ?: ""
-    }
-
     private fun declarationType(nodeType: String): DeclarationType = when (nodeType) {
         CLASS_DECLARATION, ABSTRACT_CLASS_DECLARATION, TYPE_ALIAS_DECLARATION -> DeclarationType.CLASS
         INTERFACE_DECLARATION -> DeclarationType.INTERFACE
@@ -277,133 +411,6 @@ internal object DeclarationExtractor {
         FUNCTION_DECLARATION, FUNCTION_SIGNATURE, GENERATOR_FUNCTION_DECLARATION -> DeclarationType.FUNCTION
         LEXICAL_DECLARATION, VARIABLE_DECLARATION -> DeclarationType.VARIABLE
         else -> DeclarationType.UNKNOWN
-    }
-
-    private fun extractLocalDeclarationNames(rootNode: TSNode, sourceCode: String): Set<String> = rootNode
-        .children()
-        .flatMap { child ->
-            when (child.type) {
-                EXPORT_STATEMENT -> extractNamesFromExportStatement(child, sourceCode)
-                else -> emptyList()
-            }
-        }.filter { it.isNotBlank() }
-        .toSet()
-
-    private fun extractNamesFromExportStatement(node: TSNode, sourceCode: String): List<String> {
-        val hasExportClause = node.children().any { it.type == EXPORT_CLAUSE }
-        val hasSource = node.children().any { it.type == STRING }
-        if (hasSource) return emptyList()
-        if (hasExportClause) {
-            val clause = node.children().firstOrNull { it.type == EXPORT_CLAUSE } ?: return emptyList()
-            return clause
-                .children()
-                .filter { it.type == EXPORT_SPECIFIER }
-                .mapNotNull { specifier ->
-                    specifier
-                        .children()
-                        .filter { it.type == IDENTIFIER }
-                        .lastOrNull()
-                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                }.toList()
-        }
-        return node
-            .children()
-            .filter { it.type in DECLARATION_NODE_TYPES }
-            .flatMap { extractNamesFromNode(it, sourceCode) }
-            .toList()
-    }
-
-    private fun extractNamesFromNode(node: TSNode, sourceCode: String): List<String> {
-        if (node.type == LEXICAL_DECLARATION || node.type == VARIABLE_DECLARATION) {
-            return node
-                .children()
-                .filter { it.type == VARIABLE_DECLARATOR }
-                .mapNotNull { TreeTraversal.findFirstChildTextByType(it, sourceCode, IDENTIFIER)?.trim() }
-                .filter { it.isNotBlank() }
-                .toList()
-        }
-        val name = extractName(node, sourceCode)
-        return if (name.isNotBlank()) listOf(name) else emptyList()
-    }
-
-    private fun buildAliasMap(rootNode: TSNode, sourceCode: String): Map<String, String> {
-        val aliasMap = mutableMapOf<String, String>()
-        TreeTraversal.findAllDescendantsOfType(rootNode, IMPORT_STATEMENT).forEach { importNode ->
-            val importClause = importNode.children().firstOrNull { it.type == IMPORT_CLAUSE } ?: return@forEach
-            val defaultBinding = importClause.children().firstOrNull { it.type == IDENTIFIER }
-            if (defaultBinding != null) {
-                val name = TreeTraversal.getNodeText(defaultBinding, sourceCode).trim()
-                if (name.isNotBlank()) aliasMap[name] = name
-            }
-            val namedImports = importClause.children().firstOrNull { it.type == NAMED_IMPORTS } ?: return@forEach
-            namedImports
-                .children()
-                .filter { it.type == IMPORT_SPECIFIER }
-                .forEach { specifier ->
-                    val identifiers = specifier
-                        .children()
-                        .filter { it.type == IDENTIFIER }
-                        .map { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                        .toList()
-                    when (identifiers.size) {
-                        1 -> aliasMap[identifiers[0]] = identifiers[0]
-                        2 -> aliasMap[identifiers[1]] = normalizeDefaultKeyword(identifiers[0])
-                    }
-                }
-        }
-        return aliasMap
-    }
-
-    private fun normalizeDefaultKeyword(name: String): String = if (name == DEFAULT_KEYWORD) DEFAULT_EXPORT else name
-
-    private fun collectExportReferencedLocalNames(rootNode: TSNode, sourceCode: String): Set<String> {
-        val fromExportClauses = rootNode
-            .children()
-            .filter { it.type == EXPORT_STATEMENT }
-            .flatMap { node -> exportClauseOriginalNames(node, sourceCode) }
-            .toSet()
-        val fromDefaultExport = when (val shape = classifyDefaultExport(rootNode, sourceCode)) {
-            is DefaultExport.Reexport -> setOf(shape.name)
-            else -> emptySet()
-        }
-        return fromExportClauses + fromDefaultExport + extractCJSExportedNames(rootNode, sourceCode)
-    }
-
-    private fun exportClauseOriginalNames(node: TSNode, sourceCode: String): List<String> {
-        val hasSource = node.children().any { it.type == STRING }
-        val hasExportClause = node.children().any { it.type == EXPORT_CLAUSE }
-        if (hasSource || !hasExportClause) return emptyList()
-        val clause = node.children().firstOrNull { it.type == EXPORT_CLAUSE } ?: return emptyList()
-        return clause
-            .children()
-            .filter { it.type == EXPORT_SPECIFIER }
-            .mapNotNull { specifier ->
-                val name = specifier
-                    .children()
-                    .filter { it.type == IDENTIFIER }
-                    .firstOrNull()
-                    ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                    ?: return@mapNotNull null
-                if (name == DEFAULT_KEYWORD) null else name
-            }.toList()
-    }
-
-    private fun extractCJSExportedNames(rootNode: TSNode, sourceCode: String): Set<String> {
-        return rootNode
-            .children()
-            .filter { it.type == EXPRESSION_STATEMENT }
-            .mapNotNull { stmt ->
-                val assignment = stmt.children().firstOrNull { it.type == ASSIGNMENT_EXPRESSION }
-                    ?: return@mapNotNull null
-                val children = assignment.children().toList()
-                val left = children.firstOrNull { it.type == MEMBER_EXPRESSION } ?: return@mapNotNull null
-                val right = children.lastOrNull { it.type == IDENTIFIER } ?: return@mapNotNull null
-                val leftText = TreeTraversal.getNodeText(left, sourceCode).trim()
-                if (!leftText.startsWith("module.exports") && !leftText.startsWith("exports.")) {
-                    return@mapNotNull null
-                }
-                TreeTraversal.getNodeText(right, sourceCode).trim().takeIf { it.isNotBlank() }
-            }.toSet()
     }
 
     private fun declarationNamesIncludes(node: TSNode, sourceCode: String, names: Set<String>): Boolean {

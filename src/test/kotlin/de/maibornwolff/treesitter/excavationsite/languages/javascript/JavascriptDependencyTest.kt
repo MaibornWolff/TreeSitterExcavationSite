@@ -229,9 +229,8 @@ class JavascriptDependencyTest {
 
             // Assert
             val byName = result.declarations.associateBy { it.name }
-            assertThat(byName).containsKey("buildFunction")
+            assertThat(byName.keys).containsExactlyInAnyOrder("buildFunction", "DEFAULT_EXPORT")
             assertThat(byName["buildFunction"]?.type).isEqualTo(DeclarationType.VARIABLE)
-            assertThat(byName).containsKey("DEFAULT_EXPORT")
             assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
             assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("buildFunction")
         }
@@ -321,6 +320,23 @@ class JavascriptDependencyTest {
 
             // Assert
             assertThat(result.declarations).isEmpty()
+        }
+
+        @Test
+        fun `should extract declaration exported via bare exports-property assignment`() {
+            // Arrange
+            val code = """
+                const helper = () => {}
+                exports.helper = helper
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName).containsKey("helper")
+            assertThat(byName["helper"]?.type).isEqualTo(DeclarationType.VARIABLE)
         }
 
         @Test

@@ -491,9 +491,8 @@ class TypescriptDependencyTest {
 
             // Assert
             val byName = result.declarations.associateBy { it.name }
-            assertThat(byName).containsKey("events")
+            assertThat(byName.keys).containsExactlyInAnyOrder("events", "DEFAULT_EXPORT")
             assertThat(byName["events"]?.type).isEqualTo(DeclarationType.VARIABLE)
-            assertThat(byName).containsKey("DEFAULT_EXPORT")
             assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
             assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("events")
         }
@@ -612,8 +611,7 @@ class TypescriptDependencyTest {
 
             // Assert
             val byName = result.declarations.associateBy { it.name }
-            assertThat(byName).containsKey("Base")
-            assertThat(byName).containsKey("DEFAULT_EXPORT")
+            assertThat(byName.keys).containsExactlyInAnyOrder("Base", "DEFAULT_EXPORT")
             assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
             assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("Base")
         }
