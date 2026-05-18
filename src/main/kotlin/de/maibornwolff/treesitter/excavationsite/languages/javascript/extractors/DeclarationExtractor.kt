@@ -362,7 +362,11 @@ internal object DeclarationExtractor {
             .filter { it.type == EXPORT_STATEMENT }
             .flatMap { node -> exportClauseOriginalNames(node, sourceCode) }
             .toSet()
-        return fromExportClauses + extractCJSExportedNames(rootNode, sourceCode)
+        val fromDefaultExport = when (val shape = classifyDefaultExport(rootNode, sourceCode)) {
+            is DefaultExport.Reexport -> setOf(shape.name)
+            else -> emptySet()
+        }
+        return fromExportClauses + fromDefaultExport + extractCJSExportedNames(rootNode, sourceCode)
     }
 
     private fun exportClauseOriginalNames(node: TSNode, sourceCode: String): List<String> {

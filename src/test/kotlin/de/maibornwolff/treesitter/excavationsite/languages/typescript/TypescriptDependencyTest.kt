@@ -482,18 +482,20 @@ class TypescriptDependencyTest {
         }
 
         @Test
-        fun `should produce DEFAULT_EXPORT REEXPORT when local var is default-exported without own export`() {
-            // Arrange
+        fun `should include original declaration alongside DEFAULT_EXPORT REEXPORT for export default identifier`() {
+            // Arrange — declare-then-export-default; collectExportReferencedLocalNames now captures events
             val code = "const events = { EventEmitter }\nexport default events"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
 
             // Assert
-            assertThat(result.declarations).hasSize(1)
-            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
-            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
-            assertThat(result.declarations[0].usedTypes.map { it.name }).containsExactlyInAnyOrder("events")
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName).containsKey("events")
+            assertThat(byName["events"]?.type).isEqualTo(DeclarationType.VARIABLE)
+            assertThat(byName).containsKey("DEFAULT_EXPORT")
+            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("events")
         }
 
         @Test
@@ -601,18 +603,19 @@ class TypescriptDependencyTest {
         }
 
         @Test
-        fun `should produce DEFAULT_EXPORT REEXPORT when bare abstract class is default-exported by name`() {
-            // Arrange
+        fun `should include original declaration alongside DEFAULT_EXPORT REEXPORT for export default abstract class`() {
+            // Arrange — declare-then-export-default; collectExportReferencedLocalNames now captures Base
             val code = "abstract class Base {}\nexport default Base"
 
             // Act
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
 
             // Assert
-            assertThat(result.declarations).hasSize(1)
-            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
-            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
-            assertThat(result.declarations[0].usedTypes.map { it.name }).containsExactlyInAnyOrder("Base")
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName).containsKey("Base")
+            assertThat(byName).containsKey("DEFAULT_EXPORT")
+            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("Base")
         }
 
         @Test

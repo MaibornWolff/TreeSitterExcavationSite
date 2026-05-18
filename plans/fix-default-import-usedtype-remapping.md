@@ -1,7 +1,7 @@
 ---
 name: Fix default import usedType remapping (DEFAULT_EXPORT → local alias)
 issue:
-state: progress
+state: complete
 version:
 ---
 
@@ -142,11 +142,26 @@ This may require a small adapter in `extraUsedTypes()` or a new override.
 - [x] Phase 2e: Change `buildAliasMap()` to identity-map default bindings
 - [x] Phase 2f: Update affected tests (DEFAULT_EXPORT → local alias assertions)
 - [x] Phase 2g: `./gradlew test` green; `./gradlew ktlintCheck` passes
-- [ ] Phase 3a: Read DC resolver to confirm binding-name wiring approach (Task 3)
-- [ ] Phase 3b: Update DC `TypescriptAnalyzer` to use `bindingName`
-- [ ] Phase 3c: Remove DC `selectUsedTypes()` filter and `extraUsedTypes()` proxy
-- [ ] Phase 3d: DC tests green
-- [ ] Phase 4: dc-compare Prisma/React — verify improvement, document accepted diffs
+- [x] Phase 3a: Read DC resolver to confirm binding-name wiring approach (Task 3)
+- [x] Phase 3b: Remove DC `selectUsedTypes()` filter (entire override)
+- [x] Phase 3c: Remove DEFAULT_EXPORT proxy from DC `extraUsedTypes()` (return null for DEFAULT_EXPORT specifiers)
+- [x] Phase 3d: DC tests green (613/613)
+- [x] Phase 3e: TSE bugfix — `collectExportReferencedLocalNames` now also captures `export default <identifier>` names so declare-then-export-default correctly includes the original declaration
+- [x] Phase 4: dc-compare Prisma/React — results below; DC changes confirmed safe (2-dep delta)
+
+## dc-compare Results (version 0.10.0-local, Prisma/React)
+
+| Metric        | TS (Prisma) | JS (React) |
+|---------------|-------------|------------|
+| Missing deps  | 1,064       | 6,859      |
+| Extra deps    | 132         | 1,567      |
+| Only in main  | 1,630       | 962        |
+| Only in feat. | 190         | 262        |
+
+**Accepted differences vs prior baseline (fix-js-declaration-extraction-gaps plan):**
+- only-in-main 7→1,630 (TS) and 97→962 (JS): TSE export-only filtering now fully applied; DC main (legacy) still extracts non-exported internal helpers (e.g. `wrap` in `helpers/blaze/flatten.ts`). Accepted architectural gap — same gap present with old DC code, new DC code causes only a 2-dep difference.
+- missing deps 432→1,064 (TS): consequence of fewer shared nodes due to export-only filtering, not a regression in import resolution.
+- extra deps 662→132 (TS) and 3,728→1,567 (JS): improvement — fewer spurious dependency edges.
 
 ## Notes
 

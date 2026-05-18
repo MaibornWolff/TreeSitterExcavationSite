@@ -217,8 +217,8 @@ class JavascriptDependencyTest {
         }
 
         @Test
-        fun `should produce DEFAULT_EXPORT REEXPORT when local var is default-exported without own export`() {
-            // Arrange
+        fun `should include original declaration alongside DEFAULT_EXPORT REEXPORT for export default identifier`() {
+            // Arrange — declare-then-export-default; collectExportReferencedLocalNames now captures buildFunction
             val code = """
                 const buildFunction = () => { return "hello"; };
                 export default buildFunction;
@@ -228,10 +228,12 @@ class JavascriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
 
             // Assert
-            assertThat(result.declarations).hasSize(1)
-            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
-            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
-            assertThat(result.declarations[0].usedTypes.map { it.name }).containsExactlyInAnyOrder("buildFunction")
+            val byName = result.declarations.associateBy { it.name }
+            assertThat(byName).containsKey("buildFunction")
+            assertThat(byName["buildFunction"]?.type).isEqualTo(DeclarationType.VARIABLE)
+            assertThat(byName).containsKey("DEFAULT_EXPORT")
+            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("buildFunction")
         }
 
         // JS intentionally produces both the named declaration AND a DEFAULT_EXPORT copy (same DeclarationType)
