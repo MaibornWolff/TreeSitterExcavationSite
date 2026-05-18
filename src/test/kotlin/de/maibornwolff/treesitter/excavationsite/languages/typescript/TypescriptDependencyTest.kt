@@ -69,6 +69,30 @@ class TypescriptDependencyTest {
         }
 
         @Test
+        fun `should populate bindingName for ES6 default import`() {
+            // Arrange
+            val code = "import Foo from './foo'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports[0].bindingName).isEqualTo("Foo")
+        }
+
+        @Test
+        fun `should leave bindingName null for named ES6 import`() {
+            // Arrange
+            val code = "import { A } from './foo'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports[0].bindingName).isNull()
+        }
+
+        @Test
         fun `should extract ES6 wildcard import`() {
             // Arrange
             val code = "import * as Foo from './foo'"
@@ -794,7 +818,7 @@ class TypescriptDependencyTest {
         }
 
         @Test
-        fun `should resolve default import name to DEFAULT_EXPORT in usedTypes`() {
+        fun `should emit local alias name in usedTypes for default import`() {
             // Arrange
             val code = """
                 import Dep from './dep'
@@ -806,7 +830,7 @@ class TypescriptDependencyTest {
 
             // Assert
             val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
-            assertThat(usedTypeNames).containsExactlyInAnyOrder("DEFAULT_EXPORT")
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("Dep")
         }
     }
 

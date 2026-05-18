@@ -50,9 +50,10 @@ internal object ImportExtractor {
                     listOf(ImportDeclaration(path = basePath, isWildcard = true))
                 else -> {
                     val named = extractNamedSpecifiers(importClause, basePath, sourceCode)
-                    val hasDefaultBinding = importClause.children().any { it.type == IDENTIFIER }
-                    if (hasDefaultBinding) {
-                        named + ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false)
+                    val defaultIdentifier = importClause.children().firstOrNull { it.type == IDENTIFIER }
+                    if (defaultIdentifier != null) {
+                        val bindingText = TreeTraversal.getNodeText(defaultIdentifier, sourceCode).trim()
+                        named + ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false, bindingName = bindingText)
                     } else {
                         named
                     }
@@ -94,6 +95,10 @@ internal object ImportExtractor {
             val nameChild = declarator.children().firstOrNull { it.type == OBJECT_PATTERN || it.type == IDENTIFIER }
             when (nameChild?.type) {
                 OBJECT_PATTERN -> extractDestructuredCommonJs(nameChild, basePath, sourceCode)
+                IDENTIFIER -> {
+                    val bindingText = TreeTraversal.getNodeText(nameChild, sourceCode).trim()
+                    listOf(ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false, bindingName = bindingText))
+                }
                 else -> listOf(ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false))
             }
         }

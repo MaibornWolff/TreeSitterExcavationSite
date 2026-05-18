@@ -54,6 +54,42 @@ class JavascriptDependencyTest {
         }
 
         @Test
+        fun `should populate bindingName for ES6 default import`() {
+            // Arrange
+            val code = "import Foo from './foo'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.imports[0].bindingName).isEqualTo("Foo")
+        }
+
+        @Test
+        fun `should populate bindingName for CJS default import`() {
+            // Arrange
+            val code = "const Foo = require('./foo')"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.imports[0].bindingName).isEqualTo("Foo")
+        }
+
+        @Test
+        fun `should leave bindingName null for named ES6 import`() {
+            // Arrange
+            val code = "import { A } from './foo'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.imports[0].bindingName).isNull()
+        }
+
+        @Test
         fun `should extract multiple named ES6 imports as separate declarations`() {
             // Arrange
             val code = "import { A, B } from './foo'"
