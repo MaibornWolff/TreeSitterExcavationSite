@@ -523,6 +523,45 @@ class JavascriptDependencyTest {
     }
 
     @Nested
+    inner class CjsAliasUsages {
+        @Test
+        fun `should resolve CJS destructured require alias to original name as usedType`() {
+            // Arrange
+            val code = """
+                const { myMethod: alias } = require('./module')
+                export class MyClass {
+                    run() { return alias() }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert — MyClass also appears because JS class names are plain `identifier` nodes (PascalCase check)
+            val usedTypeNames = result.declarations.first { it.name == "MyClass" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("MyClass", "myMethod")
+        }
+
+        @Test
+        fun `should emit CJS shorthand destructured require name as usedType`() {
+            // Arrange
+            val code = """
+                const { myMethod } = require('./module')
+                export class MyClass {
+                    run() { return myMethod() }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert — MyClass also appears because JS class names are plain `identifier` nodes (PascalCase check)
+            val usedTypeNames = result.declarations.first { it.name == "MyClass" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("MyClass", "myMethod")
+        }
+    }
+
+    @Nested
     inner class ApiSupportCheck {
         @Test
         fun `should support JavaScript dependency analysis`() {

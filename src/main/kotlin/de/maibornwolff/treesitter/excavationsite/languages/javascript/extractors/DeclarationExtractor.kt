@@ -47,6 +47,13 @@ private const val IMPORT_CLAUSE = "import_clause"
 private const val NAMED_IMPORTS = "named_imports"
 private const val IMPORT_SPECIFIER = "import_specifier"
 
+private const val CALL_EXPRESSION = "call_expression"
+private const val OBJECT_PATTERN = "object_pattern"
+private const val SHORTHAND_PROPERTY_IDENTIFIER_PATTERN = "shorthand_property_identifier_pattern"
+private const val PAIR_PATTERN = "pair_pattern"
+private const val PROPERTY_IDENTIFIER = "property_identifier"
+private const val REQUIRE = "require"
+
 private val DECLARATION_NODE_TYPES = setOf(
     CLASS_DECLARATION,
     ABSTRACT_CLASS_DECLARATION,
@@ -97,6 +104,31 @@ internal object DeclarationPrepass {
                         2 -> aliasMap[identifiers[1]] = normalizeDefaultKeyword(identifiers[0])
                     }
                 }
+        }
+        TreeTraversal.findAllDescendantsOfType(rootNode, CALL_EXPRESSION).forEach { callNode ->
+            val callee = callNode.children().firstOrNull { it.type == IDENTIFIER } ?: return@forEach
+            if (TreeTraversal.getNodeText(callee, sourceCode).trim() != REQUIRE) return@forEach
+            val declarator = callNode.parent
+            if (declarator == null || declarator.isNull || declarator.type != VARIABLE_DECLARATOR) return@forEach
+            val objectPattern = declarator.children().firstOrNull { it.type == OBJECT_PATTERN } ?: return@forEach
+            objectPattern.children().forEach { prop ->
+                when (prop.type) {
+                    SHORTHAND_PROPERTY_IDENTIFIER_PATTERN -> {
+                        val name = TreeTraversal.getNodeText(prop, sourceCode).trim()
+                        if (name.isNotBlank()) aliasMap[name] = name
+                    }
+                    PAIR_PATTERN -> {
+                        val children = prop.children().toList()
+                        val importName = children
+                            .firstOrNull { it.type == PROPERTY_IDENTIFIER || it.type == IDENTIFIER }
+                            ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                        val binding = children
+                            .lastOrNull { it.type == IDENTIFIER }
+                            ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                        if (!importName.isNullOrBlank() && !binding.isNullOrBlank()) aliasMap[binding] = importName
+                    }
+                }
+            }
         }
         return aliasMap
     }

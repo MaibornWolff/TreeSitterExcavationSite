@@ -1,7 +1,7 @@
 ---
 name: fix-decorator-and-cjs-alias-extraction
 issue: n/a
-state: todo
+state: progress
 version: 0.10.0
 ---
 
@@ -43,12 +43,12 @@ Once both TSE fixes are in place:
 
 ## Steps
 
-- [ ] Task 1a: Write failing TSE test — decorator identifiers in `usedTypes` for a decorated exported class
-- [ ] Task 1b: Fix `DeclarationExtractor.extractFromExportStatement()` to scan `decorator` siblings and merge usedTypes
-- [ ] Task 1c: Run tests — green
-- [ ] Task 2a: Write failing TSE test — CJS alias (`alias → myMethod`) resolved in `usedTypes`
-- [ ] Task 2b: Extend `DeclarationPrepass.buildAliasMap()` to handle CJS require with destructuring
-- [ ] Task 2c: Run tests — green
+- [x] Task 1a: Write failing TSE test — decorator identifiers in `usedTypes` for a decorated exported class
+- [x] Task 1b: Fix `DeclarationExtractor.extractFromExportStatement()` to scan `decorator` siblings and merge usedTypes
+- [x] Task 1c: Run tests — green
+- [x] Task 2a: Write failing TSE test — CJS alias (`alias → myMethod`) resolved in `usedTypes`
+- [x] Task 2b: Extend `DeclarationPrepass.buildAliasMap()` to handle CJS require with destructuring
+- [x] Task 2c: Run tests — green
 - [ ] Task 3a: Run DC `TypescriptAnalyzerTest` — decorator and CJS alias tests pass
 - [ ] Task 3b: Remove any `extraUsedTypes()` override from DC `TypescriptAnalyzer` if present
 - [ ] Task 3c: Run dc-compare on Prisma + React — no new regressions
