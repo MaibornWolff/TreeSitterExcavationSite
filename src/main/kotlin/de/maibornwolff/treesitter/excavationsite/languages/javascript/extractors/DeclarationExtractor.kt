@@ -28,6 +28,7 @@ private const val STRING_FRAGMENT = "string_fragment"
 private const val DEFAULT_KEYWORD = "default"
 private const val WILDCARD_REEXPORT = "*"
 
+private const val DECORATOR = "decorator"
 private const val AMBIENT_DECLARATION = "ambient_declaration"
 private const val MODULE_DECLARATION = "module"
 private const val INTERNAL_MODULE = "internal_module"
@@ -316,12 +317,19 @@ internal object DeclarationExtractor {
             hasSource && !hasExportClause ->
                 listOf(Declaration(name = WILDCARD_REEXPORT, type = DeclarationType.REEXPORT, usedTypes = emptySet()))
 
-            else ->
+            else -> {
+                val decoratorUsedTypes = node
+                    .children()
+                    .filter { it.type == DECORATOR }
+                    .flatMap { UsedTypeExtractor.extract(it, sourceCode, aliasMap, localDeclarationNames).toList() }
+                    .toSet()
                 node
                     .children()
                     .filter { it.type in DECLARATION_NODE_TYPES }
                     .flatMap { extractFromNode(it, sourceCode, parentPath, aliasMap, localDeclarationNames) }
+                    .map { decl -> if (decoratorUsedTypes.isEmpty()) decl else decl.copy(usedTypes = decl.usedTypes + decoratorUsedTypes) }
                     .toList()
+            }
         }
     }
 

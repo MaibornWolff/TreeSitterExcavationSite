@@ -1106,6 +1106,27 @@ class TypescriptDependencyTest {
     }
 
     @Nested
+    inner class DecoratorUsedTypes {
+        @Test
+        fun `should emit decorator identifiers as usedTypes on decorated exported class`() {
+            // Arrange
+            val code = """
+                import { Component } from '@angular/core'
+                import { MyService } from './my-service'
+                @Component({ imports: [MyService] })
+                export class MyClass {}
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "MyClass" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("Component", "MyService")
+        }
+    }
+
+    @Nested
     inner class ApiSupportCheck {
         @Test
         fun `should support TypeScript dependency analysis`() {
