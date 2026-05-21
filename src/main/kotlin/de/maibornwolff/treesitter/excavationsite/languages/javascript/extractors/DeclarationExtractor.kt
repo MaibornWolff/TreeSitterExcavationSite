@@ -34,10 +34,6 @@ private const val MODULE_DECLARATION = "module"
 private const val INTERNAL_MODULE = "internal_module"
 private const val STATEMENT_BLOCK = "statement_block"
 
-private const val EXPRESSION_STATEMENT = "expression_statement"
-private const val ASSIGNMENT_EXPRESSION = "assignment_expression"
-private const val MEMBER_EXPRESSION = "member_expression"
-
 private const val TYPE_IDENTIFIER = "type_identifier"
 private const val IDENTIFIER = "identifier"
 private const val VARIABLE_DECLARATOR = "variable_declarator"
@@ -140,6 +136,7 @@ internal object DeclarationPrepass {
         .flatMap { child ->
             when (child.type) {
                 EXPORT_STATEMENT -> extractNamesFromExportStatement(child, sourceCode)
+                in DECLARATION_NODE_TYPES -> extractNamesFromNode(child, sourceCode)
                 else -> emptyList()
             }
         }.filter { it.isNotBlank() }
@@ -181,56 +178,6 @@ internal object DeclarationPrepass {
         val name = extractName(node, sourceCode)
         return if (name.isNotBlank()) listOf(name) else emptyList()
     }
-
-    internal fun collectExportReferencedLocalNames(rootNode: TSNode, sourceCode: String): Set<String> {
-        val fromExportClauses = rootNode
-            .children()
-            .filter { it.type == EXPORT_STATEMENT }
-            .flatMap { node -> exportClauseOriginalNames(node, sourceCode) }
-            .toSet()
-        val fromDefaultExport = when (val shape = DeclarationExtractor.classifyDefaultExport(rootNode, sourceCode)) {
-            is DeclarationExtractor.DefaultExport.Reexport -> setOf(shape.name)
-            else -> emptySet()
-        }
-        return fromExportClauses + fromDefaultExport + extractCJSExportedNames(rootNode, sourceCode)
-    }
-
-    private fun exportClauseOriginalNames(node: TSNode, sourceCode: String): List<String> {
-        val hasSource = node.children().any { it.type == STRING }
-        val hasExportClause = node.children().any { it.type == EXPORT_CLAUSE }
-        if (hasSource || !hasExportClause) return emptyList()
-        val clause = node.children().firstOrNull { it.type == EXPORT_CLAUSE } ?: return emptyList()
-        return clause
-            .children()
-            .filter { it.type == EXPORT_SPECIFIER }
-            .mapNotNull { specifier ->
-                val name = specifier
-                    .children()
-                    .filter { it.type == IDENTIFIER }
-                    .firstOrNull()
-                    ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                    ?: return@mapNotNull null
-                if (name == DEFAULT_KEYWORD) null else name
-            }.toList()
-    }
-
-    private fun extractCJSExportedNames(rootNode: TSNode, sourceCode: String): Set<String> {
-        return rootNode
-            .children()
-            .filter { it.type == EXPRESSION_STATEMENT }
-            .mapNotNull { stmt ->
-                val assignment = stmt.children().firstOrNull { it.type == ASSIGNMENT_EXPRESSION }
-                    ?: return@mapNotNull null
-                val children = assignment.children().toList()
-                val left = children.firstOrNull { it.type == MEMBER_EXPRESSION } ?: return@mapNotNull null
-                val right = children.lastOrNull { it.type == IDENTIFIER } ?: return@mapNotNull null
-                val leftText = TreeTraversal.getNodeText(left, sourceCode).trim()
-                if (!leftText.startsWith("module.exports") && !leftText.startsWith("exports.")) {
-                    return@mapNotNull null
-                }
-                TreeTraversal.getNodeText(right, sourceCode).trim().takeIf { it.isNotBlank() }
-            }.toSet()
-    }
 }
 
 // ── main extractor ────────────────────────────────────────────────────────────
@@ -269,7 +216,6 @@ internal object DeclarationExtractor {
     fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> {
         val aliasMap = DeclarationPrepass.buildAliasMap(rootNode, sourceCode)
         val localDeclarationNames = DeclarationPrepass.extractLocalDeclarationNames(rootNode, sourceCode)
-        val exportReferencedLocalNames = DeclarationPrepass.collectExportReferencedLocalNames(rootNode, sourceCode)
         val declarations = rootNode
             .children()
             .flatMap { child ->
@@ -286,13 +232,12 @@ internal object DeclarationExtractor {
                         aliasMap = aliasMap,
                         localDeclarationNames = localDeclarationNames
                     )
-                    in DECLARATION_NODE_TYPES -> {
-                        if (declarationNamesIncludes(child, sourceCode, exportReferencedLocalNames)) {
-                            extractFromNode(child, sourceCode, aliasMap = aliasMap, localDeclarationNames = localDeclarationNames)
-                        } else {
-                            emptyList()
-                        }
-                    }
+                    in DECLARATION_NODE_TYPES -> extractFromNode(
+                        child,
+                        sourceCode,
+                        aliasMap = aliasMap,
+                        localDeclarationNames = localDeclarationNames
+                    )
                     else -> emptyList()
                 }
             }.filter { it.name.isNotBlank() }
@@ -451,20 +396,5 @@ internal object DeclarationExtractor {
         FUNCTION_DECLARATION, FUNCTION_SIGNATURE, GENERATOR_FUNCTION_DECLARATION -> DeclarationType.FUNCTION
         LEXICAL_DECLARATION, VARIABLE_DECLARATION -> DeclarationType.VARIABLE
         else -> DeclarationType.UNKNOWN
-    }
-
-    private fun declarationNamesIncludes(node: TSNode, sourceCode: String, names: Set<String>): Boolean {
-        if (names.isEmpty()) return false
-        return when (node.type) {
-            LEXICAL_DECLARATION, VARIABLE_DECLARATION ->
-                node
-                    .children()
-                    .filter { it.type == VARIABLE_DECLARATOR }
-                    .any { declarator ->
-                        val name = TreeTraversal.findFirstChildTextByType(declarator, sourceCode, IDENTIFIER)?.trim()
-                        !name.isNullOrBlank() && name in names
-                    }
-            else -> extractName(node, sourceCode) in names
-        }
     }
 }

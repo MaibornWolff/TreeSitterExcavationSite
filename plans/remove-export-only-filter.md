@@ -1,7 +1,7 @@
 ---
 name: remove-export-only-filter
 issue:
-state: todo
+state: progress
 version: 0.10.0
 ---
 
@@ -40,10 +40,12 @@ Delete all of them and run `./gradlew ktlintFormat`.
 
 ## Steps
 
-- [ ] Complete Task 1: Add failing test for non-exported declaration extraction
-- [ ] Complete Task 2: Remove filter gate + expand `extractLocalDeclarationNames`
-- [ ] Complete Task 3: Update tests asserting non-exported exclusion
-- [ ] Complete Task 4: Remove dead code
+- [x] Complete Task 1: Add failing test for non-exported declaration extraction
+- [x] Complete Task 2: Remove filter gate + expand `extractLocalDeclarationNames`
+- [x] Complete Task 3: Update tests asserting non-exported exclusion
+- [x] Complete Task 4: Remove dead code
+- [ ] Complete Task 5: Run dc-compare and classify extra nodes
+- [ ] Complete Task 6: Decide on surgical filtering (if needed)
 
 ## Detailed Steps
 
@@ -250,3 +252,40 @@ Delete from `DeclarationExtractor`:
 - `extractNamesFromExportStatement` and `extractNamesFromNode` in `DeclarationPrepass` are NOT dead — they remain used by the updated `extractLocalDeclarationNames`.
 - The 1630/962 "only-in-main" nodes in dc-compare should largely close after this fix. A dc-compare rerun is recommended after merging.
 - The 3483/14351 "true regressions" (missing edges) are a separate body-scan gap unrelated to this filter — do not expect those to close.
+
+### Task 5 — Run dc-compare and classify extra nodes
+
+After Task 4, publish TSE to local Maven and run dc-compare against Prisma (TS) and React (JS):
+
+```bash
+# In TreeSitterExcavationSite
+./gradlew publishToMavenLocal
+
+# In DependaCharta (with mavenLocal() + local coords temporarily)
+# Run analysis on C:\Development\CodeChartaEtc\prisma  (TS)
+# Run analysis on React repo                            (JS)
+# Then compare with analyze.js / analyze2.js in dc-compare/
+```
+
+Expected direction of change vs current numbers:
+- "only-in-main" nodes (1630 TS / 962 JS): should drop significantly — these were non-exported declarations that TSE was missing
+- "only-in-feature" nodes (190 TS / 262 JS): will increase — TSE now produces non-exported declarations that DC main may not have matched via its TSQuery patterns
+
+For each category of "only-in-feature" extras, identify the declaration type (function, class, variable, const arrow function, etc.) and check whether DC main's TypeScript/JavaScript analyzer would have been expected to emit it. Document findings.
+
+- [ ] Publish TSE to local Maven: `./gradlew publishToMavenLocal`
+- [ ] Run dc-compare for TS (Prisma) and JS (React) — see dc-compare workflow in memory
+- [ ] Record new numbers in a comment in this plan
+- [ ] Classify "only-in-feature" extras by node type (grep the dc-compare output JSON for their names, look at source files)
+
+### Task 6 — Decide on surgical filtering (if needed)
+
+Based on Task 5 classification, decide per declaration type whether extras are:
+- **Accept as improvement**: non-exported declarations DC main missed due to TSQuery gaps (no action needed)
+- **Filter surgically**: declaration categories that genuinely don't belong in the graph (e.g., non-exported `const` arrow functions that are implementation details with no outward-facing type usage)
+
+If surgical filtering is needed, add a targeted exclusion (e.g., by `DeclarationType` or by checking for usedTypes emptiness) rather than a blanket export filter. Add a test for each filtered category before implementing the filter. Document accepted differences explicitly in this plan's Notes section.
+
+- [ ] For each "only-in-feature" category: decide accept or filter
+- [ ] If filtering: write failing test → implement → all tests green → commit
+- [ ] Update Notes with accepted differences and rationale

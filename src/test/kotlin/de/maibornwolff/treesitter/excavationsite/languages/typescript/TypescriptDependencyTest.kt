@@ -629,6 +629,27 @@ class TypescriptDependencyTest {
             assertThat(result.declarations[0].name).isEqualTo("generate")
             assertThat(result.declarations[0].type).isEqualTo(DeclarationType.FUNCTION)
         }
+
+        @Test
+        fun `should extract non-exported function declaration with its used types`() {
+            // Arrange
+            val code = """
+                import { Logger } from './logger'
+
+                function logVisit(visitor: string): void {
+                    const logger = new Logger()
+                    logger.log(visitor)
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.declarations).extracting("name").containsExactlyInAnyOrder("logVisit")
+            val logVisit = result.declarations.first { it.name == "logVisit" }
+            assertThat(logVisit.usedTypes).extracting("name").containsExactlyInAnyOrder("Logger")
+        }
     }
 
     @Nested

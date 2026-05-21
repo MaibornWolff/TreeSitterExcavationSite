@@ -299,7 +299,7 @@ class JavascriptDependencyTest {
         }
 
         @Test
-        fun `should not extract non-exported function declaration`() {
+        fun `should extract non-exported function declaration`() {
             // Arrange
             val code = "function foo() {}"
 
@@ -307,11 +307,11 @@ class JavascriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
 
             // Assert
-            assertThat(result.declarations).isEmpty()
+            assertThat(result.declarations).extracting("name").containsExactlyInAnyOrder("foo")
         }
 
         @Test
-        fun `should not extract non-exported class declaration`() {
+        fun `should extract non-exported class declaration`() {
             // Arrange
             val code = "class Foo {}"
 
@@ -319,7 +319,7 @@ class JavascriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
 
             // Assert
-            assertThat(result.declarations).isEmpty()
+            assertThat(result.declarations).extracting("name").containsExactlyInAnyOrder("Foo")
         }
 
         @Test
