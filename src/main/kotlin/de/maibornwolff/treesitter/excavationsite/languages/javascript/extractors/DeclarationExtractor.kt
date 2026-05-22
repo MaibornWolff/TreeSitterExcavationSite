@@ -243,8 +243,11 @@ internal object DeclarationExtractor {
             }.filter { it.name.isNotBlank() }
             .toList()
         return when (val shape = classifyDefaultExport(rootNode, sourceCode)) {
-            is DefaultExport.Reexport ->
-                declarations + Declaration(DEFAULT_EXPORT, DeclarationType.REEXPORT, setOf(UsedType(shape.name)))
+            is DefaultExport.Reexport -> {
+                val resolvedType = declarations.firstOrNull { it.name == shape.name }?.type
+                    ?: DeclarationType.REEXPORT
+                declarations + Declaration(DEFAULT_EXPORT, resolvedType, setOf(UsedType(shape.name)))
+            }
             is DefaultExport.Anonymous, DefaultExport.Value ->
                 declarations + Declaration(DEFAULT_EXPORT, DeclarationType.REEXPORT, emptySet())
             is DefaultExport.Named, DefaultExport.None -> declarations

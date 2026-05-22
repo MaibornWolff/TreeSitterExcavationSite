@@ -217,8 +217,8 @@ class JavascriptDependencyTest {
         }
 
         @Test
-        fun `should include original declaration alongside DEFAULT_EXPORT REEXPORT for export default identifier`() {
-            // Arrange — declare-then-export-default; collectExportReferencedLocalNames now captures buildFunction
+        fun `should resolve DEFAULT_EXPORT type from locally declared identifier`() {
+            // Arrange — declare-then-export-default: DEFAULT_EXPORT should inherit the declared type
             val code = """
                 const buildFunction = () => { return "hello"; };
                 export default buildFunction;
@@ -231,7 +231,7 @@ class JavascriptDependencyTest {
             val byName = result.declarations.associateBy { it.name }
             assertThat(byName.keys).containsExactlyInAnyOrder("buildFunction", "DEFAULT_EXPORT")
             assertThat(byName["buildFunction"]?.type).isEqualTo(DeclarationType.VARIABLE)
-            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.VARIABLE)
             assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("buildFunction")
         }
 

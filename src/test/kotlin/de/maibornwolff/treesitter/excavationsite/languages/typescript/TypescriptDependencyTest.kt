@@ -482,8 +482,8 @@ class TypescriptDependencyTest {
         }
 
         @Test
-        fun `should include original declaration alongside DEFAULT_EXPORT REEXPORT for export default identifier`() {
-            // Arrange — declare-then-export-default; collectExportReferencedLocalNames now captures events
+        fun `should resolve DEFAULT_EXPORT type from locally declared identifier`() {
+            // Arrange — declare-then-export-default: DEFAULT_EXPORT should inherit the declared type
             val code = "const events = { EventEmitter }\nexport default events"
 
             // Act
@@ -493,7 +493,7 @@ class TypescriptDependencyTest {
             val byName = result.declarations.associateBy { it.name }
             assertThat(byName.keys).containsExactlyInAnyOrder("events", "DEFAULT_EXPORT")
             assertThat(byName["events"]?.type).isEqualTo(DeclarationType.VARIABLE)
-            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.VARIABLE)
             assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("events")
         }
 
@@ -602,8 +602,8 @@ class TypescriptDependencyTest {
         }
 
         @Test
-        fun `should include original declaration alongside DEFAULT_EXPORT REEXPORT for export default abstract class`() {
-            // Arrange — declare-then-export-default; collectExportReferencedLocalNames now captures Base
+        fun `should resolve DEFAULT_EXPORT type from locally declared abstract class`() {
+            // Arrange — declare-then-export-default: DEFAULT_EXPORT should inherit CLASS from Base
             val code = "abstract class Base {}\nexport default Base"
 
             // Act
@@ -612,7 +612,7 @@ class TypescriptDependencyTest {
             // Assert
             val byName = result.declarations.associateBy { it.name }
             assertThat(byName.keys).containsExactlyInAnyOrder("Base", "DEFAULT_EXPORT")
-            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.REEXPORT)
+            assertThat(byName["DEFAULT_EXPORT"]?.type).isEqualTo(DeclarationType.CLASS)
             assertThat(byName["DEFAULT_EXPORT"]?.usedTypes?.map { it.name }).containsExactlyInAnyOrder("Base")
         }
 
