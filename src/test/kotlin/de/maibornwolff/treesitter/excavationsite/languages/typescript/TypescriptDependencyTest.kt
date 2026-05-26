@@ -1148,6 +1148,45 @@ class TypescriptDependencyTest {
     }
 
     @Nested
+    inner class GenericTypeArguments {
+        @Test
+        fun `should emit type argument of generic function call as usedType`() {
+            // Arrange
+            val code = """
+                import { UserService } from './user'
+                export class Controller {
+                    init() { return createService<UserService>() }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Controller" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("UserService")
+        }
+
+        @Test
+        fun `should emit type argument of generic constructor call as usedType`() {
+            // Arrange
+            val code = """
+                import { Item } from './item'
+                export class Store {
+                    items = new Map<string, Item>()
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Store" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("Map", "Item")
+        }
+    }
+
+    @Nested
     inner class TypeAssertionAndSatisfies {
         @Test
         fun `should emit type in as-expression as usedType`() {

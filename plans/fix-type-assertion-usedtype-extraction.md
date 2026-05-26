@@ -103,7 +103,7 @@ so `findAllDescendantsOfType` never touches the value being cast.
 
 ## Further Improvement Candidates
 
-### 1. Generic type arguments on function calls ✅ Worth doing
+### 1. Generic type arguments on function calls ✅ Done (commit `qnxpryun`)
 
 **What:** `createService<UserService>()` — `UserService` is a `type_identifier`
 inside a `type_arguments` node on a `call_expression`. Not inside any
@@ -116,8 +116,9 @@ descendants. The `.toSet()` in `extract()` handles any duplicates with
 `type_annotation`-already-captured entries.
 
 **Usefulness:** Medium — generic function calls with imported type arguments are
-common in TypeScript codebases. Estimate: tens to low-hundreds of missing edges
-closed per repo. No noise risk (type_arguments only contains type-position nodes).
+common in TypeScript codebases. Prisma/React dc-compare (2026-05-26): −4 TS / −42 JS
+missing edges, +2/+0 extra. Small here but larger impact expected in DI-heavy
+codebases (Angular, NestJS). No noise risk (type_arguments only contains type-position nodes).
 
 ---
 
@@ -153,7 +154,12 @@ scoping each body's identifiers to only the correct declaration is hard:
   which in turn requires understanding class structure, module-level functions,
   arrow functions assigned to variables, etc.
 
-**Usefulness:** Would close ~93% of remaining missing edges if done correctly.
+**Usefulness:** A correct per-declaration-scoped body scan would close ~55–60% of
+remaining missing edges. The other ~40–43% are DC over-attribution (identifiers
+from one declaration's body incorrectly attributed to other declarations in the
+same file) — a correct implementation would rightly skip those. A naive whole-file
+scan would close ~99% of missing edges but reintroduce DC's over-attribution bug.
+(Split based on spot-check in `ts-js-dependency-extraction-completed.md`.)
 
 **Verdict:** Accept the gap for now. Revisit only if DC integration requires
 parity. Document as a known, deliberate trade-off — not an oversight.

@@ -257,8 +257,8 @@ internal object DeclarationExtractor {
     private fun extractFromAmbientDeclaration(
         node: TSNode,
         sourceCode: String,
-        aliasMap: Map<String, String> = emptyMap(),
-        localDeclarationNames: Set<String> = emptySet()
+        aliasMap: Map<String, String>,
+        localDeclarationNames: Set<String>
     ): List<Declaration> {
         val moduleNode = node.children().firstOrNull { it.type == MODULE_DECLARATION } ?: return emptyList()
         val moduleName = moduleNode
@@ -287,8 +287,8 @@ internal object DeclarationExtractor {
         node: TSNode,
         sourceCode: String,
         parentPath: List<String> = emptyList(),
-        aliasMap: Map<String, String> = emptyMap(),
-        localDeclarationNames: Set<String> = emptySet()
+        aliasMap: Map<String, String>,
+        localDeclarationNames: Set<String>
     ): List<Declaration> {
         val hasExportClause = node.children().any { it.type == EXPORT_CLAUSE }
         val hasSource = node.children().any { it.type == STRING }
@@ -347,8 +347,8 @@ internal object DeclarationExtractor {
         node: TSNode,
         sourceCode: String,
         parentPath: List<String> = emptyList(),
-        aliasMap: Map<String, String> = emptyMap(),
-        localDeclarationNames: Set<String> = emptySet()
+        aliasMap: Map<String, String>,
+        localDeclarationNames: Set<String>
     ): List<Declaration> = when (node.type) {
         LEXICAL_DECLARATION, VARIABLE_DECLARATION -> extractVariableDeclarations(
             node,
@@ -373,8 +373,8 @@ internal object DeclarationExtractor {
         node: TSNode,
         sourceCode: String,
         parentPath: List<String> = emptyList(),
-        aliasMap: Map<String, String> = emptyMap(),
-        localDeclarationNames: Set<String> = emptySet()
+        aliasMap: Map<String, String>,
+        localDeclarationNames: Set<String>
     ): List<Declaration> = node
         .children()
         .filter { it.type == VARIABLE_DECLARATOR }
