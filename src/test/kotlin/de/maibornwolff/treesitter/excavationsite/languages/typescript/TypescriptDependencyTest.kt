@@ -1148,6 +1148,43 @@ class TypescriptDependencyTest {
     }
 
     @Nested
+    inner class TypeAssertionAndSatisfies {
+        @Test
+        fun `should emit type in as-expression as usedType`() {
+            // Arrange
+            val code = """
+                import { Response } from './types'
+                export class Handler {
+                    handle(x: unknown) { return x as Response }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Handler" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).contains("Response")
+        }
+
+        @Test
+        fun `should emit type in satisfies-expression as usedType`() {
+            // Arrange
+            val code = """
+                import { Config } from './config'
+                export const settings = { debug: true } satisfies Config
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "settings" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).contains("Config")
+        }
+    }
+
+    @Nested
     inner class ApiSupportCheck {
         @Test
         fun `should support TypeScript dependency analysis`() {

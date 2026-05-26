@@ -237,9 +237,18 @@ A different concatenation order with the same types produces identical dependenc
 | **C++** | processor list order: typeDecl, inheritance, methods, typeDef, alias, generic, define | `BodyProcessor.kt` |
 | **Go** | functionQuery, typeQuery | `GoAnalyzer.kt` |
 | **Python** | N/A — imports only, no multi-category concatenation | `PythonAnalyzer.kt` |
-| **JavaScript** | N/A — imports only, no multi-category concatenation | `JavascriptAnalyzer.kt` |
+| **JavaScript** | Same as TypeScript (shared `UsedTypeExtractor`): typeIdentifiers, constructorCalls, memberAccesses, methodCalls, extensions, relevantIdentifiers, constraintTypes, typeAliasRhsTypes, jsxComponents. DC legacy was imports-only; TSE adds full used-type extraction. | `JavascriptAnalyzer.kt` |
 | **Vue** | script imports, template components | `VueAnalyzer.kt` |
 | **Delphi** | inheritance, parameters, returnTypes, fieldTypes, propertyTypes, constTypes, variableTypes, constructorCalls, methodCalls, castTypes, attributeTypes, genericConstraintTypes | N/A — TSE-native, no DC legacy |
+
+### JavaScript vs TypeScript: DEFAULT_EXPORT copy behavior
+
+For `export default function Foo` / `export default class Foo` (named inline default export), JavaScript and TypeScript intentionally diverge:
+
+- **JavaScript**: emits both the named declaration (`Foo`) AND a second `Declaration(name="DEFAULT_EXPORT", type=<same>)`. This matches DC's legacy `JavascriptAnalyzer`, which produced both nodes.
+- **TypeScript**: emits only the named declaration (`Foo`). No `DEFAULT_EXPORT` copy. This matches DC's legacy `TypeScriptAnalyzer`.
+
+This asymmetry is a DC legacy compatibility shim, not a principled semantic choice. It is implemented in `JavascriptDependencyMapping.extractJsDeclarations()`.
 
 ## Namespace models: single-namespace vs multi-namespace languages
 

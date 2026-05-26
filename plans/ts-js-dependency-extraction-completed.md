@@ -7,7 +7,8 @@ version: 0.9.0
 # TS/JS Dependency Extraction — Completed Work
 
 Summary of all fixes applied to JS/TS dependency extraction. Implementation detail is in git
-history. See `dc-compare-results-2026-05-20.md` for the full comparison analysis.
+history and `add-typescript-javascript-dependency-support.md`. See `remove-export-only-filter.md`
+for the latest dc-compare analysis.
 
 ---
 
@@ -49,23 +50,23 @@ so declare-then-export-default patterns correctly include the original declarati
 
 ---
 
-### 3. Export-only filtering + lowercase named import tracking (fix-js-declaration-extraction-gaps)
-
-**Export-only filtering:** TSE was extracting all top-level declarations regardless of export
-status. Removed the bare `in DECLARATION_NODE_TYPES` and `EXPRESSION_STATEMENT` (namespace
-unwrapper) branches from `DeclarationExtractor.extract()`. Exported declarations still flow through
-`EXPORT_STATEMENT` and `AMBIENT_DECLARATION` branches. Exception: `extractFromAmbientDeclaration`
-retains its `in DECLARATION_NODE_TYPES` branch — inside `declare module "X" {}` all declarations
-are implicitly ambient.
+### 3. Named import tracking + all-declarations graph (fix-js-declaration-extraction-gaps + remove-export-only-filter)
 
 **Named import tracking:** `buildAliasMap()` extended to self-map unaliased named imports
 (`import { foo }` → `foo → foo`), making aliasMap a complete registry of all locally bound import
 names. `extractRelevantIdentifiers()` extended to emit any identifier matching an aliasMap key,
 regardless of capitalisation.
 
-**`localDeclarationNames`:** Tracks exported symbol names so cross-references between exported
+**`localDeclarationNames`:** Tracks all top-level declaration names so cross-references between
 declarations in the same file are emitted as usedTypes. Own name excluded to prevent
 self-references.
+
+**Export-only filter removed:** An export-only filter was briefly introduced (only exported
+declarations became graph nodes) but subsequently removed — see `remove-export-only-filter.md`.
+All top-level declarations now appear in the dependency graph, matching DC main's behaviour.
+`DeclarationPrepass.buildFileContext()` was introduced as a single-pass replacement for three
+separate AST scans (`buildAliasMap`, `extractLocalDeclarationNames`,
+`collectExportReferencedLocalNames`).
 
 ---
 
@@ -85,13 +86,24 @@ for destructured CJS requires. Shorthand patterns (`{ foo }`) → identity map; 
 
 **TSE only emits identifiers in type-annotation positions** (plus aliasMap-matched identifiers in
 value positions). This means identifiers used purely as values — enum access (`ErrorArea.FMT_CLI`),
-switch cases (`case TYPES.X:`), bitwise flags (`flags & DidCapture`) — are not captured. This is
-intentional: scanning full bodies would replicate DC main's over-attribution (attributing a dep
-from one function to a different exported declaration in the same file).
+switch cases (`case TYPES.X:`), bitwise flags (`flags & DidCapture`) — are not captured even though
+they represent real dependencies.
+
+This is a pragmatic trade-off, not a principled correctness claim. Scanning full method bodies
+would recover these real dependencies, but would also attribute every local variable and helper
+call inside the body to the enclosing declaration — which is exactly DC main's over-attribution
+problem. Correctly scoping body scanning per declaration (so `UserService.doWork`'s body
+identifiers are attributed only to `UserService`, not to every other exported declaration in the
+same file) would require significantly more complex implementation.
+
+The `aliasMap` partially closes the gap: imported names used as values are caught via
+`extractRelevantIdentifiers` if they appear in the alias map. But enum member access
+(`ErrorArea.FMT_CLI`) goes through `extractMemberAccesses`, which filters to uppercase-first
+identifiers specifically to avoid noise from method chains — so it is still missed.
 
 **DC main's whole-file scan** produces systematic over-attribution where any identifier in the file
 body gets credited to every exported declaration in that file. Spot-checks confirmed ~43% of "true
 regressions" are DC over-attribution (TSE correct); the remaining ~57% are genuine TSE value-position
-gaps. Neither is a blocker — see `dc-compare-results-2026-05-20.md`.
+gaps. Neither is a blocker — see `remove-export-only-filter.md` for updated numbers.
 
 **The DC integration is ready.** Remaining differences are documented, understood, and accepted.
