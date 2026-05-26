@@ -22,6 +22,8 @@ internal object UsedTypeExtractor {
     private const val JSX_SELF_CLOSING_ELEMENT = "jsx_self_closing_element"
     private const val JSX_MEMBER_EXPRESSION = "jsx_member_expression"
     private const val JSX_IDENTIFIER = "jsx_identifier"
+    private const val AS_EXPRESSION = "as_expression"
+    private const val SATISFIES_EXPRESSION = "satisfies_expression"
 
     private val ALL_NODE_TYPES = setOf(
         TYPE_ANNOTATION,
@@ -34,7 +36,9 @@ internal object UsedTypeExtractor {
         CONSTRAINT,
         IDENTIFIER,
         JSX_OPENING_ELEMENT,
-        JSX_SELF_CLOSING_ELEMENT
+        JSX_SELF_CLOSING_ELEMENT,
+        AS_EXPRESSION,
+        SATISFIES_EXPRESSION
     )
 
     fun extract(
@@ -53,6 +57,7 @@ internal object UsedTypeExtractor {
         val relevantIdentifiers = extractRelevantIdentifiers(buckets, sourceCode, aliasMap, localDeclarationNames)
 
         val constraintTypes = extractConstraintTypes(buckets, sourceCode)
+        val typeAssertions = extractTypeAssertionTypes(buckets, sourceCode)
         val typeAliasRhsTypes = if (declaration.type ==
             TYPE_ALIAS_DECLARATION
         ) {
@@ -65,7 +70,7 @@ internal object UsedTypeExtractor {
         return (
             typeIdentifiers + constructorCalls + memberAccesses + methodCalls + extensions + relevantIdentifiers + constraintTypes +
                 typeAliasRhsTypes +
-                jsxComponents
+                jsxComponents + typeAssertions
         ).map { usedType -> aliasMap[usedType.name]?.let { UsedType(name = it) } ?: usedType }
             .toSet()
     }
@@ -154,6 +159,14 @@ internal object UsedTypeExtractor {
                 .findAllDescendantsOfType(constraintNode, TYPE_IDENTIFIER)
                 .map { UsedType(name = TreeTraversal.getNodeText(it, sourceCode).trim()) }
         }
+
+    private fun extractTypeAssertionTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> {
+        val nodes = buckets[AS_EXPRESSION].orEmpty() + buckets[SATISFIES_EXPRESSION].orEmpty()
+        return nodes.flatMap { node ->
+            TreeTraversal.findAllDescendantsOfType(node, TYPE_IDENTIFIER)
+                .map { UsedType(name = TreeTraversal.getNodeText(it, sourceCode).trim()) }
+        }
+    }
 
     private fun extractTypeAliasRhsTypes(declaration: TSNode, sourceCode: String): List<UsedType> {
         val children = declaration.children().toList()

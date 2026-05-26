@@ -1164,7 +1164,7 @@ class TypescriptDependencyTest {
 
             // Assert
             val usedTypeNames = result.declarations.first { it.name == "Handler" }.usedTypes.map { it.name }
-            assertThat(usedTypeNames).contains("Response")
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("Response")
         }
 
         @Test
@@ -1180,7 +1180,7 @@ class TypescriptDependencyTest {
 
             // Assert
             val usedTypeNames = result.declarations.first { it.name == "settings" }.usedTypes.map { it.name }
-            assertThat(usedTypeNames).contains("Config")
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("Config")
         }
     }
 
