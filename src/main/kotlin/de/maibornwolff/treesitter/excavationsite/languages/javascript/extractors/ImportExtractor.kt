@@ -30,6 +30,8 @@ internal object ImportExtractor {
     private const val IMPORT_KEYWORD = "import"
     private const val PATH_SEPARATOR = "/"
 
+    private fun splitPath(pathText: String): List<String> = pathText.split(PATH_SEPARATOR)
+
     fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> {
         val es6Imports = extractEs6Imports(rootNode, sourceCode)
         val commonJsImports = extractCommonJsImports(rootNode, sourceCode)
@@ -43,7 +45,7 @@ internal object ImportExtractor {
         .findAllDescendantsOfType(rootNode, IMPORT_STATEMENT)
         .flatMap { importNode ->
             val pathText = extractStringText(importNode, sourceCode) ?: return@flatMap emptyList()
-            val basePath = pathText.split(PATH_SEPARATOR)
+            val basePath = splitPath(pathText)
             val importClause = importNode.children().firstOrNull { it.type == IMPORT_CLAUSE }
                 ?: return@flatMap listOf(ImportDeclaration(path = basePath, isWildcard = false))
             when {
@@ -88,7 +90,7 @@ internal object ImportExtractor {
             val args = callNode.children().firstOrNull { it.type == ARGUMENTS }
                 ?: return@flatMap emptyList()
             val pathText = extractStringText(args, sourceCode) ?: return@flatMap emptyList()
-            val basePath = pathText.split(PATH_SEPARATOR)
+            val basePath = splitPath(pathText)
             val declarator = callNode.parent
             if (declarator == null || declarator.isNull || declarator.type != VARIABLE_DECLARATOR) {
                 return@flatMap listOf(ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false))
@@ -109,7 +111,7 @@ internal object ImportExtractor {
         .filter { exportNode -> TreeTraversal.containsNodeOfType(exportNode, EXPORT_CLAUSE) }
         .flatMap { exportNode ->
             val pathText = extractStringText(exportNode, sourceCode) ?: return@flatMap emptyList()
-            val basePath = pathText.split(PATH_SEPARATOR)
+            val basePath = splitPath(pathText)
             val exportClause = exportNode.children().firstOrNull { it.type == EXPORT_CLAUSE }
                 ?: return@flatMap emptyList()
             exportClause
@@ -133,7 +135,7 @@ internal object ImportExtractor {
                 !TreeTraversal.containsNodeOfType(exportNode, EXPORT_CLAUSE)
         }.mapNotNull { exportNode ->
             val pathText = extractStringText(exportNode, sourceCode) ?: return@mapNotNull null
-            ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = true)
+            ImportDeclaration(path = splitPath(pathText), isWildcard = true)
         }
 
     private fun extractDynamicImports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
@@ -144,7 +146,7 @@ internal object ImportExtractor {
             val args = callNode.children().firstOrNull { it.type == ARGUMENTS }
                 ?: return@mapNotNull null
             val pathText = extractStringText(args, sourceCode) ?: return@mapNotNull null
-            ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = false)
+            ImportDeclaration(path = splitPath(pathText), isWildcard = false)
         }
 
     private fun extractDestructuredCommonJs(objectPattern: TSNode, basePath: List<String>, sourceCode: String): List<ImportDeclaration> =
