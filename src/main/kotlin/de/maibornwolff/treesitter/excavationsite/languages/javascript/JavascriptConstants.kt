@@ -1,6 +1,9 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript
 
 internal const val DEFAULT_EXPORT = "DEFAULT_EXPORT"
+internal const val DEFAULT_KEYWORD = "default"
+
+internal fun normalizeDefaultKeyword(name: String): String = if (name == DEFAULT_KEYWORD) DEFAULT_EXPORT else name
 
 // Shared tree-sitter node-type constants used across JS/TS/TSX extractors
 internal const val TYPE_IDENTIFIER = "type_identifier"

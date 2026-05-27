@@ -2,6 +2,7 @@ package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractor
 
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.CALL_EXPRESSION
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_EXPORT
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_KEYWORD
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_CLAUSE
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_SPECIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
@@ -16,6 +17,7 @@ import de.maibornwolff.treesitter.excavationsite.languages.javascript.SHORTHAND_
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.STRING
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.TYPE_IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.VARIABLE_DECLARATOR
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.normalizeDefaultKeyword
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.shared.domain.UsedType
@@ -37,7 +39,6 @@ private const val VARIABLE_DECLARATION = "variable_declaration"
 private const val EXPORT_STATEMENT = "export_statement"
 
 private const val STRING_FRAGMENT = "string_fragment"
-private const val DEFAULT_KEYWORD = "default"
 private const val WILDCARD_REEXPORT = "*"
 
 private const val DECORATOR = "decorator"
@@ -62,6 +63,10 @@ private val DECLARATION_NODE_TYPES = setOf(
     INTERNAL_MODULE
 )
 
+private fun hasExportClause(node: TSNode): Boolean = node.children().any { it.type == EXPORT_CLAUSE }
+
+private fun hasSource(node: TSNode): Boolean = node.children().any { it.type == STRING }
+
 private fun extractName(node: TSNode, sourceCode: String): String {
     val nameTypes = when (node.type) {
         CLASS_DECLARATION, ABSTRACT_CLASS_DECLARATION,
@@ -74,7 +79,10 @@ private fun extractName(node: TSNode, sourceCode: String): String {
 // ── pre-pass helpers ──────────────────────────────────────────────────────────
 
 internal object DeclarationPrepass {
-    internal fun buildAliasMap(rootNode: TSNode, sourceCode: String): Map<String, String> {
+    internal fun buildAliasMap(rootNode: TSNode, sourceCode: String): Map<String, String> =
+        collectEsmImports(rootNode, sourceCode) + collectCjsRequireImports(rootNode, sourceCode)
+
+    private fun collectEsmImports(rootNode: TSNode, sourceCode: String): Map<String, String> {
         val aliasMap = mutableMapOf<String, String>()
         TreeTraversal.findAllDescendantsOfType(rootNode, IMPORT_STATEMENT).forEach { importNode ->
             val importClause = importNode.children().firstOrNull { it.type == IMPORT_CLAUSE } ?: return@forEach
@@ -84,50 +92,62 @@ internal object DeclarationPrepass {
                 if (name.isNotBlank()) aliasMap[name] = name
             }
             val namedImports = importClause.children().firstOrNull { it.type == NAMED_IMPORTS } ?: return@forEach
-            namedImports
-                .children()
-                .filter { it.type == IMPORT_SPECIFIER }
-                .forEach { specifier ->
-                    val identifiers = specifier
-                        .children()
-                        .filter { it.type == IDENTIFIER }
-                        .map { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                        .toList()
-                    when (identifiers.size) {
-                        1 -> aliasMap[identifiers[0]] = identifiers[0]
-                        2 -> aliasMap[identifiers[1]] = normalizeDefaultKeyword(identifiers[0])
-                    }
-                }
+            aliasMap.putAll(collectImportSpecifiers(namedImports, sourceCode))
         }
+        return aliasMap
+    }
+
+    private fun collectImportSpecifiers(namedImports: TSNode, sourceCode: String): Map<String, String> {
+        val aliasMap = mutableMapOf<String, String>()
+        namedImports.children().filter { it.type == IMPORT_SPECIFIER }.forEach { specifier ->
+            val identifiers = specifier
+                .children()
+                .filter { it.type == IDENTIFIER }
+                .map { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                .toList()
+            when (identifiers.size) {
+                1 -> aliasMap[identifiers[0]] = identifiers[0]
+                2 -> aliasMap[identifiers[1]] = normalizeDefaultKeyword(identifiers[0])
+            }
+        }
+        return aliasMap
+    }
+
+    private fun collectCjsRequireImports(rootNode: TSNode, sourceCode: String): Map<String, String> {
+        val aliasMap = mutableMapOf<String, String>()
         TreeTraversal.findAllDescendantsOfType(rootNode, CALL_EXPRESSION).forEach { callNode ->
             val callee = callNode.children().firstOrNull { it.type == IDENTIFIER } ?: return@forEach
             if (TreeTraversal.getNodeText(callee, sourceCode).trim() != REQUIRE) return@forEach
             val declarator = callNode.parent
             if (declarator == null || declarator.isNull || declarator.type != VARIABLE_DECLARATOR) return@forEach
             val objectPattern = declarator.children().firstOrNull { it.type == OBJECT_PATTERN } ?: return@forEach
-            objectPattern.children().forEach { prop ->
-                when (prop.type) {
-                    SHORTHAND_PROPERTY_IDENTIFIER_PATTERN -> {
-                        val name = TreeTraversal.getNodeText(prop, sourceCode).trim()
-                        if (name.isNotBlank()) aliasMap[name] = name
-                    }
-                    PAIR_PATTERN -> {
-                        val children = prop.children().toList()
-                        val importName = children
-                            .firstOrNull { it.type == PROPERTY_IDENTIFIER || it.type == IDENTIFIER }
-                            ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                        val binding = children
-                            .lastOrNull { it.type == IDENTIFIER }
-                            ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                        if (!importName.isNullOrBlank() && !binding.isNullOrBlank()) aliasMap[binding] = importName
-                    }
+            aliasMap.putAll(collectObjectPatternBindings(objectPattern, sourceCode))
+        }
+        return aliasMap
+    }
+
+    private fun collectObjectPatternBindings(objectPattern: TSNode, sourceCode: String): Map<String, String> {
+        val aliasMap = mutableMapOf<String, String>()
+        objectPattern.children().forEach { prop ->
+            when (prop.type) {
+                SHORTHAND_PROPERTY_IDENTIFIER_PATTERN -> {
+                    val name = TreeTraversal.getNodeText(prop, sourceCode).trim()
+                    if (name.isNotBlank()) aliasMap[name] = name
+                }
+                PAIR_PATTERN -> {
+                    val children = prop.children().toList()
+                    val importName = children
+                        .firstOrNull { it.type == PROPERTY_IDENTIFIER || it.type == IDENTIFIER }
+                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                    val binding = children
+                        .lastOrNull { it.type == IDENTIFIER }
+                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                    if (!importName.isNullOrBlank() && !binding.isNullOrBlank()) aliasMap[binding] = importName
                 }
             }
         }
         return aliasMap
     }
-
-    private fun normalizeDefaultKeyword(name: String): String = if (name == DEFAULT_KEYWORD) DEFAULT_EXPORT else name
 
     internal fun extractLocalDeclarationNames(rootNode: TSNode, sourceCode: String): Set<String> = rootNode
         .children()
@@ -141,9 +161,8 @@ internal object DeclarationPrepass {
         .toSet()
 
     private fun extractNamesFromExportStatement(node: TSNode, sourceCode: String): List<String> {
-        val hasExportClause = node.children().any { it.type == EXPORT_CLAUSE }
-        val hasSource = node.children().any { it.type == STRING }
-        if (hasSource) return emptyList()
+        if (hasSource(node)) return emptyList()
+        val hasExportClause = hasExportClause(node)
         if (hasExportClause) {
             val clause = node.children().firstOrNull { it.type == EXPORT_CLAUSE } ?: return emptyList()
             return clause
@@ -287,27 +306,23 @@ internal object DeclarationExtractor {
         parentPath: List<String> = emptyList(),
         aliasMap: Map<String, String>,
         localDeclarationNames: Set<String>
-    ): List<Declaration> {
-        val hasExportClause = node.children().any { it.type == EXPORT_CLAUSE }
-        val hasSource = node.children().any { it.type == STRING }
-        return when {
-            hasExportClause && hasSource -> extractReexportDeclarations(node, sourceCode)
-            hasSource && !hasExportClause ->
-                listOf(Declaration(name = WILDCARD_REEXPORT, type = DeclarationType.REEXPORT, usedTypes = emptySet()))
+    ): List<Declaration> = when {
+        hasExportClause(node) && hasSource(node) -> extractReexportDeclarations(node, sourceCode)
+        hasSource(node) && !hasExportClause(node) ->
+            listOf(Declaration(name = WILDCARD_REEXPORT, type = DeclarationType.REEXPORT, usedTypes = emptySet()))
 
-            else -> {
-                val decoratorUsedTypes = node
-                    .children()
-                    .filter { it.type == DECORATOR }
-                    .flatMap { UsedTypeExtractor.extract(it, sourceCode, aliasMap, localDeclarationNames).toList() }
-                    .toSet()
-                node
-                    .children()
-                    .filter { it.type in DECLARATION_NODE_TYPES }
-                    .flatMap { extractFromNode(it, sourceCode, parentPath, aliasMap, localDeclarationNames) }
-                    .map { decl -> if (decoratorUsedTypes.isEmpty()) decl else decl.copy(usedTypes = decl.usedTypes + decoratorUsedTypes) }
-                    .toList()
-            }
+        else -> {
+            val decoratorUsedTypes = node
+                .children()
+                .filter { it.type == DECORATOR }
+                .flatMap { UsedTypeExtractor.extract(it, sourceCode, aliasMap, localDeclarationNames).toList() }
+                .toSet()
+            node
+                .children()
+                .filter { it.type in DECLARATION_NODE_TYPES }
+                .flatMap { extractFromNode(it, sourceCode, parentPath, aliasMap, localDeclarationNames) }
+                .map { decl -> if (decoratorUsedTypes.isEmpty()) decl else decl.copy(usedTypes = decl.usedTypes + decoratorUsedTypes) }
+                .toList()
         }
     }
 
@@ -325,15 +340,21 @@ internal object DeclarationExtractor {
                 when (identifiers.size) {
                     1 -> {
                         val name = identifiers[0]
-                        val usedTypeName = if (name == DEFAULT_KEYWORD) DEFAULT_EXPORT else name
-                        Declaration(name = name, type = DeclarationType.REEXPORT, usedTypes = setOf(UsedType(usedTypeName)))
+                        Declaration(
+                            name = name,
+                            type = DeclarationType.REEXPORT,
+                            usedTypes = setOf(UsedType(normalizeDefaultKeyword(name)))
+                        )
                     }
 
                     2 -> {
                         val originalName = identifiers[0]
                         val alias = identifiers[1]
-                        val usedTypeName = if (originalName == DEFAULT_KEYWORD) DEFAULT_EXPORT else originalName
-                        Declaration(name = alias, type = DeclarationType.REEXPORT, usedTypes = setOf(UsedType(usedTypeName)))
+                        Declaration(
+                            name = alias,
+                            type = DeclarationType.REEXPORT,
+                            usedTypes = setOf(UsedType(normalizeDefaultKeyword(originalName)))
+                        )
                     }
 
                     else -> null

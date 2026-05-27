@@ -15,6 +15,7 @@ import de.maibornwolff.treesitter.excavationsite.languages.javascript.REQUIRE
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.SHORTHAND_PROPERTY_IDENTIFIER_PATTERN
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.STRING
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.VARIABLE_DECLARATOR
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.normalizeDefaultKeyword
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportDeclaration
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
@@ -120,7 +121,7 @@ internal object ImportExtractor {
                         .firstOrNull { it.type == IDENTIFIER }
                         ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
                         ?: return@mapNotNull null
-                    val name = if (rawName == "default") DEFAULT_EXPORT else rawName
+                    val name = normalizeDefaultKeyword(rawName)
                     ImportDeclaration(path = basePath + name, isWildcard = false)
                 }.toList()
         }
