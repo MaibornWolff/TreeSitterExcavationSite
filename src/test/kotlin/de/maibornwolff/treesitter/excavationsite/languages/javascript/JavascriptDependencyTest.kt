@@ -155,6 +155,7 @@ class JavascriptDependencyTest {
             // Assert
             assertThat(result.imports).hasSize(1)
             assertThat(result.imports[0].path).containsExactly(".", "utils", "A")
+            assertThat(result.imports[0].bindingName).isNull()
         }
 
         @Test
@@ -168,6 +169,34 @@ class JavascriptDependencyTest {
             // Assert
             assertThat(result.imports).hasSize(1)
             assertThat(result.imports[0].path).containsExactly("myModule", "myMethod")
+            assertThat(result.imports[0].isWildcard).isFalse()
+        }
+
+        @Test
+        fun `should extract dynamic import`() {
+            // Arrange
+            val code = "const mod = import('./utils')"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly(".", "utils")
+            assertThat(result.imports[0].isWildcard).isFalse()
+        }
+
+        @Test
+        fun `should extract side-effect import`() {
+            // Arrange
+            val code = "import './styles.css'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly(".", "styles.css")
             assertThat(result.imports[0].isWildcard).isFalse()
         }
     }
@@ -307,7 +336,7 @@ class JavascriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
 
             // Assert
-            assertThat(result.declarations).extracting("name").containsExactlyInAnyOrder("foo")
+            assertThat(result.declarations.map { it.name }).containsExactlyInAnyOrder("foo")
         }
 
         @Test
@@ -319,7 +348,7 @@ class JavascriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
 
             // Assert
-            assertThat(result.declarations).extracting("name").containsExactlyInAnyOrder("Foo")
+            assertThat(result.declarations.map { it.name }).containsExactlyInAnyOrder("Foo")
         }
 
         @Test
@@ -386,6 +415,34 @@ class JavascriptDependencyTest {
             val byName = result.declarations.associateBy { it.name }
             assertThat(byName).containsKey("helper")
             assertThat(byName["helper"]?.type).isEqualTo(DeclarationType.VARIABLE)
+        }
+
+        @Test
+        fun `should produce DEFAULT_EXPORT node for export default call expression`() {
+            // Arrange
+            val code = "export default defineConfig({})"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("DEFAULT_EXPORT")
+            assertThat(result.declarations[0].type).isEqualTo(DeclarationType.REEXPORT)
+        }
+
+        @Test
+        fun `should normalize default keyword to DEFAULT_EXPORT in re-export declaration usedType`() {
+            // Arrange
+            val code = "export { default as Mixin } from './mixin'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            assertThat(result.declarations).hasSize(1)
+            assertThat(result.declarations[0].name).isEqualTo("Mixin")
+            assertThat(result.declarations[0].usedTypes.map { it.name }).containsExactlyInAnyOrder("DEFAULT_EXPORT")
         }
     }
 
@@ -520,6 +577,24 @@ class JavascriptDependencyTest {
             val usedTypeNames = result.declarations.first { it.name == "app" }.usedTypes.map { it.name }
             assertThat(usedTypeNames).containsExactlyInAnyOrder("buildFunction")
         }
+
+        @Test
+        fun `should track local name from aliased export specifier when referenced in another declaration`() {
+            // Arrange — export { buildFunction as helper }: localDeclarationNames must capture "buildFunction"
+            // (the local name), not "helper" (the alias), so intra-file references to buildFunction resolve
+            val code = """
+                function buildFunction() {}
+                export { buildFunction as helper }
+                export function app() { return buildFunction() }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "app" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("buildFunction")
+        }
     }
 
     @Nested
@@ -559,6 +634,40 @@ class JavascriptDependencyTest {
             val usedTypeNames = result.declarations.first { it.name == "MyClass" }.usedTypes.map { it.name }
             assertThat(usedTypeNames).containsExactlyInAnyOrder("MyClass", "myMethod")
         }
+    }
+
+    @Nested
+    inner class UsedTypeEdgeCases {
+        // JS parser does not produce `as_expression` or `satisfies_expression` nodes — those are TS-only syntax.
+        // This test confirms that plain value-position expressions do not introduce noise in usedTypes.
+        @Test
+        fun `should not emit usedTypes for value-position expressions in JavaScript`() {
+            // Arrange
+            val code = "export class Foo { run() { return doSomething() } }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).doesNotContain("doSomething")
+        }
+
+        @Test
+        fun `should not emit lowercase constructor call as usedType`() {
+            // Arrange
+            val code = "export class Foo { x = new xmlParser() }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).doesNotContain("xmlParser")
+        }
+
+        // JS parser does not produce `type_arguments` nodes — generic type parameters are TypeScript-only syntax.
+        // No test exists for extractGenericTypeArgs in JavaScript; the JS extractor path is a no-op for this feature.
     }
 
     @Nested

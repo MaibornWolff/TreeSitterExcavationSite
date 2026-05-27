@@ -172,7 +172,7 @@ internal object DeclarationPrepass {
                     specifier
                         .children()
                         .filter { it.type == IDENTIFIER }
-                        .lastOrNull()
+                        .firstOrNull()
                         ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
                 }.toList()
         }
