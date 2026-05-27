@@ -1,6 +1,20 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.CALL_EXPRESSION
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_EXPORT
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_CLAUSE
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_SPECIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_CLAUSE
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_SPECIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMED_IMPORTS
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.OBJECT_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.PAIR_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.PROPERTY_IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.REQUIRE
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.SHORTHAND_PROPERTY_IDENTIFIER_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.STRING
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.VARIABLE_DECLARATOR
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportDeclaration
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
@@ -9,23 +23,9 @@ import org.treesitter.TSNode
 internal object ImportExtractor {
     private const val IMPORT_STATEMENT = "import_statement"
     private const val EXPORT_STATEMENT = "export_statement"
-    private const val CALL_EXPRESSION = "call_expression"
-    private const val IDENTIFIER = "identifier"
-    private const val STRING = "string"
     private const val NAMESPACE_IMPORT = "namespace_import"
-    private const val IMPORT_CLAUSE = "import_clause"
-    private const val NAMED_IMPORTS = "named_imports"
-    private const val IMPORT_SPECIFIER = "import_specifier"
-    private const val EXPORT_CLAUSE = "export_clause"
-    private const val EXPORT_SPECIFIER = "export_specifier"
     private const val ARGUMENTS = "arguments"
-    private const val VARIABLE_DECLARATOR = "variable_declarator"
-    private const val OBJECT_PATTERN = "object_pattern"
-    private const val SHORTHAND_PROPERTY_IDENTIFIER_PATTERN = "shorthand_property_identifier_pattern"
-    private const val PAIR_PATTERN = "pair_pattern"
-    private const val PROPERTY_IDENTIFIER = "property_identifier"
     private const val TEMPLATE_STRING = "template_string"
-    private const val REQUIRE = "require"
     private const val IMPORT_KEYWORD = "import"
     private const val PATH_SEPARATOR = "/"
 

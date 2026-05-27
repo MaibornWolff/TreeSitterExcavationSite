@@ -61,15 +61,15 @@ green. Then commit with message:
 
 ## Steps
 
-- [ ] Task 1: Write failing test for `as_expression`
-- [ ] Task 1: Run test — confirm failure message is "does not contain 'Response'"
-- [ ] Task 1: Write failing test for `satisfies_expression`
-- [ ] Task 1: Run test — confirm failure message is "does not contain 'Config'"
-- [ ] Task 2: Add constants `AS_EXPRESSION`, `SATISFIES_EXPRESSION` and add to `ALL_NODE_TYPES`
-- [ ] Task 2: Request human contribution for `extractTypeAssertionTypes` implementation
-- [ ] Task 2: Wire result into `extract()` concatenation
-- [ ] Task 3: Run `./gradlew test --tests "*TypescriptDependencyTest"` — all green
-- [ ] Task 3: Commit
+- [x] Task 1: Write failing test for `as_expression`
+- [x] Task 1: Run test — confirm failure message is "does not contain 'Response'"
+- [x] Task 1: Write failing test for `satisfies_expression`
+- [x] Task 1: Run test — confirm failure message is "does not contain 'Config'"
+- [x] Task 2: Add constants `AS_EXPRESSION`, `SATISFIES_EXPRESSION` and add to `ALL_NODE_TYPES`
+- [x] Task 2: Request human contribution for `extractTypeAssertionTypes` implementation
+- [x] Task 2: Wire result into `extract()` concatenation
+- [x] Task 3: Run `./gradlew test --tests "*TypescriptDependencyTest"` — all green
+- [x] Task 3: Commit
 
 ## dc-compare Results (2026-05-26, TSE 0.10.0-local)
 

@@ -1,5 +1,9 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.CALL_EXPRESSION
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.PROPERTY_IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.TYPE_IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.shared.domain.UsedType
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
@@ -7,12 +11,8 @@ import org.treesitter.TSNode
 
 internal object UsedTypeExtractor {
     private const val TYPE_ANNOTATION = "type_annotation"
-    private const val TYPE_IDENTIFIER = "type_identifier"
-    private const val IDENTIFIER = "identifier"
     private const val NEW_EXPRESSION = "new_expression"
     private const val MEMBER_EXPRESSION = "member_expression"
-    private const val CALL_EXPRESSION = "call_expression"
-    private const val PROPERTY_IDENTIFIER = "property_identifier"
     private const val EXTENDS_CLAUSE = "extends_clause"
     private const val EXTENDS_TYPE_CLAUSE = "extends_type_clause"
     private const val IMPLEMENTS_CLAUSE = "implements_clause"

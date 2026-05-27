@@ -1,6 +1,21 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.CALL_EXPRESSION
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_EXPORT
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_CLAUSE
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_SPECIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_CLAUSE
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_SPECIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMED_IMPORTS
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.OBJECT_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.PAIR_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.PROPERTY_IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.REQUIRE
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.SHORTHAND_PROPERTY_IDENTIFIER_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.STRING
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.TYPE_IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.VARIABLE_DECLARATOR
 import de.maibornwolff.treesitter.excavationsite.shared.domain.Declaration
 import de.maibornwolff.treesitter.excavationsite.shared.domain.DeclarationType
 import de.maibornwolff.treesitter.excavationsite.shared.domain.UsedType
@@ -21,9 +36,6 @@ private const val LEXICAL_DECLARATION = "lexical_declaration"
 private const val VARIABLE_DECLARATION = "variable_declaration"
 private const val EXPORT_STATEMENT = "export_statement"
 
-private const val EXPORT_CLAUSE = "export_clause"
-private const val EXPORT_SPECIFIER = "export_specifier"
-private const val STRING = "string"
 private const val STRING_FRAGMENT = "string_fragment"
 private const val DEFAULT_KEYWORD = "default"
 private const val WILDCARD_REEXPORT = "*"
@@ -34,21 +46,7 @@ private const val MODULE_DECLARATION = "module"
 private const val INTERNAL_MODULE = "internal_module"
 private const val STATEMENT_BLOCK = "statement_block"
 
-private const val TYPE_IDENTIFIER = "type_identifier"
-private const val IDENTIFIER = "identifier"
-private const val VARIABLE_DECLARATOR = "variable_declarator"
-
 private const val IMPORT_STATEMENT = "import_statement"
-private const val IMPORT_CLAUSE = "import_clause"
-private const val NAMED_IMPORTS = "named_imports"
-private const val IMPORT_SPECIFIER = "import_specifier"
-
-private const val CALL_EXPRESSION = "call_expression"
-private const val OBJECT_PATTERN = "object_pattern"
-private const val SHORTHAND_PROPERTY_IDENTIFIER_PATTERN = "shorthand_property_identifier_pattern"
-private const val PAIR_PATTERN = "pair_pattern"
-private const val PROPERTY_IDENTIFIER = "property_identifier"
-private const val REQUIRE = "require"
 
 private val DECLARATION_NODE_TYPES = setOf(
     CLASS_DECLARATION,
