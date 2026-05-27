@@ -8,6 +8,7 @@ import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_CLAUSE
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_SPECIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMED_IMPORTS
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMESPACE_IMPORT
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.OBJECT_PATTERN
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.PAIR_PATTERN
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.PROPERTY_IDENTIFIER
@@ -24,7 +25,6 @@ import org.treesitter.TSNode
 internal object ImportExtractor {
     private const val IMPORT_STATEMENT = "import_statement"
     private const val EXPORT_STATEMENT = "export_statement"
-    private const val NAMESPACE_IMPORT = "namespace_import"
     private const val ARGUMENTS = "arguments"
     private const val TEMPLATE_STRING = "template_string"
     private const val IMPORT_KEYWORD = "import"
@@ -49,8 +49,15 @@ internal object ImportExtractor {
             val importClause = importNode.children().firstOrNull { it.type == IMPORT_CLAUSE }
                 ?: return@flatMap listOf(ImportDeclaration(path = basePath, isWildcard = false))
             when {
-                TreeTraversal.containsNodeOfType(importClause, NAMESPACE_IMPORT) ->
-                    listOf(ImportDeclaration(path = basePath, isWildcard = true))
+                TreeTraversal.containsNodeOfType(importClause, NAMESPACE_IMPORT) -> {
+                    val nsName = importClause
+                        .children()
+                        .firstOrNull { it.type == NAMESPACE_IMPORT }
+                        ?.children()
+                        ?.firstOrNull { it.type == IDENTIFIER }
+                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                    listOf(ImportDeclaration(path = basePath, isWildcard = true, bindingName = nsName))
+                }
                 else -> {
                     val named = extractNamedSpecifiers(importClause, basePath, sourceCode)
                     val defaultIdentifier = importClause.children().firstOrNull { it.type == IDENTIFIER }
@@ -71,12 +78,16 @@ internal object ImportExtractor {
             .children()
             .filter { it.type == IMPORT_SPECIFIER }
             .mapNotNull { specifier ->
-                val name = specifier
+                val identifiers = specifier
                     .children()
-                    .firstOrNull { it.type == IDENTIFIER }
-                    ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                    ?: return@mapNotNull null
-                ImportDeclaration(path = basePath + name, isWildcard = false)
+                    .filter { it.type == IDENTIFIER }
+                    .map { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                    .toList()
+                when (identifiers.size) {
+                    1 -> ImportDeclaration(path = basePath + identifiers[0], isWildcard = false)
+                    2 -> ImportDeclaration(path = basePath + identifiers[0], isWildcard = false, bindingName = identifiers[1])
+                    else -> null
+                }
             }.toList()
     }
 

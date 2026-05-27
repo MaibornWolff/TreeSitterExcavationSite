@@ -9,6 +9,7 @@ import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_CLAUSE
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_SPECIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMED_IMPORTS
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMESPACE_IMPORT
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.OBJECT_PATTERN
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.PAIR_PATTERN
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.PROPERTY_IDENTIFIER
@@ -90,6 +91,14 @@ internal object DeclarationPrepass {
             if (defaultBinding != null) {
                 val name = TreeTraversal.getNodeText(defaultBinding, sourceCode).trim()
                 if (name.isNotBlank()) aliasMap[name] = name
+            }
+            val namespaceImport = importClause.children().firstOrNull { it.type == NAMESPACE_IMPORT }
+            if (namespaceImport != null) {
+                val nsIdentifier = namespaceImport.children().firstOrNull { it.type == IDENTIFIER }
+                if (nsIdentifier != null) {
+                    val name = TreeTraversal.getNodeText(nsIdentifier, sourceCode).trim()
+                    if (name.isNotBlank()) aliasMap[name] = name
+                }
             }
             val namedImports = importClause.children().firstOrNull { it.type == NAMED_IMPORTS } ?: return@forEach
             aliasMap.putAll(collectImportSpecifiers(namedImports, sourceCode))

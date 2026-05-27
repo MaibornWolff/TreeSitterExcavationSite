@@ -213,6 +213,7 @@ class TypescriptDependencyTest {
             assertThat(result.imports).hasSize(1)
             assertThat(result.imports[0].path).containsExactly(".", "utils", "Foo")
             assertThat(result.imports[0].isWildcard).isFalse()
+            assertThat(result.imports[0].bindingName).isNull()
         }
 
         @Test
@@ -282,6 +283,34 @@ class TypescriptDependencyTest {
             assertThat(result.imports).hasSize(1)
             assertThat(result.imports[0].path).containsExactly(".", "utils")
             assertThat(result.imports[0].isWildcard).isFalse()
+        }
+
+        @Test
+        fun `should populate bindingName with local alias for aliased named import`() {
+            // Arrange
+            val code = "import { A as Katze } from './foo'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly(".", "foo", "A")
+            assertThat(result.imports[0].bindingName).isEqualTo("Katze")
+        }
+
+        @Test
+        fun `should populate bindingName for wildcard import`() {
+            // Arrange
+            val code = "import * as ns from './utils'"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].isWildcard).isTrue()
+            assertThat(result.imports[0].bindingName).isEqualTo("ns")
         }
     }
 
@@ -646,9 +675,9 @@ class TypescriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
 
             // Assert
-            assertThat(result.declarations).extracting("name").containsExactlyInAnyOrder("logVisit")
+            assertThat(result.declarations.map { it.name }).containsExactlyInAnyOrder("logVisit")
             val logVisit = result.declarations.first { it.name == "logVisit" }
-            assertThat(logVisit.usedTypes).extracting("name").containsExactlyInAnyOrder("Logger")
+            assertThat(logVisit.usedTypes.map { it.name }).containsExactlyInAnyOrder("Logger")
         }
     }
 
@@ -1220,6 +1249,43 @@ class TypescriptDependencyTest {
             // Assert
             val usedTypeNames = result.declarations.first { it.name == "settings" }.usedTypes.map { it.name }
             assertThat(usedTypeNames).containsExactlyInAnyOrder("Config")
+        }
+    }
+
+    @Nested
+    inner class NamespaceImportUsedTypeExtraction {
+        @Test
+        fun `should recognize lowercase namespace alias usages as usedType`() {
+            // Arrange
+            val code = """
+                import * as ns from './utils'
+                export class Bar {
+                    doWork() { ns.method() }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Bar" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("ns")
+        }
+    }
+
+    @Nested
+    inner class UsedTypeEdgeCases {
+        @Test
+        fun `should not emit lowercase constructor call as usedType`() {
+            // Arrange
+            val code = "export class Foo { x = new xmlParser() }"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Foo" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).doesNotContain("xmlParser")
         }
     }
 
