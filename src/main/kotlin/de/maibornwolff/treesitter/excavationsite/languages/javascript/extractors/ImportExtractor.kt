@@ -4,9 +4,11 @@ import de.maibornwolff.treesitter.excavationsite.languages.javascript.CALL_EXPRE
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_EXPORT
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_CLAUSE
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_SPECIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_STATEMENT
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_CLAUSE
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_SPECIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_STATEMENT
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMED_IMPORTS
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMESPACE_IMPORT
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.OBJECT_PATTERN
@@ -23,8 +25,6 @@ import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.ch
 import org.treesitter.TSNode
 
 internal object ImportExtractor {
-    private const val IMPORT_STATEMENT = "import_statement"
-    private const val EXPORT_STATEMENT = "export_statement"
     private const val ARGUMENTS = "arguments"
     private const val TEMPLATE_STRING = "template_string"
     private const val IMPORT_KEYWORD = "import"

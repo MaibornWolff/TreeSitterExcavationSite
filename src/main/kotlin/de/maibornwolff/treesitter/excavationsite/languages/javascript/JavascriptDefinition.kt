@@ -16,7 +16,6 @@ object JavascriptDefinition : LanguageDefinition {
     override val nodeMetrics: Map<String, Set<Metric>> = JavascriptMetricMapping.nodeMetrics
     override val nodeExtractions: Map<String, Extract> = JavascriptExtractionMapping.nodeExtractions
 
-    private const val IDENTIFIER = "identifier"
     private const val FUNCTION_DECLARATION = "function_declaration"
 
     override val calculationConfig = CalculationConfig(

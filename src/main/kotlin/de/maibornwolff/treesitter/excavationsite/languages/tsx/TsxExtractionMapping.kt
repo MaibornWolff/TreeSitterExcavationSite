@@ -1,5 +1,7 @@
 package de.maibornwolff.treesitter.excavationsite.languages.tsx
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.TYPE_IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractArrowFunctionSingleParameter
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractFirstBindingIdentifiers
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors.extractIdentifiersFromClassDeclaration
@@ -19,9 +21,6 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionStrateg
 // jsx_self_closing_element, jsx_attribute). Intentionally a separate instance for TsxDefinition.
 // Keep in sync with JavascriptExtractionMapping when making changes there.
 object TsxExtractionMapping : ExtractionMapping {
-    private const val IDENTIFIER = "identifier"
-    private const val TYPE_IDENTIFIER = "type_identifier"
-
     override val nodeExtractions: Map<String, Extract> = buildMap {
         // Identifiers with generic extraction strategies
         put(

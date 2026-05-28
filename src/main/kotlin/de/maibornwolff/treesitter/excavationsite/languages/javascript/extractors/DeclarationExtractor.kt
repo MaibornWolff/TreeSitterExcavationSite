@@ -1,11 +1,14 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.DECORATOR
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_EXPORT
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_KEYWORD
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_CLAUSE
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_SPECIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_STATEMENT
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.STRING
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.TYPE_ALIAS_DECLARATION
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.TYPE_IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.VARIABLE_DECLARATOR
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.normalizeDefaultKeyword
@@ -16,7 +19,6 @@ import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.Tr
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import org.treesitter.TSNode
 
-// ── shared constants ──────────────────────────────────────────────────────────
 private const val CLASS_DECLARATION = "class_declaration"
 private const val ABSTRACT_CLASS_DECLARATION = "abstract_class_declaration"
 private const val INTERFACE_DECLARATION = "interface_declaration"
@@ -24,15 +26,12 @@ private const val ENUM_DECLARATION = "enum_declaration"
 private const val FUNCTION_DECLARATION = "function_declaration"
 private const val FUNCTION_SIGNATURE = "function_signature"
 private const val GENERATOR_FUNCTION_DECLARATION = "generator_function_declaration"
-private const val TYPE_ALIAS_DECLARATION = "type_alias_declaration"
 private const val LEXICAL_DECLARATION = "lexical_declaration"
 private const val VARIABLE_DECLARATION = "variable_declaration"
-private const val EXPORT_STATEMENT = "export_statement"
 
 private const val STRING_FRAGMENT = "string_fragment"
 private const val WILDCARD_REEXPORT = "*"
 
-private const val DECORATOR = "decorator"
 private const val AMBIENT_DECLARATION = "ambient_declaration"
 private const val MODULE_DECLARATION = "module"
 private const val INTERNAL_MODULE = "internal_module"

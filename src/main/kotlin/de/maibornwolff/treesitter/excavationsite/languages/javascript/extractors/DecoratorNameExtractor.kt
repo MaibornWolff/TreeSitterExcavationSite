@@ -1,11 +1,10 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.CALL_EXPRESSION
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import org.treesitter.TSNode
-
-private const val IDENTIFIER = "identifier"
-private const val CALL_EXPRESSION = "call_expression"
 
 /**
  * Extracts decorator name from a decorator node.

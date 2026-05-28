@@ -1,11 +1,11 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.PROPERTY_IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import org.treesitter.TSNode
 
-private const val IDENTIFIER = "identifier"
-private const val PROPERTY_IDENTIFIER = "property_identifier"
 private const val PRIVATE_PROPERTY_IDENTIFIER = "private_property_identifier"
 private const val CONSTRUCTOR = "constructor"
 

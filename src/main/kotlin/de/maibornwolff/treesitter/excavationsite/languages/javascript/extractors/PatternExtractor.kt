@@ -1,17 +1,17 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.ARRAY_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.OBJECT_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.PAIR_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.SHORTHAND_PROPERTY_IDENTIFIER_PATTERN
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import org.treesitter.TSNode
 
-private const val IDENTIFIER = "identifier"
-private const val OBJECT_PATTERN = "object_pattern"
-private const val ARRAY_PATTERN = "array_pattern"
 private const val REST_PATTERN = "rest_pattern"
-private const val PAIR_PATTERN = "pair_pattern"
 private const val OBJECT_ASSIGNMENT_PATTERN = "object_assignment_pattern"
 private const val ASSIGNMENT_PATTERN = "assignment_pattern"
-private const val SHORTHAND_PROPERTY_IDENTIFIER_PATTERN = "shorthand_property_identifier_pattern"
 
 /**
  * Recursively extracts identifiers from destructuring patterns.

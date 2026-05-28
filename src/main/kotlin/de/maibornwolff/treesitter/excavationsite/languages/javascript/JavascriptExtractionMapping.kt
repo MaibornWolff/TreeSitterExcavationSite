@@ -21,9 +21,6 @@ import de.maibornwolff.treesitter.excavationsite.shared.domain.ExtractionStrateg
  * Note: This mapping is also used by TypeScript as they share AST structure.
  */
 object JavascriptExtractionMapping : ExtractionMapping {
-    private const val IDENTIFIER = "identifier"
-    private const val TYPE_IDENTIFIER = "type_identifier"
-
     override val nodeExtractions: Map<String, Extract> = buildMap {
         // Identifiers with generic extraction strategies
         put(
