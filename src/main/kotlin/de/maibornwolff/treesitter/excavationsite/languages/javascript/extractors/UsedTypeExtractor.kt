@@ -46,16 +46,19 @@ internal object UsedTypeExtractor {
     fun extract(declaration: TSNode, sourceCode: String, aliasMap: Map<String, String>, localDeclarationNames: Set<String>): Set<UsedType> {
         val buckets = TreeTraversal.findAllDescendantsGroupedByType(declaration, ALL_NODE_TYPES)
 
-        val typeIdentifiers = extractTypeIdentifiers(buckets, sourceCode)
-        val constructorCalls = extractConstructorCalls(buckets, sourceCode)
-        val memberAccesses = extractMemberAccesses(buckets, sourceCode)
+        val typeIdentifiers = collectTypeIdentifiersFromNodes(buckets[TYPE_ANNOTATION].orEmpty(), sourceCode)
+        val constructorCalls = extractConstructorCalls(buckets, sourceCode, aliasMap)
+        val memberAccesses = extractMemberAccesses(buckets, sourceCode, aliasMap)
         val methodCalls = extractMethodCalls(buckets, sourceCode)
         val extensions = extractExtensions(buckets, sourceCode)
         val relevantIdentifiers = extractRelevantIdentifiers(buckets, sourceCode, aliasMap, localDeclarationNames)
 
-        val constraintTypes = extractConstraintTypes(buckets, sourceCode)
-        val typeAssertions = extractTypeAssertionTypes(buckets, sourceCode)
-        val genericTypeArgs = extractGenericTypeArgs(buckets, sourceCode)
+        val constraintTypes = collectTypeIdentifiersFromNodes(buckets[CONSTRAINT].orEmpty(), sourceCode)
+        val typeAssertions = collectTypeIdentifiersFromNodes(
+            buckets[AS_EXPRESSION].orEmpty() + buckets[SATISFIES_EXPRESSION].orEmpty(),
+            sourceCode
+        )
+        val genericTypeArgs = collectTypeIdentifiersFromNodes(buckets[TYPE_ARGUMENTS].orEmpty(), sourceCode)
         val typeAliasRhsTypes = if (declaration.type ==
             TYPE_ALIAS_DECLARATION
         ) {
@@ -77,25 +80,43 @@ internal object UsedTypeExtractor {
         .flatMap { TreeTraversal.findAllDescendantsOfType(it, TYPE_IDENTIFIER) }
         .map { UsedType(name = TreeTraversal.getNodeText(it, sourceCode).trim()) }
 
-    private fun extractTypeIdentifiers(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
-        collectTypeIdentifiersFromNodes(buckets[TYPE_ANNOTATION].orEmpty(), sourceCode)
-
-    private fun extractConstructorCalls(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
-        buckets[NEW_EXPRESSION].orEmpty().mapNotNull { node ->
-            val constructor = node.children().firstOrNull { it.type == IDENTIFIER || it.type == TYPE_IDENTIFIER }
-                ?: return@mapNotNull null
+    private fun extractConstructorCalls(
+        buckets: Map<String, List<TSNode>>,
+        sourceCode: String,
+        aliasMap: Map<String, String>
+    ): List<UsedType> = buckets[NEW_EXPRESSION].orEmpty().mapNotNull { node ->
+        val constructor = node.children().firstOrNull { it.type == IDENTIFIER || it.type == TYPE_IDENTIFIER }
+        if (constructor != null) {
             val name = TreeTraversal.getNodeText(constructor, sourceCode).trim()
             if (name.firstOrNull()?.isUpperCase() != true) return@mapNotNull null
-            UsedType(name = name)
+            return@mapNotNull UsedType(name = name)
         }
+        // namespace alias constructor: new ns.Class()
+        extractNsAliasMember(node.children().firstOrNull { it.type == MEMBER_EXPRESSION }, sourceCode, aliasMap)
+    }
 
-    private fun extractMemberAccesses(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
-        buckets[MEMBER_EXPRESSION].orEmpty().mapNotNull { node ->
-            val root = findLeftmostIdentifier(node) ?: return@mapNotNull null
-            val name = TreeTraversal.getNodeText(root, sourceCode).trim()
-            if (name.firstOrNull()?.isUpperCase() != true) return@mapNotNull null
-            UsedType(name = name)
-        }
+    private fun extractMemberAccesses(
+        buckets: Map<String, List<TSNode>>,
+        sourceCode: String,
+        aliasMap: Map<String, String>
+    ): List<UsedType> = buckets[MEMBER_EXPRESSION].orEmpty().mapNotNull { node ->
+        val root = findLeftmostIdentifier(node) ?: return@mapNotNull null
+        val name = TreeTraversal.getNodeText(root, sourceCode).trim()
+        if (name.firstOrNull()?.isUpperCase() == true) return@mapNotNull UsedType(name = name)
+        // namespace alias member access: ns.Class where ns is the direct object identifier
+        extractNsAliasMember(node, sourceCode, aliasMap)
+    }
+
+    private fun extractNsAliasMember(memberExpr: TSNode?, sourceCode: String, aliasMap: Map<String, String>): UsedType? {
+        memberExpr ?: return null
+        val directId = memberExpr.children().firstOrNull { it.type == IDENTIFIER } ?: return null
+        val objName = TreeTraversal.getNodeText(directId, sourceCode).trim()
+        if (objName !in aliasMap) return null
+        val prop = memberExpr.children().firstOrNull { it.type == PROPERTY_IDENTIFIER } ?: return null
+        val propName = TreeTraversal.getNodeText(prop, sourceCode).trim()
+        if (propName.firstOrNull()?.isUpperCase() != true) return null
+        return UsedType(name = propName)
+    }
 
     private fun extractMethodCalls(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
         buckets[CALL_EXPRESSION].orEmpty().mapNotNull { callNode ->
@@ -150,15 +171,6 @@ internal object UsedTypeExtractor {
             UsedType(name = name)
         }
     }
-
-    private fun extractConstraintTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
-        collectTypeIdentifiersFromNodes(buckets[CONSTRAINT].orEmpty(), sourceCode)
-
-    private fun extractGenericTypeArgs(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
-        collectTypeIdentifiersFromNodes(buckets[TYPE_ARGUMENTS].orEmpty(), sourceCode)
-
-    private fun extractTypeAssertionTypes(buckets: Map<String, List<TSNode>>, sourceCode: String): List<UsedType> =
-        collectTypeIdentifiersFromNodes(buckets[AS_EXPRESSION].orEmpty() + buckets[SATISFIES_EXPRESSION].orEmpty(), sourceCode)
 
     private fun extractTypeAliasRhsTypes(declaration: TSNode, sourceCode: String): List<UsedType> {
         val children = declaration.children().toList()

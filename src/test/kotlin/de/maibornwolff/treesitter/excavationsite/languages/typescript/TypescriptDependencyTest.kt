@@ -1298,6 +1298,42 @@ class TypescriptDependencyTest {
             val usedTypeNames = result.declarations.first { it.name == "Bar" }.usedTypes.map { it.name }
             assertThat(usedTypeNames).containsExactlyInAnyOrder("ns")
         }
+
+        @Test
+        fun `should extract class name from namespace alias constructor call`() {
+            // Arrange
+            val code = """
+                import * as types from './types'
+                export class Consumer {
+                    log(): void { new types.Logger() }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Consumer" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("types", "Logger")
+        }
+
+        @Test
+        fun `should extract class name from namespace alias member access`() {
+            // Arrange
+            val code = """
+                import * as types from './types'
+                export class Consumer {
+                    create() { return types.Animal.create() }
+                }
+            """.trimIndent()
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            val usedTypeNames = result.declarations.first { it.name == "Consumer" }.usedTypes.map { it.name }
+            assertThat(usedTypeNames).containsExactlyInAnyOrder("types", "Animal")
+        }
     }
 
     @Nested
