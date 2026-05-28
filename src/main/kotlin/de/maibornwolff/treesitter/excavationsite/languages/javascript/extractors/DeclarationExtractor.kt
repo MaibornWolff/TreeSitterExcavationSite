@@ -1,20 +1,10 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
-import de.maibornwolff.treesitter.excavationsite.languages.javascript.CALL_EXPRESSION
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_EXPORT
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_KEYWORD
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_CLAUSE
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_SPECIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
-import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_CLAUSE
-import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_SPECIFIER
-import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMED_IMPORTS
-import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMESPACE_IMPORT
-import de.maibornwolff.treesitter.excavationsite.languages.javascript.OBJECT_PATTERN
-import de.maibornwolff.treesitter.excavationsite.languages.javascript.PAIR_PATTERN
-import de.maibornwolff.treesitter.excavationsite.languages.javascript.PROPERTY_IDENTIFIER
-import de.maibornwolff.treesitter.excavationsite.languages.javascript.REQUIRE
-import de.maibornwolff.treesitter.excavationsite.languages.javascript.SHORTHAND_PROPERTY_IDENTIFIER_PATTERN
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.STRING
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.TYPE_IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.VARIABLE_DECLARATOR
@@ -48,8 +38,6 @@ private const val MODULE_DECLARATION = "module"
 private const val INTERNAL_MODULE = "internal_module"
 private const val STATEMENT_BLOCK = "statement_block"
 
-private const val IMPORT_STATEMENT = "import_statement"
-
 private val DECLARATION_NODE_TYPES = setOf(
     CLASS_DECLARATION,
     ABSTRACT_CLASS_DECLARATION,
@@ -80,83 +68,18 @@ private fun extractName(node: TSNode, sourceCode: String): String {
 // ── pre-pass helpers ──────────────────────────────────────────────────────────
 
 internal object DeclarationPrepass {
-    internal fun buildAliasMap(rootNode: TSNode, sourceCode: String): Map<String, String> =
-        collectEsmImports(rootNode, sourceCode) + collectCjsRequireImports(rootNode, sourceCode)
-
-    private fun collectEsmImports(rootNode: TSNode, sourceCode: String): Map<String, String> {
-        val aliasMap = mutableMapOf<String, String>()
-        TreeTraversal.findAllDescendantsOfType(rootNode, IMPORT_STATEMENT).forEach { importNode ->
-            val importClause = importNode.children().firstOrNull { it.type == IMPORT_CLAUSE } ?: return@forEach
-            val defaultBinding = importClause.children().firstOrNull { it.type == IDENTIFIER }
-            if (defaultBinding != null) {
-                val name = TreeTraversal.getNodeText(defaultBinding, sourceCode).trim()
-                if (name.isNotBlank()) aliasMap[name] = name
+    internal fun buildAliasMap(
+        imports: List<de.maibornwolff.treesitter.excavationsite.shared.domain.ImportDeclaration>
+    ): Map<String, String> = imports
+        .mapNotNull { import ->
+            val localName = import.bindingName ?: return@mapNotNull null
+            val realName = if (import.isWildcard || import.path.lastOrNull() == DEFAULT_EXPORT) {
+                localName
+            } else {
+                import.path.lastOrNull() ?: return@mapNotNull null
             }
-            val namespaceImport = importClause.children().firstOrNull { it.type == NAMESPACE_IMPORT }
-            if (namespaceImport != null) {
-                val nsIdentifier = namespaceImport.children().firstOrNull { it.type == IDENTIFIER }
-                if (nsIdentifier != null) {
-                    val name = TreeTraversal.getNodeText(nsIdentifier, sourceCode).trim()
-                    if (name.isNotBlank()) aliasMap[name] = name
-                }
-            }
-            val namedImports = importClause.children().firstOrNull { it.type == NAMED_IMPORTS } ?: return@forEach
-            aliasMap.putAll(collectImportSpecifiers(namedImports, sourceCode))
-        }
-        return aliasMap
-    }
-
-    private fun collectImportSpecifiers(namedImports: TSNode, sourceCode: String): Map<String, String> {
-        val aliasMap = mutableMapOf<String, String>()
-        namedImports.children().filter { it.type == IMPORT_SPECIFIER }.forEach { specifier ->
-            val identifiers = specifier
-                .children()
-                .filter { it.type == IDENTIFIER }
-                .map { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                .toList()
-            when (identifiers.size) {
-                1 -> aliasMap[identifiers[0]] = identifiers[0]
-                2 -> aliasMap[identifiers[1]] = normalizeDefaultKeyword(identifiers[0])
-            }
-        }
-        return aliasMap
-    }
-
-    private fun collectCjsRequireImports(rootNode: TSNode, sourceCode: String): Map<String, String> {
-        val aliasMap = mutableMapOf<String, String>()
-        TreeTraversal.findAllDescendantsOfType(rootNode, CALL_EXPRESSION).forEach { callNode ->
-            val callee = callNode.children().firstOrNull { it.type == IDENTIFIER } ?: return@forEach
-            if (TreeTraversal.getNodeText(callee, sourceCode).trim() != REQUIRE) return@forEach
-            val declarator = callNode.parent
-            if (declarator == null || declarator.isNull || declarator.type != VARIABLE_DECLARATOR) return@forEach
-            val objectPattern = declarator.children().firstOrNull { it.type == OBJECT_PATTERN } ?: return@forEach
-            aliasMap.putAll(collectObjectPatternBindings(objectPattern, sourceCode))
-        }
-        return aliasMap
-    }
-
-    private fun collectObjectPatternBindings(objectPattern: TSNode, sourceCode: String): Map<String, String> {
-        val aliasMap = mutableMapOf<String, String>()
-        objectPattern.children().forEach { prop ->
-            when (prop.type) {
-                SHORTHAND_PROPERTY_IDENTIFIER_PATTERN -> {
-                    val name = TreeTraversal.getNodeText(prop, sourceCode).trim()
-                    if (name.isNotBlank()) aliasMap[name] = name
-                }
-                PAIR_PATTERN -> {
-                    val children = prop.children().toList()
-                    val importName = children
-                        .firstOrNull { it.type == PROPERTY_IDENTIFIER || it.type == IDENTIFIER }
-                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                    val binding = children
-                        .lastOrNull { it.type == IDENTIFIER }
-                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                    if (!importName.isNullOrBlank() && !binding.isNullOrBlank()) aliasMap[binding] = importName
-                }
-            }
-        }
-        return aliasMap
-    }
+            localName to realName
+        }.toMap()
 
     internal fun extractLocalDeclarationNames(rootNode: TSNode, sourceCode: String): Set<String> = rootNode
         .children()
@@ -240,7 +163,8 @@ internal object DeclarationExtractor {
         } ?: DefaultExport.None
 
     fun extract(rootNode: TSNode, sourceCode: String): List<Declaration> {
-        val aliasMap = DeclarationPrepass.buildAliasMap(rootNode, sourceCode)
+        val imports = ImportExtractor.extract(rootNode, sourceCode)
+        val aliasMap = DeclarationPrepass.buildAliasMap(imports)
         val localDeclarationNames = DeclarationPrepass.extractLocalDeclarationNames(rootNode, sourceCode)
         val declarations = rootNode
             .children()

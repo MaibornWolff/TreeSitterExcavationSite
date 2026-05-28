@@ -78,7 +78,7 @@ class JavascriptDependencyTest {
         }
 
         @Test
-        fun `should leave bindingName null for named ES6 import`() {
+        fun `should populate bindingName with real name for non-aliased named import`() {
             // Arrange
             val code = "import { A } from './foo'"
 
@@ -86,7 +86,7 @@ class JavascriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.JAVASCRIPT)
 
             // Assert
-            assertThat(result.imports[0].bindingName).isNull()
+            assertThat(result.imports[0].bindingName).isEqualTo("A")
         }
 
         @Test

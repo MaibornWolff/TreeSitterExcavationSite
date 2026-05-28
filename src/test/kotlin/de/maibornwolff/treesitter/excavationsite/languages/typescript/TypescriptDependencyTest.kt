@@ -81,7 +81,7 @@ class TypescriptDependencyTest {
         }
 
         @Test
-        fun `should leave bindingName null for named ES6 import`() {
+        fun `should populate bindingName with real name for non-aliased named import`() {
             // Arrange
             val code = "import { A } from './foo'"
 
@@ -89,7 +89,7 @@ class TypescriptDependencyTest {
             val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
 
             // Assert
-            assertThat(result.imports[0].bindingName).isNull()
+            assertThat(result.imports[0].bindingName).isEqualTo("A")
         }
 
         @Test
@@ -146,6 +146,33 @@ class TypescriptDependencyTest {
             assertThat(result.imports).hasSize(1)
             assertThat(result.imports[0].path).containsExactly("myModule", "myMethod")
             assertThat(result.imports[0].isWildcard).isFalse()
+        }
+
+        @Test
+        fun `should populate bindingName for CJS shorthand destructured import`() {
+            // Arrange
+            val code = "const { A } = require('./foo')"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].bindingName).isEqualTo("A")
+        }
+
+        @Test
+        fun `should populate bindingName for CJS renamed destructured import`() {
+            // Arrange
+            val code = "const { real: alias } = require('./foo')"
+
+            // Act
+            val result = TreeSitterDependencies.analyze(code, Language.TYPESCRIPT)
+
+            // Assert
+            assertThat(result.imports).hasSize(1)
+            assertThat(result.imports[0].path).containsExactly(".", "foo", "real")
+            assertThat(result.imports[0].bindingName).isEqualTo("alias")
         }
 
         @Test

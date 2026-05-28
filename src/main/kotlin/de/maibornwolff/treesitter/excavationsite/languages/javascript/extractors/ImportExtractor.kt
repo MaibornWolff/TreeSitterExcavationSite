@@ -84,7 +84,7 @@ internal object ImportExtractor {
                     .map { TreeTraversal.getNodeText(it, sourceCode).trim() }
                     .toList()
                 when (identifiers.size) {
-                    1 -> ImportDeclaration(path = basePath + identifiers[0], isWildcard = false)
+                    1 -> ImportDeclaration(path = basePath + identifiers[0], isWildcard = false, bindingName = identifiers[0])
                     2 -> ImportDeclaration(path = basePath + identifiers[0], isWildcard = false, bindingName = identifiers[1])
                     else -> null
                 }
@@ -164,17 +164,35 @@ internal object ImportExtractor {
         objectPattern
             .children()
             .mapNotNull { prop ->
-                val name = when (prop.type) {
-                    SHORTHAND_PROPERTY_IDENTIFIER_PATTERN ->
-                        TreeTraversal.getNodeText(prop, sourceCode).trim()
-                    PAIR_PATTERN ->
-                        prop
-                            .children()
+                when (prop.type) {
+                    SHORTHAND_PROPERTY_IDENTIFIER_PATTERN -> {
+                        val name = TreeTraversal.getNodeText(prop, sourceCode).trim()
+                        if (name.isBlank()) {
+                            null
+                        } else {
+                            ImportDeclaration(path = basePath + name, isWildcard = false, bindingName = name)
+                        }
+                    }
+                    PAIR_PATTERN -> {
+                        val children = prop.children().toList()
+                        val realName = children
                             .firstOrNull { it.type == IDENTIFIER || it.type == PROPERTY_IDENTIFIER }
                             ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                        val binding = children
+                            .lastOrNull { it.type == IDENTIFIER }
+                            ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                        if (realName.isNullOrBlank()) {
+                            null
+                        } else {
+                            ImportDeclaration(
+                                path = basePath + realName,
+                                isWildcard = false,
+                                bindingName = binding?.takeIf { it.isNotBlank() } ?: realName
+                            )
+                        }
+                    }
                     else -> null
                 }
-                if (name.isNullOrBlank()) null else ImportDeclaration(path = basePath + name, isWildcard = false)
             }.toList()
 
     private fun extractStringText(node: TSNode, sourceCode: String): String? {
