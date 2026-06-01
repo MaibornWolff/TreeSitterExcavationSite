@@ -23,7 +23,7 @@ includeBuild("/path/to/TreeSitterLibrary")
 
 // build.gradle.kts
 dependencies {
-    implementation("de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite:0.9.0")
+    implementation("de.maibornwolff.treesitter.excavationsite:treesitter-excavationsite:0.9.1")
 }
 ```
 

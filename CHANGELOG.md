@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-06-01
+
+### Added
+
+- `ImportDeclaration.bindingName` to track the local alias for default, wildcard (`* as ns`), and aliased named imports
+- CJS destructured `require()` alias resolution: bound names from `const { A, B } = require(...)` are now resolved as usedTypes
+- Decorator identifier extraction: decorator names on export declarations are now emitted as usedTypes
+
+### Fixed
+
+- TypeScript/JavaScript: namespace alias member and constructor class names (`ns.Foo`, `new ns.Foo()`) are now extracted as usedTypes
+- TypeScript/JavaScript: `as`-expression and `satisfies`-expression types now captured as usedTypes
+- TypeScript/JavaScript: generic type arguments now captured as usedTypes
+- TypeScript/JavaScript: declare-then-export and `export default <identifier>` patterns handled correctly
+- TypeScript: interface `extends` clause types, type alias RHS types, generic type constraints, and `namespace` declarations
+
 ## [0.9.0] - 2026-05-11
 
 ### Added
@@ -94,7 +110,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 - Metrics API: `TreeSitterMetrics.parse(code, language) -> MetricsResult`
 - Support for 14 languages
 
-[unreleased]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.9.0...HEAD
+[unreleased]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.9.1...HEAD
+
+[0.9.1]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.9.0...v0.9.1
 
 [0.9.0]: https://github.com/MaibornWolff/TreeSitterExcavationSite/compare/v0.8.0...v0.9.0
 
