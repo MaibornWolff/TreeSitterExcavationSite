@@ -7,7 +7,7 @@ version: 1
 
 ## Goal
 
-Add TypeScript and JavaScript dependency support to TSE, following the migration pattern established by Java and Kotlin. TypeScript gets full support (imports + declarations + used types); JavaScript gets imports only (matching DC's legacy behavior).
+Add TypeScript and JavaScript dependency support to TSE, following the migration pattern established by Java and Kotlin. Both languages get full support (imports + declarations + used types). JavaScript uses the same `UsedTypeExtractor` as TypeScript; the only behavioral difference is that JS emits an additional `DEFAULT_EXPORT` copy for named inline default exports, matching DC's legacy `JavascriptAnalyzer` behavior.
 
 **Done when:**
 - All new and existing TSE tests pass
@@ -36,14 +36,14 @@ TypeScript/JavaScript imports use file paths (`'./utils/helper'`, `'react'`, `'@
 ### Shared ImportExtractor
 TypeScript is a superset of JavaScript — both share identical import grammar. A single `ImportExtractor` in `languages/javascript/extractors/` serves both `TypescriptDependencyMapping` and `JavascriptDependencyMapping`.
 
-### JavaScript — full extraction (correction)
-Initial assumption "JavaScript: imports only" was wrong. DC's `JavascriptAnalyzer` produces nodes for exported declarations (classes, functions, constants). `JavascriptDependencyMapping` must use `DeclarationExtractor::extract` — identical to `TypescriptDependencyMapping`. `DeclarationExtractor` and `UsedTypeExtractor` already work for JavaScript since JS is a subset of the TypeScript grammar.
+### JavaScript — full extraction
+DC's `JavascriptAnalyzer` produces nodes for exported declarations (classes, functions, constants). `JavascriptDependencyMapping` uses `DeclarationExtractor::extract` — identical to `TypescriptDependencyMapping`. `DeclarationExtractor` and `UsedTypeExtractor` work for JavaScript since JS is a subset of the TypeScript grammar.
 
 ### No boundary exclusion (TypeScript)
-Start without boundary exclusion — match DC's re-parsing type leakage behavior. Add only if dc-compare reveals issues.
+No boundary exclusion — dc-compare confirmed this matches DC's re-parsing type leakage behavior.
 
-### Used type concatenation order (TypeScript)
-From `integration/dependencies/README.md`: `typeIdentifiers, constructorCalls, memberAccesses, methodCalls, extensions, relevantIdentifiers`
+### Used type concatenation order (TypeScript and JavaScript)
+From `integration/dependencies/README.md`: `typeIdentifiers, constructorCalls, memberAccesses, methodCalls, extensions, relevantIdentifiers, constraintTypes, typeAliasRhsTypes, jsxComponents`
 
 ### TSX dependency mapping — reuse TypeScript extractors
 TSX is a superset of TypeScript. `TsxDependencyMapping` reuses `PackageExtractor`, `ImportExtractor`, and `DeclarationExtractor` unchanged. `UsedTypeExtractor` is extended to also handle `jsx_opening_element` and `jsx_self_closing_element` — these nodes are simply absent when called via the TypeScript parser, so the extension is backward-compatible and safe to share.
@@ -138,7 +138,7 @@ DC handles `import('./module')` as an import. TSE's CommonJS handler only matche
 
 ### 9. Set up early dc-compare loop
 
-Create DC branch `feat/tse-typescript-javascript-integration` pointing to TSE feature branch via JitPack. Run after basic extractors work — don't wait until feature-complete.
+Create DC branch `feat/tse-typescript-javascript-integration` pointing to TSE via `publishToMavenLocal` (see `dc-compare` workflow in `dependency-migration.md`). Run after basic extractors work — don't wait until feature-complete.
 
 Test repos:
 - **TypeScript primary**: medium-sized open-source TypeScript project (e.g., `microsoft/TypeScript-Node-Starter` or `prisma/prisma`)
@@ -490,7 +490,7 @@ After integrating TSE into DC's TypescriptAnalyzer, 17 DC tests remained failing
 
 - All new files live in `languages/javascript/` (TypeScript and JavaScript share the folder)
 - TypeScript concatenation order: typeIdentifiers, constructorCalls, memberAccesses, methodCalls, extensions, relevantIdentifiers
-- JavaScript: full extraction — `JavascriptDependencyMapping` uses same extractors as TypeScript (correction: initial "imports only" assumption was wrong)
+- JavaScript: full extraction — `JavascriptDependencyMapping` uses same extractors as TypeScript
 - `type_alias_declaration` → CLASS (matches DC legacy behavior)
 - Each language owns its own `extractType` helper — no shared utility (per Kotlin plan decision)
 - DC follow-up (separate PR): rewrite DC's `TypescriptAnalyzer` + `JavascriptAnalyzer` to use TSE

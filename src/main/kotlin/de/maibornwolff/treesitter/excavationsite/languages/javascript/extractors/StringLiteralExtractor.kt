@@ -1,13 +1,13 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.CALL_EXPRESSION
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_STATEMENT
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_STATEMENT
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.REQUIRE
 import de.maibornwolff.treesitter.excavationsite.shared.domain.StringParser
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import org.treesitter.TSNode
 
-private const val IMPORT_STATEMENT = "import_statement"
-private const val EXPORT_STATEMENT = "export_statement"
-private const val CALL_EXPRESSION = "call_expression"
-private const val REQUIRE = "require"
 private const val IMPORT = "import"
 
 /**

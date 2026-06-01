@@ -1,33 +1,36 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.CALL_EXPRESSION
 import de.maibornwolff.treesitter.excavationsite.languages.javascript.DEFAULT_EXPORT
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_CLAUSE
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_SPECIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.EXPORT_STATEMENT
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_CLAUSE
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_SPECIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IMPORT_STATEMENT
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMED_IMPORTS
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.NAMESPACE_IMPORT
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.OBJECT_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.PAIR_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.PROPERTY_IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.REQUIRE
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.SHORTHAND_PROPERTY_IDENTIFIER_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.STRING
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.VARIABLE_DECLARATOR
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.normalizeDefaultKeyword
 import de.maibornwolff.treesitter.excavationsite.shared.domain.ImportDeclaration
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import org.treesitter.TSNode
 
 internal object ImportExtractor {
-    private const val IMPORT_STATEMENT = "import_statement"
-    private const val EXPORT_STATEMENT = "export_statement"
-    private const val CALL_EXPRESSION = "call_expression"
-    private const val IDENTIFIER = "identifier"
-    private const val STRING = "string"
-    private const val NAMESPACE_IMPORT = "namespace_import"
-    private const val IMPORT_CLAUSE = "import_clause"
-    private const val NAMED_IMPORTS = "named_imports"
-    private const val IMPORT_SPECIFIER = "import_specifier"
-    private const val EXPORT_CLAUSE = "export_clause"
-    private const val EXPORT_SPECIFIER = "export_specifier"
     private const val ARGUMENTS = "arguments"
-    private const val VARIABLE_DECLARATOR = "variable_declarator"
-    private const val OBJECT_PATTERN = "object_pattern"
-    private const val SHORTHAND_PROPERTY_IDENTIFIER_PATTERN = "shorthand_property_identifier_pattern"
-    private const val PAIR_PATTERN = "pair_pattern"
-    private const val PROPERTY_IDENTIFIER = "property_identifier"
     private const val TEMPLATE_STRING = "template_string"
-    private const val REQUIRE = "require"
     private const val IMPORT_KEYWORD = "import"
     private const val PATH_SEPARATOR = "/"
+
+    private fun splitPath(pathText: String): List<String> = pathText.split(PATH_SEPARATOR)
 
     fun extract(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> {
         val es6Imports = extractEs6Imports(rootNode, sourceCode)
@@ -42,17 +45,25 @@ internal object ImportExtractor {
         .findAllDescendantsOfType(rootNode, IMPORT_STATEMENT)
         .flatMap { importNode ->
             val pathText = extractStringText(importNode, sourceCode) ?: return@flatMap emptyList()
-            val basePath = pathText.split(PATH_SEPARATOR)
+            val basePath = splitPath(pathText)
             val importClause = importNode.children().firstOrNull { it.type == IMPORT_CLAUSE }
                 ?: return@flatMap listOf(ImportDeclaration(path = basePath, isWildcard = false))
             when {
-                TreeTraversal.containsNodeOfType(importClause, NAMESPACE_IMPORT) ->
-                    listOf(ImportDeclaration(path = basePath, isWildcard = true))
+                TreeTraversal.containsNodeOfType(importClause, NAMESPACE_IMPORT) -> {
+                    val nsName = importClause
+                        .children()
+                        .firstOrNull { it.type == NAMESPACE_IMPORT }
+                        ?.children()
+                        ?.firstOrNull { it.type == IDENTIFIER }
+                        ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                    listOf(ImportDeclaration(path = basePath, isWildcard = true, bindingName = nsName))
+                }
                 else -> {
                     val named = extractNamedSpecifiers(importClause, basePath, sourceCode)
-                    val hasDefaultBinding = importClause.children().any { it.type == IDENTIFIER }
-                    if (hasDefaultBinding) {
-                        named + ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false)
+                    val defaultIdentifier = importClause.children().firstOrNull { it.type == IDENTIFIER }
+                    if (defaultIdentifier != null) {
+                        val bindingText = TreeTraversal.getNodeText(defaultIdentifier, sourceCode).trim()
+                        named + ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false, bindingName = bindingText)
                     } else {
                         named
                     }
@@ -67,12 +78,16 @@ internal object ImportExtractor {
             .children()
             .filter { it.type == IMPORT_SPECIFIER }
             .mapNotNull { specifier ->
-                val name = specifier
+                val identifiers = specifier
                     .children()
-                    .firstOrNull { it.type == IDENTIFIER }
-                    ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
-                    ?: return@mapNotNull null
-                ImportDeclaration(path = basePath + name, isWildcard = false)
+                    .filter { it.type == IDENTIFIER }
+                    .map { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                    .toList()
+                when (identifiers.size) {
+                    1 -> ImportDeclaration(path = basePath + identifiers[0], isWildcard = false, bindingName = identifiers[0])
+                    2 -> ImportDeclaration(path = basePath + identifiers[0], isWildcard = false, bindingName = identifiers[1])
+                    else -> null
+                }
             }.toList()
     }
 
@@ -86,7 +101,7 @@ internal object ImportExtractor {
             val args = callNode.children().firstOrNull { it.type == ARGUMENTS }
                 ?: return@flatMap emptyList()
             val pathText = extractStringText(args, sourceCode) ?: return@flatMap emptyList()
-            val basePath = pathText.split(PATH_SEPARATOR)
+            val basePath = splitPath(pathText)
             val declarator = callNode.parent
             if (declarator == null || declarator.isNull || declarator.type != VARIABLE_DECLARATOR) {
                 return@flatMap listOf(ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false))
@@ -94,6 +109,10 @@ internal object ImportExtractor {
             val nameChild = declarator.children().firstOrNull { it.type == OBJECT_PATTERN || it.type == IDENTIFIER }
             when (nameChild?.type) {
                 OBJECT_PATTERN -> extractDestructuredCommonJs(nameChild, basePath, sourceCode)
+                IDENTIFIER -> {
+                    val bindingText = TreeTraversal.getNodeText(nameChild, sourceCode).trim()
+                    listOf(ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false, bindingName = bindingText))
+                }
                 else -> listOf(ImportDeclaration(path = basePath + DEFAULT_EXPORT, isWildcard = false))
             }
         }
@@ -103,7 +122,7 @@ internal object ImportExtractor {
         .filter { exportNode -> TreeTraversal.containsNodeOfType(exportNode, EXPORT_CLAUSE) }
         .flatMap { exportNode ->
             val pathText = extractStringText(exportNode, sourceCode) ?: return@flatMap emptyList()
-            val basePath = pathText.split(PATH_SEPARATOR)
+            val basePath = splitPath(pathText)
             val exportClause = exportNode.children().firstOrNull { it.type == EXPORT_CLAUSE }
                 ?: return@flatMap emptyList()
             exportClause
@@ -115,7 +134,7 @@ internal object ImportExtractor {
                         .firstOrNull { it.type == IDENTIFIER }
                         ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
                         ?: return@mapNotNull null
-                    val name = if (rawName == "default") DEFAULT_EXPORT else rawName
+                    val name = normalizeDefaultKeyword(rawName)
                     ImportDeclaration(path = basePath + name, isWildcard = false)
                 }.toList()
         }
@@ -127,7 +146,7 @@ internal object ImportExtractor {
                 !TreeTraversal.containsNodeOfType(exportNode, EXPORT_CLAUSE)
         }.mapNotNull { exportNode ->
             val pathText = extractStringText(exportNode, sourceCode) ?: return@mapNotNull null
-            ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = true)
+            ImportDeclaration(path = splitPath(pathText), isWildcard = true)
         }
 
     private fun extractDynamicImports(rootNode: TSNode, sourceCode: String): List<ImportDeclaration> = TreeTraversal
@@ -138,24 +157,42 @@ internal object ImportExtractor {
             val args = callNode.children().firstOrNull { it.type == ARGUMENTS }
                 ?: return@mapNotNull null
             val pathText = extractStringText(args, sourceCode) ?: return@mapNotNull null
-            ImportDeclaration(path = pathText.split(PATH_SEPARATOR), isWildcard = false)
+            ImportDeclaration(path = splitPath(pathText), isWildcard = false)
         }
 
     private fun extractDestructuredCommonJs(objectPattern: TSNode, basePath: List<String>, sourceCode: String): List<ImportDeclaration> =
         objectPattern
             .children()
             .mapNotNull { prop ->
-                val name = when (prop.type) {
-                    SHORTHAND_PROPERTY_IDENTIFIER_PATTERN ->
-                        TreeTraversal.getNodeText(prop, sourceCode).trim()
-                    PAIR_PATTERN ->
-                        prop
-                            .children()
+                when (prop.type) {
+                    SHORTHAND_PROPERTY_IDENTIFIER_PATTERN -> {
+                        val name = TreeTraversal.getNodeText(prop, sourceCode).trim()
+                        if (name.isBlank()) {
+                            null
+                        } else {
+                            ImportDeclaration(path = basePath + name, isWildcard = false, bindingName = name)
+                        }
+                    }
+                    PAIR_PATTERN -> {
+                        val children = prop.children().toList()
+                        val realName = children
                             .firstOrNull { it.type == IDENTIFIER || it.type == PROPERTY_IDENTIFIER }
                             ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                        val binding = children
+                            .lastOrNull { it.type == IDENTIFIER }
+                            ?.let { TreeTraversal.getNodeText(it, sourceCode).trim() }
+                        if (realName.isNullOrBlank()) {
+                            null
+                        } else {
+                            ImportDeclaration(
+                                path = basePath + realName,
+                                isWildcard = false,
+                                bindingName = binding?.takeIf { it.isNotBlank() } ?: realName
+                            )
+                        }
+                    }
                     else -> null
                 }
-                if (name.isNullOrBlank()) null else ImportDeclaration(path = basePath + name, isWildcard = false)
             }.toList()
 
     private fun extractStringText(node: TSNode, sourceCode: String): String? {

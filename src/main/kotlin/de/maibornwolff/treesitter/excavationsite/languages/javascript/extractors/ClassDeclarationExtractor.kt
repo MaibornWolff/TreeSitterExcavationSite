@@ -1,12 +1,11 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.DECORATOR
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.TYPE_IDENTIFIER
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import org.treesitter.TSNode
-
-private const val IDENTIFIER = "identifier"
-private const val TYPE_IDENTIFIER = "type_identifier"
-private const val DECORATOR = "decorator"
 
 /**
  * Extracts identifiers from class declaration including decorators.

@@ -1,12 +1,11 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.ARRAY_PATTERN
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.IDENTIFIER
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.OBJECT_PATTERN
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.TreeTraversal
 import de.maibornwolff.treesitter.excavationsite.shared.infrastructure.walker.children
 import org.treesitter.TSNode
-
-private const val IDENTIFIER = "identifier"
-private const val OBJECT_PATTERN = "object_pattern"
-private const val ARRAY_PATTERN = "array_pattern"
 
 /**
  * Extracts identifiers from variable declarator, handling destructuring patterns.

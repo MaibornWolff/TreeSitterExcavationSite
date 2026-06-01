@@ -11,7 +11,8 @@ data class ImportDeclaration(
     val path: List<String>,
     val isWildcard: Boolean,
     val namespacePath: List<String> = emptyList(),
-    val kind: ImportKind = ImportKind.STANDARD
+    val kind: ImportKind = ImportKind.STANDARD,
+    val bindingName: String? = null
 )
 
 enum class DeclarationType {

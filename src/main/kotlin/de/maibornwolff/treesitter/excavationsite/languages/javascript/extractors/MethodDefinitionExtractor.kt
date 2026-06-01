@@ -1,8 +1,7 @@
 package de.maibornwolff.treesitter.excavationsite.languages.javascript.extractors
 
+import de.maibornwolff.treesitter.excavationsite.languages.javascript.DECORATOR
 import org.treesitter.TSNode
-
-private const val DECORATOR = "decorator"
 
 /**
  * Extracts identifiers from method definition including preceding decorators.
