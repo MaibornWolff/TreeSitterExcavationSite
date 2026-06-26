@@ -9,7 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Rust language support for text extraction (identifiers, comments, and string literals) as the 19th supported language, via the `tree-sitter-rust` grammar. Metrics and dependency analysis are out of scope; `TreeSitterMetrics.parse` returns LOC/RLOC only for Rust.
+- Rust dependency analysis support (`TreeSitterDependencies.analyze(code, Language.RUST)`): module/use imports (flattened use-trees incl. globs, aliases, verbatim `crate`/`self`/`super`), declarations (struct/union/enum/trait/type-alias/fn/const/static/macro), per-declaration inline-`mod` `parentPath` (Class-2 namespace model), `impl` folding onto the target type, and signature-level used types with nested generics and qualified-type `namespacePrefix`. `packagePath` is intentionally empty — a `.rs` file's crate-root module path is filesystem-derived and resolved by the consumer (DependaCharta).
+- `ImportKind.REEXPORT` — Rust `pub use module::Type` re-exports are tagged so consumers can model the crate's public-API flattening as a forwarding/alias edge (`pub use` previously emitted as a plain `STANDARD` import).
+- Rust language support for text extraction (identifiers, comments, and string literals) as the 19th supported language, via the `tree-sitter-rust` grammar. Metrics are out of scope; `TreeSitterMetrics.parse` returns LOC/RLOC only for Rust.
 
 ### Fixed
 

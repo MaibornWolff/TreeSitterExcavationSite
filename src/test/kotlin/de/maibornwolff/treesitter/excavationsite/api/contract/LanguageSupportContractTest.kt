@@ -299,7 +299,8 @@ class LanguageSupportContractTest {
                     Language.DELPHI,
                     Language.TYPESCRIPT,
                     Language.JAVASCRIPT,
-                    Language.TSX
+                    Language.TSX,
+                    Language.RUST
                 )
         }
     }
