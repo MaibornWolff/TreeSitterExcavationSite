@@ -43,7 +43,8 @@ class GoldenFileContractTest {
             Language.VUE to "vue_sample.vue",
             Language.ABL to "abl_sample.p",
             Language.TSX to "tsx_sample.tsx",
-            Language.DELPHI to "delphi_sample.pas"
+            Language.DELPHI to "delphi_sample.pas",
+            Language.RUST to "rust_sample.rs"
         )
 
         private val GOLDEN_BASE_NAMES = mapOf(
@@ -64,7 +65,8 @@ class GoldenFileContractTest {
             Language.VUE to "vue_sample",
             Language.ABL to "abl_sample",
             Language.TSX to "tsx_sample",
-            Language.DELPHI to "delphi_sample"
+            Language.DELPHI to "delphi_sample",
+            Language.RUST to "rust_sample"
         )
     }
 
