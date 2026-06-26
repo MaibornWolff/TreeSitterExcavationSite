@@ -27,7 +27,7 @@ performance:
 complexity:
   LongMethod:
     active: true
-    threshold: 120  # More lenient for test code
+    threshold: 150  # More lenient for test code; grows with the number of supported languages
   TooManyFunctions:
     active: true
     thresholdInClasses: 15
@@ -35,6 +35,7 @@ complexity:
   CyclomaticComplexMethod:
     active: true
     threshold: 20
+    ignoreSimpleWhenEntries: true  # Exhaustive language-dispatch when-entries are trivial, not complex
   ComplexCondition:
     active: true
     threshold: 5

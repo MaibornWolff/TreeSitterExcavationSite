@@ -34,7 +34,8 @@ class LanguageSupportContractTest {
             ".cpp, CPP",
             ".c, C",
             ".m, OBJECTIVE_C",
-            ".pas, DELPHI"
+            ".pas, DELPHI",
+            ".rs, RUST"
         )
         fun `should map primary extension to correct language`(extension: String, expectedLanguage: String) {
             // Act
@@ -157,7 +158,8 @@ class LanguageSupportContractTest {
             ".m",
             ".mm",
             ".pas",
-            ".dpr"
+            ".dpr",
+            ".rs"
         )
         fun `should return true for supported extensions`(extension: String) {
             // Assert

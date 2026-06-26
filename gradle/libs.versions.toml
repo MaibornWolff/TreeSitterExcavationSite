@@ -24,6 +24,7 @@ tree-sitter-ruby = "0.23.1"
 tree-sitter-swift = "0.5.0"
 tree-sitter-objc = "main-a"
 tree-sitter-bash = "0.23.3"
+tree-sitter-rust = "0.24.0"
 tree-sitter-vue = "0.2.1a"
 # tree-sitter-ng is an experimental fork with ABL support (JitPack)
 tree-sitter-abl = "de274a6"
@@ -56,6 +57,7 @@ treesitter-ruby = { group = "io.github.bonede", name = "tree-sitter-ruby", versi
 treesitter-swift = { group = "io.github.bonede", name = "tree-sitter-swift", version.ref = "tree-sitter-swift" }
 treesitter-objc = { group = "io.github.bonede", name = "tree-sitter-objc", version.ref = "tree-sitter-objc" }
 treesitter-bash = { group = "io.github.bonede", name = "tree-sitter-bash", version.ref = "tree-sitter-bash" }
+treesitter-rust = { group = "io.github.bonede", name = "tree-sitter-rust", version.ref = "tree-sitter-rust" }
 treesitter-vue = { group = "io.github.bonede", name = "tree-sitter-vue", version.ref = "tree-sitter-vue" }
 # ABL from experimental fork (tree-sitter-ng via JitPack)
 treesitter-abl = { group = "com.github.ChristianHuehn.tree-sitter-ng", name = "tree-sitter-abl", version.ref = "tree-sitter-abl" }

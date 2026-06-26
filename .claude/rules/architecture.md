@@ -39,7 +39,7 @@ src/main/kotlin/de/maibornwolff/treesitter/excavationsite/
 ├── languages/                     # Language definitions
 │   ├── Language.kt                # Internal language enum with definitions
 │   ├── LanguageRegistry.kt        # Language lookup
-│   └── <lang>/                    # Per-language directory (18 languages and frameworks)
+│   └── <lang>/                    # Per-language directory (19 languages and frameworks)
 │       ├── *Definition.kt         # Combines metric, extraction, and dependency mappings
 │       ├── *MetricMapping.kt      # Metric node type mappings
 │       ├── *ExtractionMapping.kt  # Extraction node type mappings
