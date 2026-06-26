@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Rust language support for text extraction (identifiers, comments, and string literals) as the 19th supported language, via the `tree-sitter-rust` grammar. Metrics and dependency analysis are out of scope; `TreeSitterMetrics.parse` returns LOC/RLOC only for Rust.
 
+### Fixed
+
+- JavaScript extraction no longer crashes with `TSException: Node is a null node` when a `method_definition`'s decorator look-behind walk reaches the start of its parent (the `prevSibling` sentinel is now guarded before its type is read).
+
 ## [0.9.1] - 2026-06-01
 
 ### Added
