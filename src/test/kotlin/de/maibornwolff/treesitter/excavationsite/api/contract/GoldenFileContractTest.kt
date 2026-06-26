@@ -137,6 +137,26 @@ class GoldenFileContractTest {
             // Assert
             assertGoldenFile(goldenPath, actual)
         }
+
+        @Test
+        fun `should match golden file for RUST dependencies`() {
+            // Arrange
+            val language = Language.RUST
+            val sampleFileName = SAMPLE_FILE_NAMES[language]
+                ?: error("No sample file configured for $language")
+            val goldenBaseName = GOLDEN_BASE_NAMES[language]
+                ?: error("No golden base name configured for $language")
+            val samplePath = "$RESOURCES_PATH/$sampleFileName"
+            val goldenPath = "$RESOURCES_PATH/${goldenBaseName}_dependencies.golden"
+
+            // Act
+            val code = File(samplePath).readText()
+            val result = TreeSitterDependencies.analyze(code, language)
+            val actual = serializeDependencies(result)
+
+            // Assert
+            assertGoldenFile(goldenPath, actual)
+        }
     }
 
     private fun serializeMetrics(result: MetricsResult): String {

@@ -4,7 +4,8 @@ data class DependencyResult(val packagePath: List<String>, val imports: List<Imp
 
 enum class ImportKind {
     STANDARD,
-    INCLUDE
+    INCLUDE,
+    REEXPORT
 }
 
 data class ImportDeclaration(
