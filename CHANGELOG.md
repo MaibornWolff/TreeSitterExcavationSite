@@ -9,9 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- Rust code-metrics support (`TreeSitterMetrics.parse(code, Language.RUST)`): complexity (`if`/`while`/`for`/`loop`/`match` arms incl. the `_` wildcard, plus `&&`/`||`), function counts (free fns, impl methods, trait default methods, and bodyless trait signatures; closures add complexity but are not counted as functions), comment lines, parameters (the `self` receiver is excluded), per-function aggregations, and message chains. The `?` operator, match guards, and plain `else` are intentionally not counted, matching the other languages. Rust metrics are now `Stable`.
 - Rust dependency analysis support (`TreeSitterDependencies.analyze(code, Language.RUST)`): module/use imports (flattened use-trees incl. globs, aliases, verbatim `crate`/`self`/`super`), declarations (struct/union/enum/trait/type-alias/fn/const/static/macro), per-declaration inline-`mod` `parentPath` (Class-2 namespace model), `impl` folding onto the target type, and signature-level used types with nested generics and qualified-type `namespacePrefix`. `packagePath` is intentionally empty — a `.rs` file's crate-root module path is filesystem-derived and resolved by the consumer (DependaCharta).
 - `ImportKind.REEXPORT` — Rust `pub use module::Type` re-exports are tagged so consumers can model the crate's public-API flattening as a forwarding/alias edge (`pub use` previously emitted as a plain `STANDARD` import).
-- Rust language support for text extraction (identifiers, comments, and string literals) as the 19th supported language, via the `tree-sitter-rust` grammar. Metrics are out of scope; `TreeSitterMetrics.parse` returns LOC/RLOC only for Rust.
+- Rust language support for text extraction (identifiers, comments, and string literals) as the 19th supported language, via the `tree-sitter-rust` grammar.
 
 ### Fixed
 
