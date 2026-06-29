@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Comment-line counting no longer over-counts comments whose AST node includes the trailing newline (its exclusive end point lands at column 0 of the next row, e.g. tree-sitter-rust `///`/`//!` doc comments). The following row is no longer miscounted as a comment line. Verified to leave every existing language's metric golden unchanged.
 - JavaScript extraction no longer crashes with `TSException: Node is a null node` when a `method_definition`'s decorator look-behind walk reaches the start of its parent (the `prevSibling` sentinel is now guarded before its type is read).
 
 ## [0.9.1] - 2026-06-01
