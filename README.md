@@ -109,7 +109,7 @@ println(result.declarations)  // [Declaration(name=UserService, type=CLASS, used
 
 // Check language support
 println(TreeSitterDependencies.isDependencyAnalysisSupported(Language.JAVA))   // true
-println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA, KOTLIN, TYPESCRIPT, JAVASCRIPT, CSHARP, CPP, DELPHI]
+println(TreeSitterDependencies.getSupportedLanguages())                        // [JAVA, KOTLIN, TYPESCRIPT, TSX, JAVASCRIPT, CSHARP, CPP, DELPHI, RUST]
 ```
 
 ## Supported Languages and Frameworks
@@ -133,7 +133,7 @@ println(TreeSitterDependencies.getSupportedLanguages())                        /
 | Vue | `.vue` | Stable | Stable | — |
 | ABL | `.p`, `.cls`, `.w`, `.i` | Experimental | Experimental | — |
 | Delphi | `.pas`, `.dpr` | Stable | Stable | Experimental |
-| Rust | `.rs` | — | Stable | — |
+| Rust | `.rs` | Stable | Stable | Experimental |
 
 ## Available Metrics
 
